@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vitrine</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!--
+  Vitrine (working name) · Option C "Soft Pixel Workbench" · interactive mockup.
+  Unofficial gallery for your PixelLab assets. Not affiliated with or endorsed by PixelLab.
+  Icons: Lucide (https://lucide.dev), ISC License, Copyright (c) Lucide Contributors.
+  Paths are inlined in app.js (ICONS).
+-->
+<a class="skip" href="#sheet-body" data-act="skip">Skip to library</a>
+
+<!-- S1 Connect -->
+<main id="connect" class="connect" hidden>
+  <div class="connect-panel">
+    <div class="connect-brand"><span data-art="mark" data-cell="3"></span><span data-art="word" data-cell="3"></span></div>
+    <p class="descriptor">Unofficial gallery for your PixelLab assets</p>
+    <h1 id="connect-h" tabindex="-1">Your PixelLab art, all in one place</h1>
+    <p class="welcome" id="welcome" hidden>Welcome back! Your token was kept for one tab only, so paste it again here.</p>
+    <p class="value">Vitrine shows everything in your PixelLab account. It only looks. It never creates, changes, or deletes anything.</p>
+    <form id="connect-form" novalidate>
+      <input class="sr-only" type="text" name="username" autocomplete="username" value="PixelLab API token" tabindex="-1" aria-hidden="true" readonly>
+      <label class="lbl" for="token">PixelLab API token</label>
+      <div class="field-row">
+        <input id="token" class="input" type="password" name="password" autocomplete="current-password" placeholder="Paste your token" spellcheck="false" aria-describedby="token-err">
+        <button type="button" class="btn outline" data-act="reveal" aria-pressed="false" aria-controls="token">Show</button>
+      </div>
+      <p id="token-err" class="err" hidden></p>
+      <details class="where">
+        <summary>Where do I find my token?</summary>
+        <ol>
+          <li>Open your <a href="https://pixellab.ai/account" target="_blank" rel="noopener noreferrer">PixelLab account page ↗<span class="sr-only"> (opens PixelLab in a new tab)</span></a></li>
+          <li>Find your API token and copy it.</li>
+          <li>Paste it here.</li>
+        </ol>
+        <p class="muted">Signed out? PixelLab will ask you to sign in first.</p>
+      </details>
+      <label class="switch"><input type="checkbox" id="remember" role="switch" aria-describedby="remember-help"><span class="track" aria-hidden="true"></span><span>Remember on this device</span></label>
+      <p id="remember-help" class="help">Kept in this tab only. You'll paste it again in a new tab.</p>
+      <p class="note"><span data-icon="key-round"></span><span>Heads up: PixelLab tokens give full access to your account, including spending credits. Vitrine only reads, but keep your token as private as a password.</span></p>
+      <button class="btn primary block" type="submit" id="connect-btn">Connect</button>
+      <button class="btn outline block" type="button" data-act="use-sample">Use sample library</button>
+      <p class="mock-note">Mockup: any non-empty value connects; the word "bad" shows the invalid-token error.</p>
+    </form>
+    <p class="privacy">Your token goes only to PixelLab's API. Vitrine has no servers and no analytics.</p>
+  </div>
+  <p class="disclaimer">Unofficial. Not affiliated with or endorsed by PixelLab.</p>
+</main>
+
+<div id="app" class="app" hidden>
+  <!-- App bar (≥ 600; phone variant) -->
+  <header class="appbar" id="appbar">
+    <a class="brand" href="#/" aria-label="Vitrine, Library"><span data-art="mark" data-cell="2"></span><span data-art="word" data-cell="2"></span></a>
+    <div class="search" role="search">
+      <span data-icon="search"></span>
+      <input id="q" type="search" placeholder="Search 71 assets" aria-label="Search assets" autocomplete="off" spellcheck="false">
+      <kbd class="keycap" data-hide="phone compact">/</kbd>
+      <button class="btn icon" data-act="search-close" aria-label="Close search" data-hide="three two stack"><span data-icon="x"></span></button>
+    </div>
+    <div class="result" data-slot="result" data-hide="phone compact"></div>
+    <span class="spacer"></span>
+    <button class="btn icon" data-act="search-open" aria-label="Search" data-hide="three two stack compact"><span data-icon="search"></span></button>
+    <button class="btn" data-act="select" data-hide="three two stack compact">Select</button>
+    <button class="btn icon" data-act="settings" aria-label="Settings" data-hide="three compact"><span data-icon="settings"></span></button>
+  </header>
+
+  <!-- Rail (tablet, compact height) -->
+  <nav class="rail" aria-label="Main">
+    <a class="nav-item" href="#/" data-nav="library"><span data-icon="layout-grid"></span><span>Library</span></a>
+    <a class="nav-item" href="#/collections" data-nav="collections"><span data-icon="folders"></span><span>Collections</span></a>
+    <span class="spacer"></span>
+    <button class="nav-item" data-act="search-open" data-hide="three two stack phone"><span data-icon="search"></span><span>Search</span></button>
+    <button class="nav-item" data-act="select" data-hide="three two stack phone"><span data-icon="square-check"></span><span>Select</span></button>
+    <button class="nav-item" data-act="settings"><span data-icon="settings"></span><span>Settings</span></button>
+  </nav>
+
+  <!-- Left pane (≥ 1200) -->
+  <aside class="leftpane" id="leftpane" aria-label="Library and collections"></aside>
+
+  <!-- Contact sheet -->
+  <main class="sheet" id="sheet">
+    <div class="sheet-head" id="sheet-head">
+      <div class="folder-head" id="folder-head" hidden></div>
+      <div class="chips" id="chips" role="radiogroup" aria-label="Asset type"></div>
+      <div class="toolbar" id="toolbar">
+        <div class="tb-title"><h1 id="h1" tabindex="-1">Library</h1><span class="tb-sub" id="tb-sub"></span><span class="px tb-count" id="tb-count"></span></div>
+        <div class="seg sheetinfo" id="sheetinfo" role="radiogroup" aria-label="Show" data-hide="three two phone compact">
+          <button role="radio" aria-checked="true" data-info="0">Sheet</button><button role="radio" aria-checked="false" tabindex="-1" data-info="1">Info</button>
+        </div>
+        <div class="result" data-slot="result" data-hide="three two stack compact"></div>
+        <span class="tb-sel" id="tb-sel" data-hide="phone compact"></span>
+        <span class="spacer"></span>
+        <button class="btn" data-act="sort-menu" aria-haspopup="menu" data-hide="phone compact"><span data-icon="arrow-down-up"></span><span id="sort-label">Newest</span></button>
+        <div class="sizer" role="group" aria-label="Grid size" data-hide="phone compact">
+          <button class="btn icon" data-act="size-down" aria-label="Smaller grid"><span data-icon="minus"></span></button>
+          <span class="px size-letter" id="size-letter" aria-live="polite">M</span>
+          <button class="btn icon" data-act="size-up" aria-label="Larger grid"><span data-icon="plus"></span></button>
+        </div>
+        <button class="btn icon" data-act="view-menu" aria-label="Sort and grid size" aria-haspopup="menu" data-hide="three two stack"><span data-icon="arrow-down-up"></span></button>
+        <button class="btn" data-act="animate" aria-pressed="false"><span data-icon="circle-play"></span><span>Animate</span></button>
+        <button class="btn icon" data-act="overflow" aria-label="More library actions" aria-haspopup="menu"><span data-icon="ellipsis"></span></button>
+        <button class="btn" data-act="select" data-hide="phone compact">Select</button>
+      </div>
+    </div>
+    <div class="banner" id="banner" role="status" hidden></div>
+    <div class="sheet-body" id="sheet-body" tabindex="-1"></div>
+    <div class="info-slot" id="info-slot"></div>
+    <footer class="statusbar" id="statusbar" data-hide="stack phone compact">
+      <span class="sb-text" id="sb-text"></span>
+      <span class="sb-right" data-slot="export-progress"></span>
+      <span class="px sb-pos" id="sb-pos"></span>
+    </footer>
+  </main>
+
+  <!-- Stage pane (desktop/tablet) · stage screen (phone) · immersive (compact) -->
+  <section class="stage-pane" id="stage" aria-labelledby="stage-title" data-bd="checker">
+    <div class="stage-view" id="stage-view">
+      <header class="stage-head">
+        <button class="btn icon" data-act="stage-back" aria-label="Back to library" data-hide="three two stack"><span data-icon="chevron-left"></span></button>
+        <h2 id="stage-title" tabindex="-1"><span class="t">Nothing selected</span> <span class="st"></span></h2>
+        <button class="btn icon nav-btn" data-act="prev" aria-label="Previous asset"><span data-icon="chevron-left"></span></button>
+        <button class="btn icon nav-btn" data-act="next" aria-label="Next asset"><span data-icon="chevron-right"></span></button>
+        <button class="btn icon" data-act="info" aria-label="Info" aria-pressed="false" data-hide="three two stack phone"><span data-icon="info"></span></button>
+        <button class="btn icon" data-act="stage-menu" aria-label="More asset actions" aria-haspopup="menu"><span data-icon="ellipsis"></span></button>
+      </header>
+      <div class="stage-toolbar">
+        <button class="btn icon bd-btn" data-act="backdrop-menu" aria-label="Backdrop" aria-haspopup="true" data-hide="three two stack"><span data-icon="contrast"></span></button>
+        <div class="swatches" id="swatches" role="radiogroup" aria-label="Backdrop"></div>
+        <span class="spacer"></span>
+        <div class="zoom" role="group" aria-label="Zoom">
+          <button class="btn mini" data-act="zoom-fit" aria-label="Fit"><span data-icon="scan"></span></button>
+          <button class="btn mini" data-act="zoom-1">1:1</button>
+          <button class="btn mini" data-act="zoom-out" aria-label="Zoom out"><span data-icon="minus"></span></button>
+          <button class="btn mini" data-act="zoom-in" aria-label="Zoom in"><span data-icon="plus"></span></button>
+        </div>
+        <span class="px zoom-readout" id="zoom-readout" aria-live="polite"></span>
+      </div>
+      <div class="stage-frame">
+        <div class="stage-wrap" id="stage-wrap">
+          <div class="stage" id="stage-box" role="img" tabindex="0" aria-label="">
+            <div class="art" id="stage-art"><canvas id="stage-canvas" width="1" height="1"></canvas><div class="tile-grid" id="tile-grid" hidden></div></div>
+          </div>
+        </div>
+        <button class="edge prev" data-act="prev" aria-label="Previous asset" tabindex="-1"><span data-icon="chevron-left"></span></button>
+        <button class="edge next" data-act="next" aria-label="Next asset" tabindex="-1"><span data-icon="chevron-right"></span></button>
+      </div>
+      <div class="controls" id="controls">
+        <div class="controls-main">
+          <div class="transport" id="transport">
+            <button class="btn icon" data-act="step-back" aria-label="Previous frame"><span data-icon="step-back"></span></button>
+            <button class="btn play" data-act="play" id="play-btn" aria-label="Play"><span data-icon="play"></span></button>
+            <button class="btn icon" data-act="step-fwd" aria-label="Next frame"><span data-icon="step-forward"></span></button>
+            <div class="scrub"><input type="range" id="scrub" min="0" max="7" value="0" step="1" aria-label="Frame"><div class="ticks" id="ticks" aria-hidden="true"></div></div>
+            <span class="px readout" id="readout"></span>
+            <button class="btn mono fps" data-act="fps" id="fps-btn" aria-haspopup="dialog">8 FPS</button>
+            <button class="btn icon" data-act="loop" id="loop-btn" aria-pressed="true" aria-label="Loop"><span data-icon="repeat"></span></button>
+          </div>
+          <div class="filmstrip" id="filmstrip" role="group" aria-label="Frames"></div>
+          <div class="context" id="context">
+            <button class="btn outline dir-btn" data-act="compass-toggle" id="dir-btn" aria-haspopup="true" aria-expanded="false" data-hide="three two stack compact"></button>
+            <div class="seg" id="anim-seg" role="radiogroup" aria-label="Animation"></div>
+            <div class="seg" id="state-seg" role="radiogroup" aria-label="State"></div>
+            <button class="btn outline" data-act="grid-toggle" id="grid-btn" aria-pressed="false"><span data-icon="grid-3x3"></span><span>Grid</span></button>
+            <span class="tile-info" id="tile-info" aria-live="polite"></span>
+          </div>
+        </div>
+        <div class="compass" id="compass" role="radiogroup" aria-label="Direction"></div>
+      </div>
+      <div class="inspector" id="inspector"></div>
+    </div>
+    <div class="summary" id="summary" hidden></div>
+  </section>
+
+  <!-- Phone bottom bar -->
+  <nav class="bottombar" aria-label="Main">
+    <a class="nav-item" href="#/" data-nav="library"><span data-icon="layout-grid"></span><span>Library</span></a>
+    <a class="nav-item" href="#/collections" data-nav="collections"><span data-icon="folders"></span><span>Collections</span></a>
+  </nav>
+  <!-- Selection bar (phone: replaces the bottom bar; compact: floating) -->
+  <div class="selbar" id="selbar" role="toolbar" aria-label="Selection" hidden></div>
+  <div class="export-chip" data-slot="export-progress" data-hide="three two"></div>
+</div>
+<div class="toasts" id="toasts"></div>
+
+<div class="sr-only" id="live" aria-live="polite"></div>
+<div class="sr-only" id="live-a" aria-live="assertive"></div>
+
+<script src="../shared/sample-data.js"></script>
+<script src="../shared/pixel-utils.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

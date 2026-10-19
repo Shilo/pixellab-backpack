@@ -1,0 +1,181 @@
+# 00 — Decision Log: Vitrine
+
+Every decision behind the design docs, in one place. Status 2026-10-18. One line each; the linked doc holds the detail.
+
+**Precedence (B-5; the canonical statement, other docs point here):**
+1. The final rulings F-1 to F-16 and the builder answers B-1 to B-20 in this log override any conflicting text anywhere.
+2. Then 07 (visual and layout) and 02 (behaviour).
+3. Then 01, 03, 05 and 06.
+4. Then the recommended mockup (`mockups/recommended/`). It illustrates the docs and never overrides them: a detail that exists only in the mockup goes back into 07 or 02 before it is built.
+5. Finally 04 and the option mockups A, B and C (explored options, historical).
+
+**ID families:** D = R1 research cross-review · R = earlier orchestrator rulings · F = final orchestrator rulings · B = orchestrator answers to the R4 builder check · E = editor calls made while applying the F rulings · UX / AR = builder-relevant **(decision)** items in 02 / 05.
+
+**Cross-references (B-18):** design docs cite research documents as "research NN" (`docs/research/NN-…`) and spell out "design 07" or "research 07" wherever both could be meant. A bare "07 Qn" is never written; the Qn questions are research 07's.
+
+## 1. Final rulings (F)
+
+| ID | Decision | Rationale | Source | Status |
+|---|---|---|---|---|
+| F-1 | Base = Option A shell: sidebar ≥ 1200 px, rail on tablet and phone landscape, floating bottom pill on phone portrait; captioned uniform grid; modal viewer with a docked Info panel (desktop, tablet landscape) or bottom sheet (phone); immersive phone-landscape viewer | Best shell and phone model: A 75.5 vs B 74 vs C 72.5; 12/17 viewports passed vs 8 | R3a §5–6, R3b matrix | active (07 §2) |
+| F-2 | Drop A's click-to-select inspector (V1) and dwell prefetch (V6). Click, tap, Enter or Space opens the viewer; its Info panel is the inspector. Card states: default, focused, selected | V1 broke the first click and looked like selection; V6 spends reads | R2 #9, R3a A3 | active (02 §3.4, §4.5) |
+| F-3 | Theme = R3b "Quiet Studio, lifted" `:root` block verbatim (light + dark, follows system, in-app override); one ice-blue accent; one neutral art surface for cards and stage; light-gray wells in light mode; system sans with B's label hierarchy; mono for technical values | Fixes A's 1.00:1 / 1.03:1 surface collisions; plum turns pink in dark, amber fill is 2.33:1 | R3b | active (07 §5) |
+| F-4 | Viewer: inline compass beside the transport; a filmstrip replaces the range scrubber; fps stepper in the transport row ("8 fps", reset); zoom `− [Fit\|N×] +` with the readout toggling Fit ↔ 1:1; one Backdrop button with 5 swatches (Theme, Checker, Light gray N8, Mid gray N5, Black); control rows ≤ 960 px, centred | Removes the cockpit; takes B's and C's best controls | R2 #3, R3a T2, R3b #10 | active (02 §3.5, §6; 07 §4.4) |
+| F-5 | The word is always "Download". Info panel shows download tiles. Per-asset menus have ≤ 4 items (character: GIF at current animation, direction and fps · Sprite sheet (ZIP) · All frames (ZIP) · PixelLab original (ZIP)). Multi-file outputs are one ZIP. Multi-asset: one dialog with 3 described presets + collapsed Advanced (scale, GIF matte, file naming). GIF states it uses the current speed | 8-item menu with look-alikes; verb drift; undefined two-file outputs | R2 #4, #8–10; R3a #4–6 | active (02 §7) |
+| F-6 | Selection: Select button + long-press (touch); checkbox click, Shift, Ctrl (desktop); `x`, Ctrl+A, Esc. ≥ 1200 px: selection-summary panel (mosaic + count + actions) on the right while ≥ 2 selected; phone and tablet: bottom selection bar | C's summary was the best bulk surface | R3a T5, R3b | active (02 §3.9) |
+| F-7 | Names: destinations "Library" and "Folders" (Favorites pinned first; "Collections" retired); toggle "Play previews"; credential "PixelLab API key" ("secret token" once in help); chip "Images" with tooltip "Creator gallery" | PixelLab's own word is "API key"; "Animate" collided with a paid tool | R2 #1, #2, #7, #14 | active; "Folders" is an owner-overridable default |
+| F-8 | Type chips: All · Characters · Objects · Images · Tilesets · Tiles · Maps · UI (8; "Other" removed). Phone: one scrollable row, 44 px tall on touch. "Other PixelLab content isn't in the public API yet" note at the end of All results and in Settings › About, with links | The "Other" chip was the fake-chip anti-goal | R2 #5, #11 | active; Tilesets/Tiles split is an owner-overridable default |
+| F-9 | Play previews default ON with caps: in view only, ≤ 8 playing, detail fetches low priority one at a time; auto-off under reduced motion or Save-Data unless explicitly turned on; the toggle is the WCAG 2.2.2 pause. Phase 0 read-cost checks may flip the default to OFF | The grid never moved on phones; cost is capped instead of avoided | R2 #2, #20 | active; owner-overridable default; trigger in E-9 |
+| F-10 | Connect: one screen; paste auto-tests the key (Test button as fallback), first sync starts at once; the 3 "get your key" steps are visible with the account link; "Keep me signed in on this device" offered after the first sync (non-blocking banner); default stays session-only. Settings: status (last 4), Test, Keep signed in, Forget, rotate-key link | First run took ~21 taps and 11 doubts | R2 §2, #1–3; R3a #8 | active (02 §3.1, §3.12) |
+| F-11 | Labelled "Open in PixelLab ↗" button in the Info panel header + "More in PixelLab ▾" tool menu; generation tools say "May use PixelLab credits"; new tab, `noopener noreferrer` | Hand-off was icon-only or buried; credit safety | R3a #11, T7 | active (02 §3.11) |
+| F-12 | Folders: 2×2 cover mosaics; Add to folder via popover (desktop) / sheet (phone), never full screen; rename, delete; deleting a folder never deletes assets | Recognisable covers; light picker | R3a B5, R2 delight #5 | active (02 §3.8) |
+| F-13 | Must-fix: phone search never hides navigation (visible Cancel, pill reachable); pill never covers content (bottom padding = pill + safe area); 44 px touch targets incl. chips and sync status; safe areas for landscape prev/next and sheet actions; forced colors keep swatches; focused vs selected distinct; refit on resize and DPR change; compact height defaults to M; at 200% text search stays reachable and Info labels stack; hash route path first, query last | Severity 3–4 findings | R3a A1, A2; R3b #1–#12; R2 consistency #10 | active (02 §1, §4, §10; 07 §7) |
+| F-14 | Cheap delight: first-sync reveal (static under reduced motion); animation + direction kept across prev/next when available; empty states show a tiny idle sprite from the library; quiet "Synced just now" status | Cheap, art-first | R2 §3 | active |
+| F-15 | Keymap = 02's minus keys for removed features; "Shortcuts off" stays (WCAG 2.1.4); help overlay list updated | No key belonged to a removed feature; Space now also opens a card (F-2) | 02 §9 | active (02 §9.3, §9.5) |
+| F-16 | Owner-reserved: final name and trademark; accent vs PixelLab brand; public hosting and ToS contact; Phase 0 approvals A1–A3; PWA manifest; source licence and public repo (plus 06's CI-deploy item). The "which visual option" item is resolved: the hybrid in 07 | Outside design authority | 01 §11, 06 §8 | active; B-2 adds owner-run checks, B-4 and B-7 add conditions |
+
+**Orchestrator defaults the owner may override:** "Folders" as the destination name (F-7) · Play previews default ON (F-9) · Tilesets and Tiles as separate chips, matching PixelLab's own Map Workshop tabs (F-8).
+
+## 2. Builder-check answers (B)
+
+The orchestrator's answers to `docs/reviews/R4-builder-check.md` (questions Q1–Q8 and the §2 table). They rank with the F rulings. B-19 and B-20 are orchestrator rulings from the final QA pass (`docs/reviews/R5-final-qa.md`).
+
+| ID | Decision | Rationale | Source | Status |
+|---|---|---|---|---|
+| B-1 | Phase 1 may start before Phase 0. The tasks that need no Phase 0 output (06 tasks 1.1–1.4, 1.6, 1.7, 1.9, 1.10 and 1.13) run on contract-shaped synthetic fixtures. Every Phase 0-dependent value is one named constant held at its failed or declined default (`VITE_IMAGES=false`, API lane at 2 permits, library-page hand-offs; full list in 05 §14) until the Phase 0 results land. Task 1.5 needs the P0-4 fixtures, so it and every task that depends on it wait for the results | Phase 0 needs the owner's time; only the fixtures carry rework risk | R4 Q1 | active (06 §3.1, §6.2; 05 §14) |
+| B-2 | The owner runs every real-key and real-device check (Phase 0; device, screen-reader and performance checks in Phases 1–3) from checklists the builder writes. Agents never handle the key | An agent builder can't hold the key or the devices; schedule owner time | R4 Q2 | active; owner decision "owner-run checks" (01 §11, 06 §8) |
+| B-3 | 06 §2.3's numbering (P0-0 to P0-14) is canonical. Its "Maps to" column maps R1 G1–G10 and research 09's checks once; every other reference uses P0 numbers. `VITE_IMAGES` is set by P0-9 (`get_image` side effects, with approval A1) and P0-14 (no spend), never by the P0-8 burst check | Stale numbers wired a view-only safety flag to the rate-limit result | R4 Q3 | active (06 §2.3; 05 §4.2, §14) |
+| B-4 | The app is scaffolded at the project root, beside `docs/` and `mockups/`. `git init` runs locally when implementation starts. CI is a GitHub Actions workflow, added only once a remote exists. Owner-reserved: public vs private repository. `mockups/shared/assets/` holds the owner's real PixelLab art and must be removed or replaced before any public push | One tree; a public push can't be undone | R4 Q4 | active (05 §2.1, §12.5; 06 task 1.1, §8) |
+| B-5 | Precedence as stated at the top of this log: F and B > 07 (visual) and 02 (behaviour) > 01, 03, 05, 06 > `mockups/recommended/` > 04 and the option mockups | The mockup illustrates and is still in progress | R4 Q5 | active (07, 02 and 03 point here) |
+| B-6 | Before details are fetched, download surfaces show asset counts only, with no file or MB estimate, and nothing is fetched to estimate. On the Blob path, ZIP parts close at asset boundaries by a running byte count during the build. The multi-asset dialog says upfront "Large downloads may be saved in parts." | F-2 forbids background detail fetches; byte sizes exist only in media | R4 Q6 | active (02 §3.9, §7.6–7.7; 05 §8.4) |
+| B-7 | The product name lives in one constants module (`APP_ID` slug, `APP_NAME` display name) that every storage key, the cache name, the backup `app` field, the sheet JSON and the ZIP names derive from. The final name must be decided before the first build real users touch: renaming later breaks backup imports | Persisted formats carry the name | R4 Q7 | active (05 §2.1); timing on owner decision 1 |
+| B-8 | Every PixelLab website link uses `https://www.pixellab.ai/…`, the account page included. The e2e link-scan allowlist stays www-only | `https://pixellab.ai/account` failed the CI link scan | R4 Q8 | active (02 §3.1; 05 §4.4, §10.3) |
+| B-9 | Coarse-pointer taps in the viewer: on tilesets and Tiles Pro (the types with tile info), tapping a tile shows its tile info and tapping the backdrop outside the art toggles chrome. On every other type, a tap on the stage toggles chrome | Tile info needs the tap | R4 §2 | active (02 §3.5, §9.1) |
+| B-10 | The **Grid** overlay toggle (tilesets, Tiles Pro) takes the dock slot the Animation picker uses on animated types, and is also in ⋯ | Those types have no animations | R4 §2 | active (02 §6.1–6.2; 07 §4.4) |
+| B-11 | Phase 1's primary Download button for animated types is "Download ZIP" (the PixelLab original) until GIF ships in Phase 2; then "Download GIF" | Phase 1 ships only PNG and PixelLab originals | R4 §2 | active (02 §7.1; 06 task 1.19); animated objects without rotation images per B-20 |
+| B-12 | While an animated character (or object; they share one menu row) shows Rotations with no animation selected, the Download menu's first item is "PNG (this direction)" instead of GIF; the other items stay | GIF needs an animation | R4 §2 | active (02 §7.1) |
+| B-13 | "Download all {n}…" acts on exactly what is visible: the active chip and search inside the current Library, Favorites or folder view. The label states that count | What you see is what you get | R4 §2 | active (02 §1.3) |
+| B-14 | GIF matte while the Checker backdrop is showing uses the Theme backdrop colour | A matte must be one colour | R4 §2 | active (02 §7.3; 05 §8.3) |
+| B-15 | Non-completed tileset, isometric and Tiles Pro rows count in the in-progress indicator ("{n} generating ↗" chip, S19; B-19) when the API exposes their status. The REST list contracts all carry `status` (research 01) and P0-4 confirms it; a family without it is left out of the counts | Honest counts without guessing | R4 §2 | active (05 §3.2–3.4; 02 §8) |
+| B-16 | No plain fallback before `light-dark()`: the 05 §0 support floor includes it | The floor was chosen for `light-dark()` | R4 §2 | active (07 §5.1) |
+| B-17 | The e2e "zero console errors" assertion excludes the errors a failure-injection test expects, through an explicit allowlist per test | Browsers log injected 401, 429, 5xx and CORS failures as console errors | R4 §2 | active (05 §12.2) |
+| B-18 | Cross-references say "research 07" or "design 07", never a bare "07 Qn"; the convention is stated at the top of this log | Both folders have a 07 | R4 §2 | active (05, 06 fixed) |
+| B-19 | The in-progress indicator reads **"{n} generating ↗"** ("2 generating ↗"); its popover (S19) lists generating, needs review and failed counts per type, each with an "Open … in PixelLab ↗" link. Replaces "{n} in PixelLab" | "2 in PixelLab" was cryptic (R2 #6, R3a S7); the count still includes review and failed rows, which the popover names | R5 | active (02 §1.3, §8; 07 §4.2, §8 #8) |
+| B-20 | Phase 1's primary Download for an animated object with no rotation images (1-direction, `rotation_urls` all null) reads **"Download sprite sheet"**: PixelLab's official object sprite sheet (D18; `GET /v2/objects/{id}/spritesheet`, bearer), not "Download ZIP" | B-11's "PixelLab original (ZIP)" wording hides what an object's original is (E-13). Research 01 saw this endpoint return 400 for an object with no rotation images *yet* (still processing), while live `get_object` on a 1-direction object printed a sheet link | R5 | active (02 §7.1; 06 task 1.19); the 1-direction 200 is unverified: if a completed 1-direction object returns 400, the Phase 1 primary is "Download PNG" (current frame) |
+
+## 3. Earlier orchestrator rulings (R)
+
+| ID | Decision | Rationale | Source | Status |
+|---|---|---|---|---|
+| R-1 | Default playback 8 fps (125 ms) + per-animation override | PixelLab's character and Creator players and Creator GIF export use 8 fps | research 09 Q4; 01 §8 | active (supersedes D11's 10 fps) |
+| R-2 | Phone landscape / compact height uses a labelled left rail (72) | Keeps landscape height for art | 01 §8; 02 §1.2 | active |
+| R-3 | Preview toggle "Animate previews", default off | Read cost; WCAG 2.2.2 | 01 §8 | superseded by F-9 |
+| R-4 | Creator gallery ("Images") first-class, gated on Phase 0's `get_image` side-effect check (P0-9) | Requested "every asset"; `get_image` is not annotated read-only | 01 §8 | active |
+| R-5 | Fonts, effects, portraits and talking animations get one honest "not in the public API" note | No public list path | 01 §5 | active; placement per F-8 |
+| R-6 | Map thumbnails rendered lazily per map, name placeholder until then | Four-figure map counts; `view_map` cost | 01 §8 | active |
+| R-7 | Objects: one card per state | `ObjectSummary` has no `group_id` | 01 §8 | active |
+| R-8 | Uniform client-built multi-asset ZIP; PixelLab originals for single assets | No nested ZIPs, no unzip dependency | 01 §8 | active |
+| R-9 | No raw ids or media URLs in the address bar or any share feature | Ids are permanent download keys | 01 §6 | active |
+| R-10 | Non-blocking streamed sync | Never block on a full sync | 01 §8 | active |
+| R-U1 | Six viewer backdrops (unnumbered) | Judging pixel art | 02 §3.5 | superseded by F-4 (five); 04's "seven" was never adopted |
+| R-U2 | 04's deviations V1–V10 allowed in mockups only (unnumbered) | Compare concepts | 04 §0.2 | closed: V7 filmstrip adopted (F-4); V1, V3–V6, V8–V10 dropped (F-1, F-2); V2 moot |
+
+## 4. Research cross-review decisions (D, R1)
+
+| ID | Decision | Rationale | Source | Status |
+|---|---|---|---|---|
+| D1 | Pure client SPA calling `api.pixellab.ai` and `backblaze.pixellab.ai` directly; no proxy | Live CORS evidence | R1 | active |
+| D2 | REST v2 for the 7 REST families; MCP only for the Creator gallery and maps | REST has JSON and paging | R1 | active |
+| D3 | Mechanical view-only guard: GET-only wrapper + MCP allowlist; `get_image` takes `gallery:` refs only | View-only enforced in code | R1 | active (05 §4) |
+| D4 | Chips for listable types only; one "not in API" note for the rest | Honest coverage | R1 | active; list and note per F-8 |
+| D5 | Vite 8 + Svelte 5 + TypeScript ~6.0, plain CSS, native dialog/popover, hash router, idb-keyval, Lucide, client-zip + gifenc | Smallest stack | R1 | active |
+| D6 | Two destinations, Library and Collections | Converged platform model | R1 | superseded by F-7 (Library and Folders) |
+| D7 | Uniform square cells, fixed row height, ~40-line windowing, list semantics, 4 zoom levels | Zero-dependency virtualization | R1 | active |
+| D8 | Integer device-pixel k, `pixelated`, width/height sizing; no transform, zoom, object-fit or background-image on art; k < 1 smooth | Spec and Safari bugs | R1 | active |
+| D9 | Static thumbnails: south rotation or first frame; characters and objects trimmed and bottom-aligned; tilesets as returned | Consistent visual weight | R1 | active |
+| D10 | Previews static by default; hover/focus play; "Animate previews" off | Detail-only frames | R1 | superseded by F-9 |
+| D11 | Canvas player, one rAF ticker, `durations[]`, 10 fps default, override, loop, compass, states | No PixelLab timing | R1 | partly superseded: 8 fps (R-1), filmstrip (F-4) |
+| D12 | Modal viewer: focus return, Back closes, swipe/arrows, integer zoom, side panel / bottom sheet, crossfade | APG modal; pixel-safe motion | R1 | active (F-1) |
+| D13 | Opaque asset key in routes; raw UUIDs and media URLs never in URLs | UUIDs are capabilities | R1 | active (R-9) |
+| D14 | Key in memory + `sessionStorage` by default; opt-in `localStorage`; test via `/v2/balance`; Forget; full-access warning; password-manager form; last 4 shown | Shared-computer threat | R1 | active; opt-in offered after first sync (F-10) |
+| D15 | Cache persistence follows the key mode; Forget clears both | Otherwise session mode is hollow | R1 | active |
+| D16 | Flat many-to-many folders + Favorites; versioned JSON backup | Requested; Safari eviction | R1 | active |
+| D17 | Pixel-exact exports (1× original bytes, N× nearest, exact-palette GIF, PixelLab sheet layout + Aseprite JSON, frames layout, streamed ZIP, failure manifest) | Honest output | R1 | active; user-facing word "Download" (F-5) |
+| D18 | Official PixelLab exports reused for single-asset downloads | Exact format | R1 | active (F-5 menu) |
+| D19 | Creator media from `get_image` inline frames; presigned S3 never used | No CORS; 7-day expiry | R1 | active |
+| D20 | Grid shows completed assets only; header counts the rest | KISS | R1 | active; tile families counted per B-15 |
+| D21 | Hand-offs to verified id routes; Creator/UI open `/create` + copied image; new tab; no editor deep link | Stable routes only | R1 | active; presentation per F-11 |
+| D22 | One token set (08 Direction A), chroma-0 stage, theme-surface grid default, system fonts, SVG wordmark, opaque bars | Art-first | R1 | superseded by F-3 (values); principles kept |
+| D23 | CSP and security headers served as real headers | Clickjacking and exfiltration limits | R1 | active (05 §10.2: `img-src 'self' blob:`) |
+| D24 | No telemetry, analytics or CDNs; text-only rendering; host allowlist; slugged names | XSS, exfiltration, ZIP-slip | R1 | active |
+| D25 | Per-host semaphores (API 4 → 2 on 429, media 8), jittered backoff, 401 stops all, 423 = generating, dedupe, abort | Unpublished limits | R1 | active |
+| D26 | Lists paged at max size; details lazy; refresh on `updated_at` / `?t=`; tileset type by list membership | Minimal reads | R1 | active |
+| D27 | Keymap per R1 C17 + single-key shortcuts off switch | WCAG 2.1.4 | R1 | active (F-15) |
+| D28 | WCAG 2.2 AA baseline | Never weaken accessibility | R1 | active |
+| D29 | Selection: Select + long-press; click/Shift/Ctrl; Ctrl+A; Esc; no cap | Bulk download | R1 | active; containers per F-6 |
+| D30 | Vitest for pure modules, Playwright with a mocked API, svelte-check, bundle budget | No token or credits in tests | R1 | active |
+| D31 | Contact PixelLab before public launch (ToS §2.2, CORS, scoped keys, `Retry-After`) | Launch risk | R1 | active (owner) |
+
+## 5. Editor calls made while applying the F rulings (E)
+
+| ID | Decision | Rationale | Source | Status |
+|---|---|---|---|---|
+| E-1 | At ≥ 1200 px, 1 selected item uses the bottom selection bar; at ≥ 2 the summary panel slides in and the bar hides. The old top contextual bar is removed | F-6 leaves 1 selected unspecified; two containers instead of three | F-6 | active (02 §3.9, 07 §4.6) |
+| E-2 | Multi-asset presets are single-choice (radio); a second download gets another kind | Presets read as one choice (R3a T5); simpler ZIP layout | F-5 | active (02 §7.6) |
+| E-3 | Phone portrait dock: row 1 = Play · filmstrip · "8 fps" value button (opens −, +, Reset, Loop); row 2 = Animation · Direction (compass popover) · Backdrop; step and zoom go in the top bar's ⋯ (one ⋯ per screen) | A full stepper and an inline 3×3 compass don't fit 336 px beside a usable filmstrip; keeps ~64% art | F-4 | active; open question 07 §8 #5 |
+| E-4 | Info panel docks right when width ≥ 840 and landscape; bottom sheet in portrait or below 840 (opens at half when ≥ 1200 px tall); compact height uses the right overlay sheet | Portrait monitors got a 612 px stage (R3b) | F-1 | active (07 §2.1) |
+| E-5 | The "Theme" swatch is `--stage-viewer` (N8 in light, the shared 0.25 surface in dark) | Verbatim token; keeps the light stage distinct from the panel | F-3, F-4 | active; open question 07 §8 #1 |
+| E-6 | Backdrop swatch rings use `--text-3` | `--border-strong` on the dark float surface is 2.91:1 | 07 §5.4 | active |
+| E-7 | Single-asset extras (PNG of a frame, the character's PixelLab sprite sheet, scopes, scale) live in a "Download options" dialog opened from a link under the Info tiles, not from the ≤ 4-item menu | Keeps every requested format without a fifth menu item | F-5, 01 §8 (req) | active (02 §7.1) |
+| E-8 | Phone Library header = app bar (h1 · Select · ⋯ · Settings) + chip row; result line and a View button (Sort, Grid size, Play previews) scroll with the grid | 02's phone toolbar row didn't fit 336 px (R2 #6) | F-1, F-7 | active (02 §1.2) |
+| E-9 | Play previews default flips to OFF if Phase 0 P0-14 shows any read cost, or P0-8 hits a 429 at concurrency ≤ 2 | Documents F-9's trigger | F-9 | active (06 §2.3) |
+| E-10 | The "Keep me signed in" banner is one-time: either answer hides it for good; Settings keeps the toggle | Non-blocking, no nagging | F-10 | active |
+| E-11 | No autofocus on the Connect field on coarse pointers | The keyboard covered the form (R3a S1) | F-10 | active |
+| E-12 | The current filmstrip frame uses the neutral `--current` ring | Keeps long accent fills off the dock (R3b) and gives the verbatim token a use | F-3, F-4 | active |
+| E-13 | The Download split button names its default output ("Download GIF", "Download PNG") | The bare word hid what it makes (R3a #4) | F-5 | active; Phase 1 animated types read "Download ZIP" (B-11), animated objects without rotation images "Download sprite sheet" (B-20) |
+| E-14 | Hover/focus preview play (fine pointer, 300 ms) stays, counts toward the cap of 8, and works with previews off | User-initiated; not the dropped V6 dwell prefetch | F-2, F-9 | active (02 §4.8) |
+| E-15 | Timing note says 8 fps matches PixelLab's **character and Creator** players | The object player runs at ~6.7 fps (research 09) | R-1 | active (02 §12.3) |
+| E-16 | Offline status line reads "Offline · saved library" | Banner and status line contradicted each other (R3a A8) | F-14 | active |
+| E-17 | Phone search bar docks above the pill; a non-empty query keeps it visible | Implements F-13 without hiding an active filter (R3a C1) | F-13 | active |
+| E-18 | Folder mosaics on every size (phone too) | One component | F-12 | active |
+| E-19 | The per-character "Portrait & voice" row is removed | R-5 asks for one note; it lives at the end of All and in About (F-8) | R-5, F-8 | active |
+
+## 6. Builder-relevant decisions from 02 (UX) and 05 (AR)
+
+| ID | Decision | Rationale | Source | Status |
+|---|---|---|---|---|
+| UX-1 | The viewer route nests under its parent route | Reload keeps prev/next order without stored state | 02 §1.1 | active |
+| UX-2 | In-viewer changes use `history.replace`; Back returns to the grid in one step | Back never walks every asset | 02 §1.1 | active |
+| UX-3 | Search text, sort and grid size stay out of the URL | Keeps prompt fragments out of history | 02 §1.1 | active |
+| UX-4 | Height < 480 always uses the compact-height shell | Two panes don't fit | 02 §1.2 | active |
+| UX-5 | One full-window modal viewer at every size; no grid-side inspector | One viewer component (D12) | 02 §1.2 | active (F-2) |
+| UX-6 | Navigation labels always visible; no counts on chips | Touch has no tooltips; minimal chips | 02 §1.2–1.3 | active |
+| UX-7 | A `no-cors` probe distinguishes "PixelLab is blocking this browser" | Tells users it isn't their fault | 02 §3.1 | active |
+| UX-8 | Re-sync when a hidden tab returns after > 15 min; no polling | Users generate in another tab | 02 §3.2 | active |
+| UX-9 | Compass centre shows the direction name and is not interactive | Play/pause already lives in the transport | 02 §3.5 | active |
+| UX-10 | Folder membership changes apply immediately; names unique case-insensitively; folders A–Z | No forgotten save step; unambiguous picker; stable positions | 02 §3.8 | active |
+| UX-11 | Selection stays after an action until cleared | Download then file the same set | 02 §3.9 | active |
+| UX-12 | Org import merges folders by name | No duplicate folders after a round trip | 02 §3.12 | active |
+| UX-13 | Art boxes are multiples of 32; default size M below 840 px wide (or 480 tall), else L | Common PixelLab canvas sizes | 02 §4.1 | active (F-13 adds the height rule) |
+| UX-14 | One tab stop per card; hover buttons `tabindex="-1"` | Keyboard use stays bearable | 02 §4.5 | active |
+| UX-15 | Tiles Pro thumbnail = 2×2 of the first 4 variations | One tile under-represents a set | 02 §4.7 | active |
+| UX-16 | "Reload from PixelLab" for images and maps | They have no version stamp | 02 §4.7 | active |
+| UX-17 | Ids shown masked in Technical details; no other raw ids | Keeps ids out of screenshots | 02 §5 | active |
+| UX-18 | Map objects appear as objects | Indistinguishable in the list | 02 §5.2 | active |
+| UX-19 | Controls that don't apply are hidden, not disabled (compass directions excepted) | Fewer controls | 02 §6.1 | active |
+| UX-20 | Zoom steps are CSS multiples rendered as integer device-pixel k | Users think "2×"; the renderer needs integers | 02 §6.3 | active |
+| UX-21 | Sheet direction order follows the API's `rotation_urls` order; GIF trim on, scale Auto | Least surprising; tiny GIFs otherwise | 02 §7.3 | active |
+| UX-22 | Written metadata never contains ids or media URLs | Downloads get shared publicly | 02 §7.3 | active |
+| UX-23 | A 401 mid-session keeps folders, favorites and the library cache | The usual cause is key rotation | 02 §8 | active |
+| UX-24 | A failed Images gate shows one honest card, no placeholder cards | One pattern for unavailable content | 02 §8 | active |
+| UX-25 | Horizontal swipe on the stage moves between assets, never rotates | Universal muscle memory | 02 §9.1 | active |
+| UX-26 | `x` toggles selection; `Z` toggles Fit ↔ 1:1 | Keyboard parity; macOS Photos convention | 02 §9.3 | active |
+| UX-27 | Detail-only fields are not searchable; `#term` matches tags exactly | Results must not depend on viewing history | 02 §11 | active |
+| UX-28 | "Recently updated" sort exists only on the Characters chip | Only characters have `updated_at` | 02 §11.3 | active |
+| AR-1 | MCP `initialize` is not called; invoker commands are not used | Stateless server; Safari support | 05 §0 | active |
+| AR-2 | Support floor: Safari/iOS 17.5+, Chrome/Edge 123+, Firefox 125+ | Popover, `light-dark()`, OffscreenCanvas | 05 §0 | active |
+| AR-3 | Key namespaces per family; character cards keyed by `group_id ?? id` with aliases; `key6` is hex | Stable keys; case-insensitive filesystems | 05 §3.1 | active |
+| AR-4 | Top-down tileset paging starts after the sidescroller list completes | Classification is final on arrival | 05 §5.1 | active |
+| AR-5 | `PixelCanvas` is the only element that draws art | One crispness path; trim needs pixels | 05 §7.1 | active |
+| AR-6 | CSP `img-src 'self' blob:` (no media host): art is fetched via `connect-src` and drawn on canvas | Strictly tighter than R1 S7 | 05 §10.2 | active |
+| AR-7 | Settings is a dialog route over the last background route; Android Back exits selection via a history entry | No grid of its own; platform Back | 05 §9 | active |
