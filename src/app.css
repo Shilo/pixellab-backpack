@@ -116,6 +116,7 @@ svg.dots { fill: currentColor; stroke: none; }
   .crumb { flex: 1; padding: 0 4px; }
 
   .vt-notice { bottom: calc(var(--vt-bot) + 80px); }
+  .vt-notice .glass-btn { height: 44px; }
 
   .vt-state { padding: var(--vt-top) 16px 120px; }
   .vt-state .glass-empty { padding: 32px 22px 24px; }

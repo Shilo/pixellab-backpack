@@ -37,6 +37,8 @@ const blobs = new Map<string, Promise<Blob | null>>();
 const pictures = new Map<string, Promise<Blob | null>>();
 /** In-flight or answered details of this session, by card key. */
 const details = new Map<string, { fp: string; at: number; p: Promise<Detail> }>();
+/** Families whose last first-page check failed: the next open check asks again even while their saved copy is fresh (Try again, Keep loading). */
+const unchecked = new Set<FamilyId>();
 /** Frames and rotations come only from the image host (no API request, no key). */
 function onImageHost(url: string): boolean {
   try {
@@ -146,7 +148,7 @@ class Library {
       // One check across tabs: a tab that waited for the lock re-reads what the other tab saved.
       await locked(async () => {
         await adopt();
-        const ids = adapters.map((f) => f.id).filter((id) => opts.force || !isFresh(this.families[id], Date.now()));
+        const ids = adapters.map((f) => f.id).filter((id) => opts.force || unchecked.has(id) || !isFresh(this.families[id], Date.now()));
         this.avoided += adapters.length - ids.length;
         if (!ids.length) return;
         checking = true;
@@ -158,6 +160,7 @@ class Library {
             await put(id, applyCheck(saved, page, Date.now()));
           });
         await Promise.all(ids.map(check));
+        for (const id of ids) this.errors[id] ? unchecked.add(id) : unchecked.delete(id);
       });
     })().finally(() => {
       running = null;

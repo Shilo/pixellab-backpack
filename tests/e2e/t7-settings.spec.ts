@@ -170,3 +170,85 @@ test('no sideways scroll, and the keyboard reaches every control', async ({ page
   }
   await expect(dialog.getByRole('switch', { name: 'Keep me signed in' })).toBeVisible();
 });
+
+test('Forget key: a failed wipe says so and keeps the confirm open; Forget key again clears it', async ({ page }) => {
+  const mock = await start(page);
+  const dialog = await open(page);
+  // The browser refuses to clear IndexedDB once.
+  await page.evaluate(() => {
+    const w = window as unknown as { realClear: typeof IDBObjectStore.prototype.clear };
+    w.realClear = IDBObjectStore.prototype.clear;
+    IDBObjectStore.prototype.clear = () => {
+      throw new DOMException('refused', 'UnknownError');
+    };
+  });
+  const at = mock.hits.length;
+  await dialog.getByRole('button', { name: 'Forget key' }).click();
+  const confirm = page.getByRole('dialog', { name: 'Forget your API key?' });
+  await confirm.getByRole('button', { name: 'Forget key' }).click();
+  await expect(confirm.getByRole('alert')).toHaveText("Your key was removed, but the saved library couldn't be cleared. Try again or clear this site's data in your browser.");
+  await expect(confirm).toBeVisible();
+  expect(await page.evaluate(() => sessionStorage.length)).toBe(0); // the key is gone even so
+  expect(await deviceStorage(page)).not.toContain(GOOD_KEY);
+  expect(await deviceStorage(page)).toContain('family:characters');
+
+  await page.evaluate(() => {
+    IDBObjectStore.prototype.clear = (window as unknown as { realClear: typeof IDBObjectStore.prototype.clear }).realClear;
+  });
+  await confirm.getByRole('button', { name: 'Forget key' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Your PixelLab art, all in one place' })).toBeVisible();
+  const stored = await deviceStorage(page);
+  expect(stored).not.toContain('family:');
+  expect(stored).not.toContain(GOOD_KEY);
+  await settle(page, mock);
+  expect(mock.hits.length).toBe(at);
+});
+
+test('Keep me signed in survives the tab being closed and reopened; this-tab-only does not', async ({ page }) => {
+  await start(page);
+  // Closing and reopening a tab loses sessionStorage: simulated by clearing it before a reload.
+  const reopen = async () => {
+    await page.evaluate(() => sessionStorage.clear());
+    await page.reload();
+  };
+  const dialog = await open(page);
+  await dialog.getByRole('switch', { name: 'Keep me signed in' }).check();
+  await page.keyboard.press('Escape');
+  await reopen();
+  await expect(page.getByRole('link', { name: 'Characters, 250' })).toBeVisible();
+
+  const again = await open(page);
+  await again.getByRole('switch', { name: 'Keep me signed in' }).click();
+  await page.getByRole('dialog', { name: 'Stop keeping you signed in?' }).getByRole('button', { name: 'Stop' }).click();
+  await page.keyboard.press('Escape');
+  await reopen();
+  await expect(page.getByText('Welcome back! Your API key was kept for one tab only, so paste it again here.')).toBeVisible();
+  expect(await deviceStorage(page)).not.toContain(GOOD_KEY);
+});
+
+test('Forget key in one tab signs out a second kept tab, which sends nothing with the old key', async ({ page, context }) => {
+  const mock = await mockPixelLab(context);
+  await page.goto('/');
+  await connect(page);
+  await settle(page, mock);
+  const dialog = await open(page);
+  await dialog.getByRole('switch', { name: 'Keep me signed in' }).check();
+  const tab = await context.newPage();
+  await tab.goto('/');
+  await expect(tab.getByRole('link', { name: 'Characters, 250' })).toBeVisible();
+  await settle(tab, mock);
+
+  const at = mock.hits.length;
+  await dialog.getByRole('button', { name: 'Forget key' }).click();
+  await page.getByRole('dialog', { name: 'Forget your API key?' }).getByRole('button', { name: 'Forget key' }).click();
+  await expect(page.getByRole('heading', { name: 'Your PixelLab art, all in one place' })).toBeVisible();
+  await expect(tab.getByLabel('PixelLab API key')).toBeVisible();
+  expect(await tab.evaluate(() => [localStorage.getItem('pixellab-backpack:key-kept'), sessionStorage.length])).toEqual([null, 0]);
+  // The second tab cannot bring the key back: a refresh there has no key to send.
+  await tab.reload();
+  await expect(tab.getByLabel('PixelLab API key')).toBeVisible();
+  await settle(tab, mock);
+  expect(mock.hits.slice(at).filter((h) => h.host === 'api')).toEqual([]);
+  expect(await deviceStorage(tab)).not.toContain(GOOD_KEY);
+});

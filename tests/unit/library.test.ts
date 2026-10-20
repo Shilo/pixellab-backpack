@@ -172,6 +172,23 @@ describe('open check', () => {
     expect(lists()).toHaveLength(14);
   });
 
+  it('a first-page check that failed is asked again by the next open check, even within the hour (Try again / Keep loading)', async () => {
+    const lib = await tab();
+    await lib.connect('key');
+    later(61_000);
+    h.st.fail = new h.HttpError('cap');
+    await lib.openCheck({ force: true }); // Refresh at the daily cap: every family fails
+    expect(Object.keys(lib.errors)).toHaveLength(7);
+    h.st.fail = null;
+    h.apiGet.mockClear();
+    await lib.openCheck(); // saved copies are fresh, but their last check failed
+    expect(lists()).toHaveLength(7);
+    expect(lib.errors).toEqual({});
+    h.apiGet.mockClear();
+    await lib.openCheck(); // and only once
+    expect(lists()).toHaveLength(0);
+  });
+
   it("another account's key wipes the saved copy and checks every family", async () => {
     await (await tab()).connect('key');
     h.apiGet.mockClear();

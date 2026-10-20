@@ -167,7 +167,7 @@
   .prose p + p { margin-top: 8px; }
   .prose b { color: var(--gl-color-text); }
   .links { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 8px 0 0; padding: 0; list-style: none; }
-  .links a, .prose > a { display: inline-block; padding: 10px 0; }
+  .links a, .prose > a { display: inline-block; padding: 12px 0; } /* 44 px tall targets */
   .foot { margin: 10px 6px 0; font-size: 13.5px; line-height: 1.5; color: var(--gl-color-text-muted); }
   a { color: #8dbbff; text-decoration: underline; text-underline-offset: 2px; }
   dialog.glass-modal-overlay { background: rgba(8, 10, 16, .6); }

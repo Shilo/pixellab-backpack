@@ -174,3 +174,23 @@ test('one failed picture leaves the library on screen', async ({ page }) => {
   await expect(page.getByTitle('Character 2', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: "Can't reach PixelLab right now." })).toHaveCount(0);
 });
+
+test('Esc pressed twice on an Activity panel opened by #activity closes it with one Back step only', async ({ page }) => {
+  const mock = await mockPixelLab(page);
+  await page.goto('/');
+  await connect(page);
+  await page.getByRole('link', { name: 'Objects, 12' }).click();
+  await expect(page).toHaveURL(/#\/c\/objects$/);
+  await settle(page, mock, 600);
+  await page.evaluate(() => (location.hash = '#activity'));
+  const panel = page.getByRole('dialog', { name: 'Activity' });
+  await expect(panel).toBeVisible();
+  // Two presses before the browser reports the first Back (a fast double tap or key repeat).
+  await page.evaluate(() => {
+    for (let i = 0; i < 2; i++) window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  });
+  await expect(panel).toHaveCount(0);
+  await page.waitForTimeout(300); // a second history step would land after the first
+  await expect(page).toHaveURL(/#\/c\/objects$/);
+  await expect(page.getByTitle('Object 1', { exact: true })).toBeVisible();
+});

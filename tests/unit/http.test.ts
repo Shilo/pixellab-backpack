@@ -204,6 +204,26 @@ test('three failures in a row stop everything until Try again', async () => {
   expect((await again).err).toBeUndefined();
 });
 
+test('a stop fails requests waiting out a retry delay at once, so Try again never waits on the halted work', async () => {
+  const a = outcome(http.apiGet('/characters'));
+  const b = outcome(http.apiGet('/objects'));
+  await tick();
+  pending[0].reply(500); // /characters retries at 2 s
+  await tick(1500);
+  pending[1].reply(500); // /objects retries at 3.5 s
+  await tick(500);
+  expect(pending).toHaveLength(3);
+  pending[2].reply(500); // 3rd failure in a row: stop, while /objects still waits to retry
+  expect((await a).err?.kind).toBe('stopped');
+  let settled = false;
+  void b.then(() => (settled = true));
+  await tick(); // no time passes
+  expect(settled).toBe(true);
+  expect((await b).err?.kind).toBe('stopped');
+  await tick(10_000);
+  expect(calls).toHaveLength(3); // nothing re-sent later either
+});
+
 test('first 429: one at a time and a 60 s pause; a second 429 within 5 minutes stops', async () => {
   const seen: string[] = [];
   http.onStatus((s) => seen.push(s));

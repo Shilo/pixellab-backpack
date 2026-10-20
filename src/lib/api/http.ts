@@ -216,6 +216,8 @@ let last429 = -Infinity;
 let fails = 0;
 let halted = false; // "stopped": nothing is sent until retry()
 let wakeAt = 0;
+/** Jobs waiting out a retry delay (outside the queue): a stop fails them at once, so nothing is left waiting on halted work. */
+const retrying = new Set<Job>();
 
 const hidden = () => typeof document !== 'undefined' && document.visibilityState === 'hidden';
 const offline = () => typeof navigator !== 'undefined' && navigator.onLine === false;
@@ -274,6 +276,8 @@ function stop(why: 'stopped' | 'blocked' = 'stopped'): void {
   setStatus(why); // before the flag, which freezes the status
   halted = true;
   rejectQueue('stopped');
+  retrying.forEach((j) => fail(j, new HttpError('stopped')));
+  retrying.clear();
 }
 
 /** A thrown fetch: aborted, offline, or (browser online) unreachable: CORS, an extension, a firewall or an outage. */
@@ -347,7 +351,9 @@ async function attempt(job: Job): Promise<void> {
     record('api', job.label, 'error', t0, s || undefined);
     job.retries++;
     const delay = s === 429 ? 0 : 1000 * 2 ** job.retries * (0.5 + Math.random());
+    retrying.add(job);
     setTimeout(() => {
+      if (!retrying.delete(job)) return; // a stop already failed it
       if (job.signal?.aborted) return fail(job, new HttpError('cancelled'));
       if (job.auth && !key) return fail(job, new HttpError('key-lost')); // forgotten while it waited to retry
       queue.unshift(job);

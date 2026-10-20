@@ -261,7 +261,7 @@
     .g1-form h2 { font-size: 17px; }
     .g1-steps { gap: 10px; }
     .g1-steps p { font-size: 14px; }
-    .g1-reveal { height: 36px; }
+    .g1-reveal { height: 44px; }
     .g1-note { padding: 12px 14px; }
     .g1-note p { font-size: 13px; }
     .g1-fine { padding: 0 4px; font-size: 12.5px; }

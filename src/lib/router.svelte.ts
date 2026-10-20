@@ -34,8 +34,8 @@ let activityPushed = false;
 /** Closes a panel opened by `#activity`: Back when this tab opened it, else the address bar is replaced with the screen. */
 export function closeActivity(): void {
   if (!router.activity) return;
+  router.activity = false; // at once: a second Esc before the browser reports Back must not step back twice
   if (activityPushed) return history.back();
-  router.activity = false;
   history.replaceState(history.state, '', pathOf(router.route));
 }
 
