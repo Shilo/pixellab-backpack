@@ -46,30 +46,34 @@
     art = null;
     bitmaps = [];
     if (srcs.length) {
-      Promise.all(srcs.map((s) => createImageBitmap(s, { colorSpaceConversion: 'none' }))).then(
-        (list) => {
-          held = list;
-          if (stale) return list.forEach((b) => b.close());
-          try {
-            let { width: sw, height: sh } = list[0]; // ponytail: sized to the first frame; mixed frame sizes crop/pad
-            let sx = 0;
-            let sy = 0;
-            if (t) {
-              const tmp = new OffscreenCanvas(sw, sh).getContext('2d', { willReadFrequently: true })!;
-              tmp.drawImage(list[0], 0, 0);
-              ({ x: sx, y: sy, w: sw, h: sh } = trimBox(tmp.getImageData(0, 0, sw, sh).data, sw, sh));
-            }
-            crop = { x: sx, y: sy };
-            c.width = sw; // also clears the canvas
-            c.height = sh;
-            bitmaps = list;
-            art = { w: sw, h: sh };
-          } catch {
-            list.forEach((b) => b.close()); // keep the placeholder
+      Promise.allSettled(srcs.map((s) => createImageBitmap(s, { colorSpaceConversion: 'none' }))).then((res) => {
+        const list = res.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
+        // An undecodable source keeps the placeholder; stale runs are discarded.
+        if (stale || list.length < res.length) return list.forEach((b) => b.close());
+        held = list;
+        try {
+          let { width: sw, height: sh } = list[0]; // ponytail: sized to the first frame; mixed frame sizes crop/pad
+          let sx = 0;
+          let sy = 0;
+          if (t) {
+            const tmp = new OffscreenCanvas(sw, sh).getContext('2d', { willReadFrequently: true })!;
+            tmp.drawImage(list[0], 0, 0);
+            ({ x: sx, y: sy, w: sw, h: sh } = trimBox(tmp.getImageData(0, 0, sw, sh).data, sw, sh));
           }
-        },
-        () => {}, // undecodable blob: keep the placeholder
-      );
+          crop = { x: sx, y: sy };
+          c.width = sw; // also clears the canvas
+          c.height = sh;
+          if (list.length === 1) {
+            // One picture (every grid cell): draw once and release the bitmap.
+            c.getContext('2d')!.drawImage(list[0], sx, sy, sw, sh, 0, 0, sw, sh);
+            list[0].close();
+            held = [];
+          } else bitmaps = list;
+          art = { w: sw, h: sh };
+        } catch {
+          list.forEach((b) => b.close()); // keep the placeholder
+        }
+      });
     }
     return () => {
       stale = true;

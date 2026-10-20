@@ -30,8 +30,9 @@ export function createPlayer() {
         playing = false;
       }
     }
-    schedule();
+    if (playing) raf = requestAnimationFrame(tick);
   };
+  // Starts the loop from idle or after a hidden tab; `last` is reset only here so no time is dropped per tick.
   function schedule() {
     if (!playing || raf || document.hidden) return;
     last = performance.now();
