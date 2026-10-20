@@ -378,6 +378,24 @@ test('a failure while online is retried and counted; "blocked" only after the la
   expect((await again).err).toBeUndefined();
 });
 
+test('a request that succeeds while the queue is halted on "blocked" does not clear the status', async () => {
+  const slow = outcome(http.apiGet('/slow'));
+  const bad = outcome(http.apiGet('/bad'));
+  await tick();
+  pending[1].fail(new TypeError('Failed to fetch'));
+  await tick(2000);
+  pending[2].fail(new TypeError('Failed to fetch'));
+  await tick(4000);
+  pending[3].fail(new TypeError('Failed to fetch'));
+  expect((await bad).err?.kind).toBe('blocked');
+  pending[0].reply(); // the other request was still in flight and now succeeds
+  expect((await slow).err).toBeUndefined();
+  expect(http.getCounters().status).toBe('blocked'); // still halted, so the UI keeps "Try again"
+  expect((await outcome(http.apiGet('/next'))).err?.kind).toBe('stopped');
+  http.retry();
+  expect(http.getCounters().status).toBe('ok');
+});
+
 test('a network failure followed by success is retried and resolves', async () => {
   const p = outcome(http.apiGet('/characters'));
   await tick();

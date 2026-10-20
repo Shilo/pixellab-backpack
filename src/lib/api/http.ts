@@ -243,7 +243,7 @@ async function attempt(job: Job): Promise<void> {
       // headers, so it is treated like a 5xx below: retried, counted, and 'blocked' only at the end.
       if ((e as Error)?.name === 'AbortError' || offline()) return fail(job, netError(e), t0);
     }
-    if (res && (status === 'offline' || status === 'blocked')) setStatus('ok');
+    if (res && !halted && (status === 'offline' || status === 'blocked')) setStatus('ok');
     const s = res ? res.status : 0;
     if (res?.ok) {
       fails = 0;
