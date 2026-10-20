@@ -7,13 +7,15 @@
 
 <script lang="ts">
   import { untrack } from 'svelte';
+  import type { CategoryId } from '../categories';
   import { library } from '../data/library.svelte';
   import PixelArt from '../render/PixelArt.svelte';
+  import { pathOf } from '../router.svelte';
   import type { Card, FamilyId } from '../types';
 
-  let { card, familyId, costly }: { card: Card; familyId: FamilyId; costly: boolean } = $props();
+  let { card, familyId, costly, categoryId }: { card: Card; familyId: FamilyId; costly: boolean; categoryId: CategoryId } = $props();
 
-  let box: HTMLDivElement | undefined = $state();
+  let box: HTMLAnchorElement | undefined = $state();
   let onScreen = $state(false);
   let blob = $state<Blob | null>(null);
 
@@ -44,12 +46,13 @@
   });
 </script>
 
-<div class="cell" bind:this={box} title={card.name}>
+<!-- The link's name is the visible name; the picture is decoration here. -->
+<a class="cell" bind:this={box} href={pathOf({ name: 'category', id: categoryId, key: card.key })} title={card.name} data-key={card.key}>
   <div class="sq">
-    <div class="art">{#if blob}<PixelArt {blob} alt={card.name || 'Untitled'} fill />{/if}</div>
+    <div class="art" aria-hidden="true">{#if blob}<PixelArt {blob} alt={card.name || 'Untitled'} fill />{/if}</div>
   </div>
   <span class="nm">{card.name || 'Untitled'}</span>
-</div>
+</a>
 
 <style>
   .art {

@@ -37,22 +37,18 @@
   import { library } from '../data/library.svelte';
   import AssetCell from './AssetCell.svelte';
 
-  let { categoryId }: { categoryId: CategoryId } = $props();
+  let { categoryId, reveal = null }: { categoryId: CategoryId; reveal?: string | null } = $props();
 
   let el: HTMLElement | undefined = $state();
   let m = $state<Metrics | null>(null);
   let scrollTop = $state(0);
 
   // Shown cards of the category, family after family (unfinished, failed and duplicate assets are hidden).
+  const items = $derived(library.items(categoryId));
   const segs = $derived.by(() => {
     let end = 0;
-    return CATEGORIES.find((c) => c.id === categoryId)!.families.map((id) => {
-      const cards = library.shown(id);
-      end += cards.length;
-      return { id, cards, end };
-    });
+    return CATEGORIES.find((c) => c.id === categoryId)!.families.map((id) => ({ id, end: (end += items.filter((it) => it.familyId === id).length) }));
   });
-  const items = $derived(segs.flatMap((s) => s.cards.map((card) => ({ card, familyId: s.id }))));
 
   // Fixed-size cells: the rows in the page follow from the scroll position alone.
   const rows = $derived(m ? Math.ceil(items.length / m.cols) : 0);
@@ -97,6 +93,19 @@
     });
   });
 
+  // Back from the viewer: the card last shown comes into view (only if it is not already) and its link takes focus.
+  let revealed: string | null = null;
+  $effect(() => {
+    const key = reveal;
+    if (key === revealed || !el || !m) return;
+    revealed = key;
+    const i = key ? items.findIndex((it) => it.card.key === key) : -1;
+    if (i < 0) return;
+    const top = m.top + Math.floor(i / m.cols) * m.stride;
+    if (top < el.scrollTop || top + m.stride > el.scrollTop + m.viewH) el.scrollTop = scrollTop = Math.max(0, top - (m.viewH - m.stride) / 2);
+    tick().then(() => el?.querySelector<HTMLElement>(`a[data-key="${key}"]`)?.focus({ preventScroll: true }));
+  });
+
   // Next pages only when the page reaches near the end of a family's cards. A family is asked again only after its
   // cards changed since the last ask (a failed ask leaves them alone), and gives up after two asks that added nothing
   // (e.g. a shifted list that reloads), so an empty or failed answer never turns into a request loop.
@@ -122,7 +131,7 @@
   {:else}
     {#if range[0] > 0}<div class="pad" style:height="{spacer(range[0], m)}px"></div>{/if}
     {#each shown as it (it.card.key)}
-      <AssetCell card={it.card} familyId={it.familyId} costly={library.family(it.familyId).artCostsApi} />
+      <AssetCell card={it.card} familyId={it.familyId} {categoryId} costly={library.family(it.familyId).artCostsApi} />
     {/each}
     {#if rows > range[1]}<div class="pad" style:height="{spacer(rows - range[1], m)}px"></div>{/if}
   {/if}

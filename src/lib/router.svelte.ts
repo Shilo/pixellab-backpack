@@ -17,6 +17,8 @@ export const pathOf = (r: Route): string =>
 
 const ACTIVITY = '#activity';
 const hash = globalThis.location?.hash ?? '';
+// An empty hash is home: write it as '#/' so going Back from a pushed screen (Activity) lands on '#/' too.
+if (globalThis.location && !hash) history.replaceState(history.state, '', '#/');
 
 // Read `router.route`; it follows the address bar (Back and Forward included).
 export const router = $state<{ route: Route; activity: boolean }>({ route: parseRoute(hash), activity: hash === ACTIVITY });

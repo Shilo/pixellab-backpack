@@ -14,8 +14,8 @@
   import type { createPlayer } from '../render/player.svelte';
 
   // The viewer's "..." menu: a glass popover under the capsule (desktop) or bottom sheet (phone). No player = a still picture.
-  let { open, onClose, player, zoomLabel, onZoom, onZoomToggle, backdrop, onBackdrop, link }: {
-    open: boolean; onClose: () => void; player: ReturnType<typeof createPlayer> | null;
+  let { open, onClose, opener, player, zoomLabel, onZoom, onZoomToggle, backdrop, onBackdrop, link }: {
+    open: boolean; onClose: () => void; opener?: HTMLElement; player: ReturnType<typeof createPlayer> | null;
     zoomLabel: string; onZoom: (d: 1 | -1) => void; onZoomToggle: () => void;
     backdrop: number; onBackdrop: (i: number) => void; link: string;
   } = $props();
@@ -24,7 +24,7 @@
   // Focus moves in and returns to the opener on close; Esc closes only this layer (capture phase keeps it from the viewer).
   $effect(() => {
     if (!open) return;
-    const opener = document.activeElement as HTMLElement | null;
+    const back = opener ?? (document.activeElement as HTMLElement | null); // Safari does not focus a clicked button
     panel?.querySelector<HTMLElement>('button:not(:disabled), a')?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
@@ -34,7 +34,7 @@
     window.addEventListener('keydown', onKey, true);
     return () => {
       window.removeEventListener('keydown', onKey, true);
-      opener?.focus?.();
+      back?.focus?.();
     };
   });
 </script>
@@ -103,7 +103,7 @@
 
 <style>
   .backdrop { position: fixed; inset: 0; z-index: 1000; border: 0; padding: 0; background: rgba(8, 10, 16, .25); cursor: default; }
-  .menu { position: fixed; z-index: 1010; top: 92px; right: 24px; left: auto; bottom: auto; width: 340px; padding: 6px 20px; border-radius: 20px; transform: none;
+  .menu { position: fixed; z-index: 1010; top: 92px; right: calc(24px + var(--side, 0px)); left: auto; bottom: auto; width: 340px; padding: 6px 20px; border-radius: 20px; transform: none;
     background: linear-gradient(var(--gl-surface-3), var(--gl-surface-3)), var(--vt-scrim); max-height: calc(100dvh - 110px); overflow-y: auto; }
   .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 56px; border-bottom: 1px solid var(--gl-border-subtle); }
   .title { font-size: 15px; }

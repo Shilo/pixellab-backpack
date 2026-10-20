@@ -165,7 +165,7 @@ export async function mockPixelLab(target: Page | BrowserContext, counts: Partia
     const pic = FAMS[fam].pic;
     if (pic) r[pic] = `${IMG}/${acct}/${rid}.png`; // even unfinished rows carry a link: the app must not use it
     if (fam === 'characters') {
-      Object.assign(r, { directions: charDirs(i).length, animation_count: charAnims(i).length, state_name: null, group_id: null });
+      Object.assign(r, { directions: charDirs(i).length, animation_count: charAnims(i).length, state_name: null, group_id: null, prompt: `synthetic courier ${i + 1}`, size: { width: 16, height: 16 } });
       if (GROUPED.includes(i)) Object.assign(r, { name: `${FAMS[fam].label} ${GROUPED[0] + 1}`, group_id: `${acct}-group-1`, state_name: i === GROUPED[0] ? null : 'Armored' });
     }
     if (fam === 'objects') r.directions = i === 0 ? 1 : 4;

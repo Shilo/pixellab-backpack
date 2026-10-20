@@ -13,12 +13,21 @@
   import MoreMenu from './lib/ui/MoreMenu.svelte';
   import Notice from './lib/ui/Notice.svelte';
   import Settings from './lib/ui/Settings.svelte';
+  import Viewer from './lib/ui/Viewer.svelte';
 
   // Saved copy first (the key screen's "Welcome back" reads it); with a key this is also the one open check.
   onMount(() => void library.openCheck());
 
   const route = $derived(router.route);
   const category = $derived(route.name === 'category' ? library.categories.find((c) => c.id === route.id)! : null);
+
+  const viewing = $derived(route.name === 'category' && route.key ? route.key : null);
+  // The card last shown in the viewer: the grid brings it back into view and focuses it after closing.
+  let lastShown = $state<string | null>(null);
+  $effect(() => {
+    if (viewing) lastShown = viewing;
+    else if (!category) lastShown = null;
+  });
 
   let menu = $state(false);
   let activity = $state(false);
@@ -91,6 +100,8 @@
 {#if !library.hasKey}
   <KeyScreen />
 {:else}
+  <!-- The viewer is a modal over the screen: what is under it stays mounted (the grid keeps its scroll) but inert. -->
+  <div inert={!!viewing}>
   {#if library.status === 'blocked'}
     <main class="vt-state">
       <div class="glass-empty vt-scrim">
@@ -121,7 +132,7 @@
       </div>
     </main>
   {:else if category}
-    <CategoryGrid categoryId={category.id} />
+    <CategoryGrid categoryId={category.id} reveal={viewing ? null : lastShown} />
   {:else}
     <LibraryHome />
   {/if}
@@ -135,6 +146,10 @@
     <Dock mode="home" onMore={() => (menu = true)} />
   {/if}
   <MoreMenu open={menu} onClose={() => (menu = false)} onActivity={() => (activity = true)} onSettings={() => (settings = true)} />
+  </div>
+  {#if category && viewing}
+    <Viewer categoryId={category.id} assetKey={viewing} />
+  {/if}
 {/if}
 
 <!-- Outside the key check: Forget key signs out while its confirm is still on screen. -->
