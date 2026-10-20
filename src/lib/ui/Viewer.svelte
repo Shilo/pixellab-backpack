@@ -22,7 +22,7 @@
   // One asset, full window, over the grid (which stays mounted underneath). Keys: ←/→, Esc, Space only (R9).
   let { categoryId, assetKey }: { categoryId: CategoryId; assetKey: string } = $props();
 
-  const hit = $derived(library.find(categoryId, assetKey));
+  const hit = $derived(library.find(assetKey));
   const cur = $derived(hit?.card.key ?? null); // a string: effects keyed on it re-run only when the asset changes
   // ponytail: 'slowed' counts as still checking (retries in flight); a key still unknown after the check closes the viewer.
   const waiting = $derived(library.status === 'idle' || library.status === 'checking' || library.status === 'slowed');

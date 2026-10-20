@@ -1,7 +1,7 @@
 // The library check service (docs/plan/mvp-plan.md "Recommendation: the MVP strategy"): decides when to ask
 // PixelLab (first-page check on open, the 1-hour rule, paging on scroll, art once) and holds the state screens read.
 import { APP_ID } from '../app';
-import { CATEGORIES, type CategoryId } from '../categories';
+import { CATEGORIES, familiesOf, type Scope } from '../categories';
 import { createFamilies, dedupeTilesets, groupStates, type Family } from '../api/families';
 import {
   apiGet,
@@ -20,7 +20,7 @@ import {
   setKey,
   type Status,
 } from '../api/http';
-import type { Card, Detail, FamilyId, FamilyState, Page } from '../types';
+import type { Card, Detail, FamilyId, FamilyState, Item, Page } from '../types';
 import { applyCheck, DEEP_TTL_MS, dropExpiredDeep, isFresh, joinNextPage } from './check';
 import { loadDetail, loadFamilies, saveDetail, saveFamily, wipe } from './store';
 
@@ -69,7 +69,7 @@ class Library {
   categories = $derived(
     CATEGORIES.map((c) => ({
       ...c,
-      count: c.families.reduce((n, id) => n + (this.families[id]?.total ?? 0), 0),
+      count: this.count(c.id),
       mosaic: this.items(c.id).slice(0, 4),
     })),
   );
@@ -81,22 +81,45 @@ class Library {
   };
 
   /** The flat list the grid shows, family after family. */
-  items = (categoryId: CategoryId): { card: Card; familyId: FamilyId }[] =>
-    CATEGORIES.find((c) => c.id === categoryId)!.families.flatMap((familyId) => this.shown(familyId).map((card) => ({ card, familyId })));
+  items = (scope: Scope): Item[] => familiesOf(scope).flatMap((familyId) => this.shown(familyId).map((card) => ({ card, familyId })));
 
-  /** Any done card of the category by key, grouped states included. */
-  find = (categoryId: CategoryId, key: string): { card: Card; familyId: FamilyId } | null => {
-    for (const familyId of CATEGORIES.find((c) => c.id === categoryId)!.families) {
+  /** Any done card of any family by key, grouped states included (keys are unique across families). */
+  find = (key: string): Item | null => {
+    for (const familyId of familiesOf('all')) {
       const card = this.done(familyId).find((c) => c.key === key);
       if (card) return { card, familyId };
     }
     return null;
   };
 
+  /** PixelLab's totals summed over the scope (the home tiles' numbers). */
+  count = (scope: Scope): number => familiesOf(scope).reduce((n, id) => n + (this.families[id]?.total ?? 0), 0);
+
+  /** full: every family fully saved; partial: every family has a saved first page; missing: otherwise. */
+  coverage = (scope: Scope): 'full' | 'partial' | 'missing' => {
+    const saved = familiesOf(scope).map((id) => this.families[id]);
+    if (!saved.every((s) => s)) return 'missing';
+    return saved.every((s) => s!.cards.length >= s!.total) ? 'full' : 'partial';
+  };
+
+  /** Done cards by group_id per family, so states() does not filter every card on each call. */
+  private groups = $derived(
+    Object.fromEntries(
+      Object.keys(byId).map((id) => {
+        const m = new Map<string, Card[]>();
+        for (const c of this.done(id as FamilyId)) {
+          const g = c.meta.group_id;
+          if (typeof g === 'string' && g.trim()) (m.get(g) ?? m.set(g, []).get(g)!).push(c);
+        }
+        return [id, m];
+      }),
+    ) as Record<FamilyId, Map<string, Card[]>>,
+  );
+
   /** Done cards sharing card's group_id, in list order; [card] when ungrouped. */
   states = (card: Card, familyId: FamilyId): Card[] => {
     const g = card.meta.group_id;
-    return typeof g === 'string' && g.trim() ? this.done(familyId).filter((c) => c.meta.group_id === g) : [card];
+    return (typeof g === 'string' && this.groups[familyId].get(g)) || [card];
   };
 
   private done = (id: FamilyId): Card[] => (this.families[id]?.cards ?? []).filter((c) => c.done);

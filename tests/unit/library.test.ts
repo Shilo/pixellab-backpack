@@ -440,7 +440,7 @@ describe('detail', () => {
   });
 });
 
-describe('states, items, find', () => {
+describe('states, items, find, count, coverage', () => {
   it('a grouped character shows once; states() returns both; find() reaches the hidden state', async () => {
     h.st.lists.characters.rows[0].group_id = 'g';
     h.st.lists.characters.rows[2].group_id = 'g';
@@ -451,14 +451,60 @@ describe('states, items, find', () => {
     expect(lib.states(items[0].card, 'characters').map((c) => c.id)).toEqual(['a-characters-0', 'a-characters-2']);
     expect(lib.states(items[1].card, 'characters')).toEqual([items[1].card]);
     const hidden = lib.families.characters!.cards[2];
-    expect(lib.find('characters', hidden.key)?.card.id).toBe('a-characters-2');
-    expect(lib.find('objects', hidden.key)).toBeNull();
+    expect(lib.find(hidden.key)?.card.id).toBe('a-characters-2');
+    expect(lib.find('nope')).toBeNull();
     expect(lib.items('tiles').map((i) => i.familyId)).toEqual([
       ...Array(3).fill('tilesets'),
       ...Array(3).fill('tilesets-side'),
       ...Array(3).fill('isometric'),
       ...Array(3).fill('tiles-pro'),
     ]);
+  });
+
+  it('items(all) joins the four categories in home order; count(all) is their sum', async () => {
+    const lib = await tab();
+    await lib.connect('key');
+    const ids = ['characters', 'objects', 'tiles', 'ui'] as const;
+    expect(lib.items('all')).toEqual(ids.flatMap((id) => lib.items(id)));
+    expect(lib.items('all')).toHaveLength(21);
+    expect(lib.count('all')).toBe(ids.reduce((n, id) => n + lib.count(id), 0));
+    expect(lib.count('all')).toBe(21);
+    expect(lib.count('tiles')).toBe(12);
+  });
+
+  it('find() reaches any family by key', async () => {
+    const lib = await tab();
+    await lib.connect('key');
+    const card = lib.families['tiles-pro']!.cards[1];
+    expect(lib.find(card.key)).toMatchObject({ familyId: 'tiles-pro', card: { id: 'a-tiles-pro-1' } });
+  });
+
+  it('coverage tells a missing, a short and a full family apart', async () => {
+    h.st.lists.objects = { total: 150, rows: h.st.lists.objects.rows };
+    const lib = await tab();
+    expect(lib.coverage('all')).toBe('missing');
+    await lib.connect('key');
+    expect(lib.coverage('characters')).toBe('full');
+    expect(lib.coverage('objects')).toBe('partial');
+    expect(lib.coverage('all')).toBe('partial');
+    delete lib.families.ui;
+    expect(lib.coverage('ui')).toBe('missing');
+    expect(lib.coverage('all')).toBe('missing');
+  });
+
+  it('count, coverage, items, find and states send no request', async () => {
+    h.st.lists.characters.rows[0].group_id = 'g';
+    const lib = await tab();
+    await lib.connect('key');
+    h.apiGet.mockClear();
+    h.publicGet.mockClear();
+    const card = lib.items('all')[0].card;
+    lib.count('all');
+    lib.coverage('all');
+    lib.find(card.key);
+    lib.states(card, 'characters');
+    expect(h.apiGet).not.toHaveBeenCalled();
+    expect(h.publicGet).not.toHaveBeenCalled();
   });
 });
 

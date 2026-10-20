@@ -59,3 +59,9 @@ export interface Page {
   total: number;
   cards: Card[];
 }
+
+/** A card with the family it belongs to. */
+export interface Item {
+  card: Card;
+  familyId: FamilyId;
+}

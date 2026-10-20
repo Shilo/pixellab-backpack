@@ -100,7 +100,7 @@
     if (key === revealed || !el || !m) return;
     revealed = key;
     // A grouped character's other state is shown by its group's one card.
-    const hit = key ? library.find(categoryId, key) : null;
+    const hit = key ? library.find(key) : null;
     const g = hit?.card.meta.group_id;
     const i = hit ? items.findIndex((it) => it.card.key === key || (typeof g === 'string' && !!g && it.familyId === hit.familyId && it.card.meta.group_id === g)) : -1;
     if (i < 0) return;
