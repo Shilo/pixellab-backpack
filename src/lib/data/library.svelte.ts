@@ -37,6 +37,15 @@ const blobs = new Map<string, Promise<Blob | null>>();
 const pictures = new Map<string, Promise<Blob | null>>();
 /** In-flight or answered details of this session, by card key. */
 const details = new Map<string, { fp: string; at: number; p: Promise<Detail> }>();
+/** Frames and rotations come only from the image host (no API request, no key). */
+function onImageHost(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && u.hostname === 'backblaze.pixellab.ai';
+  } catch {
+    return false;
+  }
+}
 const fresh = (s: { fp: string; at: number } | undefined, card: Card) => !!s && s.fp === card.fp && Date.now() - s.at < DEEP_TTL_MS;
 
 class Library {
@@ -98,7 +107,8 @@ class Library {
       page = await byId.characters.list(0);
     } catch (e) {
       setKey(null); // ponytail: an unverified key is never kept; the key screen keeps the typed text
-      this.hasKey = this.keepSignedIn = false;
+      this.hasKey = false;
+      this.keepSignedIn = keptSignedIn();
       const kind = e instanceof HttpError ? e.kind : null;
       return kind === 'key-lost' ? 'wrong-key' : kind === 'offline' || kind === 'blocked' ? kind : kind === 'cap' ? 'paused' : 'server';
     }
@@ -113,6 +123,7 @@ class Library {
     }
     delete this.errors.characters;
     this.hasKey = true;
+    this.keepSignedIn = keptSignedIn();
     await put('characters', applyCheck(this.families.characters, page, Date.now()));
     await this.openCheck();
     return 'ok';
@@ -207,6 +218,7 @@ class Library {
 
   /** One image-host frame or rotation, cached by link for the session. Image-host links only (no API request). */
   picture = (url: string, familyId: FamilyId, signal?: AbortSignal): Promise<Blob | null> => {
+    if (!onImageHost(url)) return Promise.resolve(null);
     let p = pictures.get(url);
     if (!p) {
       p = publicGet(url, { signal, label: `${byId[familyId].label} · frame` })
@@ -235,7 +247,7 @@ class Library {
   signOut = (): void => {
     setKey(null);
     this.hasKey = false;
-    this.keepSignedIn = false;
+    this.keepSignedIn = keptSignedIn();
     ran = false;
     sync();
   };
@@ -250,7 +262,7 @@ class Library {
     blobs.clear();
     pictures.clear();
     details.clear();
-    await wipe().catch(() => {});
+    await wipe(); // a failure rejects so Settings can say so; the key is already gone
   };
 }
 
@@ -261,7 +273,10 @@ function sync(): void {
 }
 onStatus((s) => {
   net = s;
-  if (s === 'key-lost') library.hasKey = library.keepSignedIn = false;
+  if (s === 'key-lost') {
+    library.hasKey = false;
+    library.keepSignedIn = keptSignedIn(); // a 401 keeps the key mode: a reconnect saves the new key where the old one was
+  }
   sync();
 });
 

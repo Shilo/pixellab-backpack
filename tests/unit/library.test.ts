@@ -14,6 +14,7 @@ const h = vi.hoisted(() => {
   }
   const st = {
     key: null as string | null,
+    kept: false,
     statusCb: null as ((s: string) => void) | null,
     fail: null as HttpError | null,
     db: new Map<string, unknown>(),
@@ -50,8 +51,9 @@ const h = vi.hoisted(() => {
       return { [rows]: list.rows.slice(off, off + Number(q.get('limit'))), total: list.total };
     }),
     publicGet: vi.fn(async () => new Response(new Blob(['png']), { status: 200 })),
-    setKey: vi.fn((k: string | null) => void (st.key = k || null)),
-    setKeepSignedIn: vi.fn(),
+    // Like http.ts: clearing the key ends Keep me signed in; a 401 does not.
+    setKey: vi.fn((k: string | null) => void ((st.key = k || null), st.key || (st.kept = false))),
+    setKeepSignedIn: vi.fn((on: boolean) => void (st.kept = on)),
     wipe: vi.fn(async () => st.db.clear()),
     // structuredClone throws on a Svelte proxy, just like IndexedDB.
     saveFamily: vi.fn(async (id: string, s: unknown) => void st.db.set(id, structuredClone(s))),
@@ -65,7 +67,7 @@ vi.mock('../../src/lib/api/http', () => ({
   setKey: h.setKey,
   getKey: () => h.st.key,
   onStatus: (cb: (s: string) => void) => ((h.st.statusCb = cb), () => {}),
-  keptSignedIn: () => false,
+  keptSignedIn: () => h.st.kept && !!h.st.key,
   keyHint: () => null,
   setKeepSignedIn: h.setKeepSignedIn,
 }));
@@ -106,7 +108,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(T0);
   vi.clearAllMocks();
-  Object.assign(h.st, { key: null, fail: null, statusCb: null });
+  Object.assign(h.st, { key: null, kept: false, fail: null, statusCb: null });
   h.st.db.clear();
   fill('a');
 });
@@ -424,6 +426,32 @@ describe('forget and keep signed in', () => {
     lib.setKeepSignedIn(true);
     expect(h.setKeepSignedIn).toHaveBeenCalledWith(true);
   });
+
+  it('a 401 keeps the real key mode, so a reconnect shows where the new key is saved', async () => {
+    await (await tab()).connect('key');
+    h.st.kept = true;
+    later(HOUR + 1);
+    const lib = await tab();
+    expect(lib.keepSignedIn).toBe(true);
+    h.st.fail = new h.HttpError('key-lost', 401);
+    await lib.openCheck();
+    expect(lib.hasKey).toBe(false);
+    expect(lib.keepSignedIn).toBe(true); // http.ts still keeps the key in localStorage
+    h.st.fail = null;
+    expect(await lib.connect('new-key')).toBe('ok');
+    expect(lib.keepSignedIn).toBe(true);
+    lib.signOut();
+    expect(lib.keepSignedIn).toBe(false);
+  });
+
+  it('a failed wipe rejects forget(), with the key already gone', async () => {
+    const lib = await tab();
+    await lib.connect('key');
+    h.wipe.mockRejectedValueOnce(new Error('disk'));
+    await expect(lib.forget()).rejects.toThrow('disk');
+    expect(h.st.key).toBeNull();
+    expect(lib.hasKey).toBe(false);
+  });
 });
 
 describe('picture', () => {
@@ -433,5 +461,12 @@ describe('picture', () => {
     expect(h.publicGet).toHaveBeenCalledOnce();
     expect(h.publicGet).toHaveBeenCalledWith(h.img('f'), expect.objectContaining({ label: 'Objects · frame' }));
     expect(h.apiGet).not.toHaveBeenCalled();
+  });
+
+  it('refuses links that are not on the image host: null, no request', async () => {
+    const lib = await tab();
+    for (const url of ['https://api.pixellab.ai/v2/characters', 'http://backblaze.pixellab.ai/x.png', 'https://evil.example/x.png', 'not a url'])
+      expect(await lib.picture(url, 'characters')).toBeNull();
+    expect(h.publicGet).not.toHaveBeenCalled();
   });
 });
