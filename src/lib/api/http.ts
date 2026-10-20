@@ -6,6 +6,7 @@ const API = 'https://api.pixellab.ai/v2';
 const API_HOST = 'api.pixellab.ai';
 const IMAGE_HOST = 'backblaze.pixellab.ai';
 const KEY_NAME = `${APP_ID}:key`; // sessionStorage: this tab only
+const KEPT_NAME = `${APP_ID}:key-kept`; // localStorage: only while "Keep me signed in" is on
 const COUNT_NAME = `${APP_ID}:api-count`; // localStorage: request times only, no data
 
 const CONCURRENCY = 2;
@@ -44,24 +45,68 @@ export class HttpError extends Error {
 }
 
 // ---- key ----
+// The key lives in exactly one store: sessionStorage (this tab only, the default) or, while
+// "Keep me signed in" is on, localStorage. A storage failure falls back to memory.
 let key: string | null = null;
+let kept = false;
 try {
-  key = sessionStorage.getItem(KEY_NAME);
+  key = localStorage.getItem(KEPT_NAME);
+  kept = !!key;
 } catch {
-  /* no sessionStorage: memory only */
+  /* no localStorage */
+}
+if (!key) {
+  try {
+    key = sessionStorage.getItem(KEY_NAME);
+  } catch {
+    /* no sessionStorage: memory only */
+  }
 }
 
 export function getKey(): string | null {
   return key;
 }
 
+/** True while the key lives in localStorage. */
+export function keptSignedIn(): boolean {
+  return kept && !!key;
+}
+
+/** The last 4 characters, for the "••••" display. null for no key or one too short to show a part of. */
+export function keyHint(): string | null {
+  return key && key.length > 8 ? key.slice(-4) : null;
+}
+
+/** Put the key in the store `on` picks and clear the other. No-op without a key. */
+function store(on: boolean): void {
+  if (!key) return;
+  try {
+    (on ? localStorage : sessionStorage).setItem(on ? KEPT_NAME : KEY_NAME, key);
+    (on ? sessionStorage : localStorage).removeItem(on ? KEY_NAME : KEPT_NAME);
+    kept = on;
+  } catch {
+    /* memory only (or the old store keeps it) */
+  }
+}
+
+export function setKeepSignedIn(on: boolean): void {
+  store(on);
+}
+
 export function setKey(k: string | null): void {
   key = k || null;
-  try {
-    if (key) sessionStorage.setItem(KEY_NAME, key);
-    else sessionStorage.removeItem(KEY_NAME);
-  } catch {
-    /* memory only */
+  if (key) store(kept);
+  else {
+    kept = false;
+    for (const s of [() => localStorage.removeItem(KEPT_NAME), () => sessionStorage.removeItem(KEY_NAME)]) {
+      try {
+        s();
+      } catch {
+        /* memory only */
+      }
+    }
+    // Waiting jobs would otherwise go out as "Bearer null".
+    for (let i = queue.length - 1; i >= 0; i--) if (queue[i].auth) fail(queue.splice(i, 1)[0], new HttpError('key-lost'));
   }
   if (status === 'key-lost') setStatus('ok');
 }
@@ -295,6 +340,7 @@ async function attempt(job: Job): Promise<void> {
     const delay = s === 429 ? 0 : 1000 * 2 ** job.retries * (0.5 + Math.random());
     setTimeout(() => {
       if (job.signal?.aborted) return fail(job, new HttpError('cancelled'));
+      if (job.auth && !key) return fail(job, new HttpError('key-lost')); // forgotten while it waited to retry
       queue.unshift(job);
       pump();
     }, delay);

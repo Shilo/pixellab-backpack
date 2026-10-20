@@ -287,6 +287,64 @@ test('the key lives in memory and sessionStorage; null clears both', async () =>
   expect(calls).toHaveLength(0);
 });
 
+test('Keep me signed in moves the key between the two stores, never both', async () => {
+  const S = 'pixellab-backpack:key';
+  const L = 'pixellab-backpack:key-kept';
+  expect(http.keptSignedIn()).toBe(false);
+  http.setKeepSignedIn(true);
+  expect(http.keptSignedIn()).toBe(true);
+  expect([session.get(S), local.get(L)]).toEqual([undefined, KEY]);
+  http.setKey('another-secret-456'); // a new key stays in the current mode's store
+  expect([session.size, local.get(L)]).toEqual([0, 'another-secret-456']);
+  http = await loadModule(); // a reload prefers the kept key
+  expect([http.getKey(), http.keptSignedIn()]).toEqual(['another-secret-456', true]);
+  http.setKeepSignedIn(false);
+  expect(http.keptSignedIn()).toBe(false);
+  expect([session.get(S), local.has(L)]).toEqual(['another-secret-456', false]);
+  http.setKey(null);
+  http.setKeepSignedIn(true); // no key: nothing to move
+  expect([session.size, local.has(L), http.keptSignedIn()]).toEqual([0, false, false]);
+});
+
+test('a kept key wins over a tab key on load', async () => {
+  local.set('pixellab-backpack:key-kept', 'kept-key-1234');
+  session.set('pixellab-backpack:key', 'tab-key-5678');
+  http = await loadModule();
+  expect(http.getKey()).toBe('kept-key-1234');
+});
+
+test('setKey(null) clears both stores and sends no queued auth job', async () => {
+  http.setKeepSignedIn(true);
+  const ps = ['/a', '/b', '/c', '/d'].map((p) => outcome(http.apiGet(p)));
+  await tick();
+  expect(pending).toHaveLength(2);
+  http.setKey(null);
+  expect((await Promise.all(ps.slice(2))).map((r) => r.err?.kind)).toEqual(['key-lost', 'key-lost']);
+  pending.forEach((p) => p.reply());
+  await tick(1000);
+  expect(calls).toHaveLength(2);
+  expect(calls.every((c) => (c.init?.headers as { Authorization: string }).Authorization === `Bearer ${KEY}`)).toBe(true);
+  expect([session.size, local.has('pixellab-backpack:key-kept')]).toEqual([0, false]);
+});
+
+test('a job waiting to retry is dropped, not sent as "Bearer null", when the key is cleared', async () => {
+  const p = outcome(http.apiGet('/a'));
+  await tick();
+  pending[0].reply(500);
+  http.setKey(null);
+  await tick(5000);
+  expect((await p).err?.kind).toBe('key-lost');
+  expect(calls).toHaveLength(1);
+});
+
+test('keyHint shows at most the last 4 characters, and nothing for a short key', () => {
+  expect(http.keyHint()).toBe('-123');
+  http.setKey('short');
+  expect(http.keyHint()).toBeNull();
+  http.setKey(null);
+  expect(http.keyHint()).toBeNull();
+});
+
 test('only https GET to the two PixelLab hosts is allowed', async () => {
   const bad = ['http://api.pixellab.ai/v2/x', 'https://evil.example/x', 'https://api.pixellab.ai.evil.example/x', 'https://user:pw@api.pixellab.ai/x', 'not a url', 'ftp://backblaze.pixellab.ai/x'];
   for (const url of bad) expect((await outcome(http.publicGet(url))).err?.kind).toBe('guard');
