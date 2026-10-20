@@ -1,49 +1,96 @@
 <script lang="ts">
-  import { fitScale, trimBox } from './fit';
+  import { fitScale, trimBox, zoomScale } from './fit';
 
-  // The only thing that draws art. Callers pass a decodable Blob (never a URL: only http.ts fetches).
+  // The only thing that draws art. Callers pass decodable Blobs (never a URL: only http.ts fetches).
   // The container takes its size from its parent; the canvas is absolutely placed so it can't resize it.
   // fill: grow to the container (largest whole device-pixel scale). Default: never above native size.
-  let { blob, alt, trim = false, fill = false }: { blob: Blob | null; alt: string; trim?: boolean; fill?: boolean } = $props();
+  // frames: an animation, decoded once; `frame` picks the one drawn. zoom: CSS px per art px (null = Fit);
+  // zoomed art larger than the box overflows it, so a scrolling parent pans natively.
+  let {
+    blob = null,
+    frames,
+    frame = 0,
+    alt,
+    trim = false,
+    fill = false,
+    zoom = null,
+    onmeasure,
+  }: {
+    blob?: Blob | null;
+    frames?: Blob[];
+    frame?: number;
+    alt: string;
+    trim?: boolean;
+    fill?: boolean;
+    zoom?: number | null;
+    onmeasure?: (m: { k: number; smooth: boolean; artW: number; artH: number }) => void;
+  } = $props();
 
   let box: HTMLDivElement | undefined = $state();
   let canvas: HTMLCanvasElement | undefined = $state();
   let art = $state<{ w: number; h: number } | null>(null);
+  let bitmaps = $state.raw<ImageBitmap[]>([]);
+  let crop = { x: 0, y: 0 };
   let boxSize = $state({ w: 0, h: 0 });
   let dpr = $state(window.devicePixelRatio || 1);
 
-  // Decode + (optionally) trim + draw at native resolution. A newer run supersedes an older one.
+  // Decode + (optionally) trim once per source set. A newer run supersedes an older one; bitmaps are closed
+  // on change and destroy.
   $effect(() => {
-    const b = blob;
+    const srcs = frames?.length ? frames : blob ? [blob] : [];
     const t = trim;
     const c = canvas;
     if (!c) return;
     let stale = false;
+    let held: ImageBitmap[] = [];
     art = null;
-    if (!b) return;
-    createImageBitmap(b).then(
-      (bmp) => {
-        if (stale) return bmp.close();
-        let sx = 0;
-        let sy = 0;
-        let sw = bmp.width;
-        let sh = bmp.height;
-        if (t) {
-          const tmp = new OffscreenCanvas(sw, sh).getContext('2d', { willReadFrequently: true })!;
-          tmp.drawImage(bmp, 0, 0);
-          ({ x: sx, y: sy, w: sw, h: sh } = trimBox(tmp.getImageData(0, 0, sw, sh).data, sw, sh));
-        }
-        c.width = sw; // also clears the canvas
-        c.height = sh;
-        c.getContext('2d')!.drawImage(bmp, sx, sy, sw, sh, 0, 0, sw, sh);
-        bmp.close();
-        art = { w: sw, h: sh };
-      },
-      () => {}, // undecodable blob: keep the placeholder
-    );
+    bitmaps = [];
+    if (srcs.length) {
+      Promise.all(srcs.map((s) => createImageBitmap(s, { colorSpaceConversion: 'none' }))).then(
+        (list) => {
+          held = list;
+          if (stale) return list.forEach((b) => b.close());
+          try {
+            let { width: sw, height: sh } = list[0]; // ponytail: sized to the first frame; mixed frame sizes crop/pad
+            let sx = 0;
+            let sy = 0;
+            if (t) {
+              const tmp = new OffscreenCanvas(sw, sh).getContext('2d', { willReadFrequently: true })!;
+              tmp.drawImage(list[0], 0, 0);
+              ({ x: sx, y: sy, w: sw, h: sh } = trimBox(tmp.getImageData(0, 0, sw, sh).data, sw, sh));
+            }
+            crop = { x: sx, y: sy };
+            c.width = sw; // also clears the canvas
+            c.height = sh;
+            bitmaps = list;
+            art = { w: sw, h: sh };
+          } catch {
+            list.forEach((b) => b.close()); // keep the placeholder
+          }
+        },
+        () => {}, // undecodable blob: keep the placeholder
+      );
+    }
     return () => {
       stale = true;
+      held.forEach((b) => b.close());
+      c.width = c.height = 0;
     };
+  });
+
+  // Draw the shown frame without re-decoding.
+  $effect(() => {
+    const a = art;
+    const bs = bitmaps;
+    const b = bs[Math.min(Math.max(0, frame), bs.length - 1)];
+    if (!canvas || !a || !b) return;
+    try {
+      const ctx = canvas.getContext('2d')!;
+      ctx.clearRect(0, 0, a.w, a.h);
+      ctx.drawImage(b, crop.x, crop.y, a.w, a.h, 0, 0, a.w, a.h);
+    } catch {
+      b.close(); // a draw error must not leak the bitmap
+    }
   });
 
   $effect(() => {
@@ -66,15 +113,22 @@
       ? fitScale(art.w, art.h, fill ? boxSize.w : Math.min(boxSize.w, art.w), fill ? boxSize.h : Math.min(boxSize.h, art.h), dpr)
       : null,
   );
+  const shown = $derived(art && zoom !== null ? zoomScale(art.w, art.h, zoom, dpr) : fit);
+
+  // Report the Fit scale (device px per art px) for the zoom readout.
+  $effect(() => {
+    if (!art || !fit || !fit.cssW) return;
+    onmeasure?.({ k: (fit.cssW * dpr) / art.w, smooth: fit.smooth, artW: art.w, artH: art.h });
+  });
 </script>
 
-<div class="pixel-art" bind:this={box} role="img" aria-label={alt}>
+<div class="pixel-art" class:zoomed={zoom !== null} bind:this={box} role="img" aria-label={alt}>
   <canvas
     bind:this={canvas}
-    style:display={fit ? null : 'none'}
-    style:width="{fit?.cssW ?? 0}px"
-    style:height="{fit?.cssH ?? 0}px"
-    style:image-rendering={fit?.smooth ? 'auto' : 'pixelated'}
+    style:display={shown ? null : 'none'}
+    style:width="{shown?.cssW ?? 0}px"
+    style:height="{shown?.cssH ?? 0}px"
+    style:image-rendering={shown?.smooth ? 'auto' : 'pixelated'}
   ></canvas>
 </div>
 
@@ -84,6 +138,9 @@
     width: 100%;
     height: 100%;
     overflow: hidden;
+  }
+  .pixel-art.zoomed {
+    overflow: visible;
   }
   canvas {
     position: absolute;
