@@ -16,6 +16,7 @@ const h = vi.hoisted(() => {
     key: null as string | null,
     kept: false,
     statusCb: null as ((s: string) => void) | null,
+    signedOutCb: null as (() => void) | null,
     fail: null as HttpError | null,
     db: new Map<string, unknown>(),
     lists: {} as Record<string, { total: number; rows: Record<string, unknown>[] }>,
@@ -54,6 +55,7 @@ const h = vi.hoisted(() => {
     // Like http.ts: clearing the key ends Keep me signed in; a 401 does not.
     setKey: vi.fn((k: string | null) => void ((st.key = k || null), st.key || (st.kept = false))),
     setKeepSignedIn: vi.fn((on: boolean) => void (st.kept = on)),
+    forgetKey: vi.fn(() => void Object.assign(st, { key: null, kept: false })),
     wipe: vi.fn(async () => st.db.clear()),
     // structuredClone throws on a Svelte proxy, just like IndexedDB.
     saveFamily: vi.fn(async (id: string, s: unknown) => void st.db.set(id, structuredClone(s))),
@@ -65,6 +67,9 @@ vi.mock('../../src/lib/api/http', () => ({
   apiGet: h.apiGet,
   publicGet: h.publicGet,
   setKey: h.setKey,
+  forgetKey: h.forgetKey,
+  IMAGE_HOST: 'backblaze.pixellab.ai',
+  onSignedOut: (cb: () => void) => ((h.st.signedOutCb = cb), () => {}),
   getKey: () => h.st.key,
   onStatus: (cb: (s: string) => void) => ((h.st.statusCb = cb), () => {}),
   keptSignedIn: () => h.st.kept && !!h.st.key,
@@ -108,7 +113,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(T0);
   vi.clearAllMocks();
-  Object.assign(h.st, { key: null, kept: false, fail: null, statusCb: null });
+  Object.assign(h.st, { key: null, kept: false, fail: null, statusCb: null, signedOutCb: null });
   h.st.db.clear();
   fill('a');
 });
@@ -132,8 +137,6 @@ describe('open check', () => {
     expect(h.st.db.size).toBe(7);
     expect(lib.status).toBe('ok');
     expect(lib.hasKey).toBe(true);
-    lib.signOut();
-    expect(lib.hasKey).toBe(false);
     const tiles = lib.categories.find((c) => c.id === 'tiles')!;
     expect(tiles.count).toBe(12);
     expect(tiles.mosaic.map((m) => m.familyId)).toEqual(['tilesets', 'tilesets', 'tilesets', 'tilesets-side']);
@@ -430,12 +433,33 @@ describe('forget and keep signed in', () => {
     expect(h.apiGet).not.toHaveBeenCalled();
     expect(h.publicGet).not.toHaveBeenCalled();
     expect(h.st.db.size).toBe(0);
+    expect(h.forgetKey).toHaveBeenCalledOnce(); // signs out the other tabs too
     expect(h.st.key).toBeNull();
     expect(lib.hasKey).toBe(false);
     expect(lib.families).toEqual({});
     expect(lib.categories.every((c) => c.count === 0)).toBe(true);
     await lib.picture(h.img('f'), 'characters'); // the memory copy went too
     expect(h.publicGet).toHaveBeenCalledOnce();
+  });
+
+  it("another tab's Forget clears this tab's memory, not the disk; a late answer is not saved back", async () => {
+    const lib = await tab();
+    await lib.connect('key');
+    vi.clearAllMocks();
+    let answer!: (v: unknown) => void;
+    h.apiGet.mockImplementationOnce(() => new Promise((ok) => (answer = ok as (v: unknown) => void)));
+    const late = lib.detail(lib.families.characters!.cards[0], 'characters');
+    await vi.waitFor(() => expect(answer).toBeDefined());
+    h.st.key = null; // http.ts dropped the key, then tells the library
+    h.st.signedOutCb!();
+    expect([lib.hasKey, lib.keepSignedIn, lib.families, lib.errors, lib.avoided]).toEqual([false, false, {}, {}, 0]);
+    expect(h.wipe).not.toHaveBeenCalled(); // the forgetting tab wipes
+    h.st.db.clear(); // ...as it did
+    answer({ rotation_urls: {}, animations: [] });
+    await late;
+    await lib.openCheck();
+    expect(h.apiGet).toHaveBeenCalledOnce(); // only the late detail
+    expect(h.st.db.size).toBe(0);
   });
 
   it('setKeepSignedIn forwards to the network module', async () => {
@@ -457,7 +481,7 @@ describe('forget and keep signed in', () => {
     h.st.fail = null;
     expect(await lib.connect('new-key')).toBe('ok');
     expect(lib.keepSignedIn).toBe(true);
-    lib.signOut();
+    await lib.forget();
     expect(lib.keepSignedIn).toBe(false);
   });
 

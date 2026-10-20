@@ -14,9 +14,10 @@
   import type { createPlayer } from '../render/player.svelte';
 
   // The viewer's "..." menu: a glass popover under the capsule (desktop) or bottom sheet (phone). No player = a still picture.
-  let { open, onClose, opener, player, zoomLabel, onZoom, onZoomToggle, backdrop, onBackdrop, link }: {
+  // zoomIn / zoomOut: the next step each way, undefined at the limit (the button is disabled).
+  let { open, onClose, opener, player, zoomLabel, zoomIn, zoomOut, onZoom, onZoomToggle, backdrop, onBackdrop, link }: {
     open: boolean; onClose: () => void; opener?: HTMLElement; player: ReturnType<typeof createPlayer> | null;
-    zoomLabel: string; onZoom: (d: 1 | -1) => void; onZoomToggle: () => void;
+    zoomLabel: string; zoomIn?: number; zoomOut?: number; onZoom: (z: number) => void; onZoomToggle: () => void;
     backdrop: number; onBackdrop: (i: number) => void; link: string;
   } = $props();
   let panel = $state<HTMLDivElement>();
@@ -78,9 +79,9 @@
     <div class="row">
       <span class="title">Zoom</span>
       <span class="ctl">
-        {@render sq('Zoom out', 'M6 12h12', () => onZoom(-1))}
+        {@render sq('Zoom out', 'M6 12h12', () => zoomOut && onZoom(zoomOut), !zoomOut)}
         <button type="button" class="read readbtn" aria-label="Zoom: {zoomLabel}. Toggle Fit and 1:1" onclick={onZoomToggle}>{zoomLabel}</button>
-        {@render sq('Zoom in', 'M12 6v12M6 12h12', () => onZoom(1))}
+        {@render sq('Zoom in', 'M12 6v12M6 12h12', () => zoomIn && onZoom(zoomIn), !zoomIn)}
       </span>
     </div>
     <div class="bd">

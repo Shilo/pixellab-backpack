@@ -48,13 +48,11 @@ export function zoomScale(artW: number, artH: number, m: number, dpr: number): F
 }
 
 // `zoom` is a ZOOM_STEPS value (null = Fit); `fitK` is the Fit scale in device px per art px.
-// Zooming in from Fit takes the first step that lands above Fit; zooming out returns null once the
-// next step down would be at or below Fit. At the top the zoom stays put.
-export function zoomStep(zoom: number | null, fitK: number, dir: 1 | -1, dpr: number): number | null {
-  if (dir === 1) return ZOOM_STEPS.find((s) => (zoom === null || s > zoom) && zoomK(s, dpr) > fitK) ?? zoom;
-  if (zoom === null) return null;
-  const down = [...ZOOM_STEPS].reverse().find((s) => s < zoom);
-  return down === undefined || zoomK(down, dpr) <= fitK ? null : down;
+// Steps by device scale from the shown one (Fit shows fitK): the next larger or smaller step, below Fit too (02 §6.3).
+// undefined = no step that way, so that button is disabled; Fit is reached through the readout.
+export function zoomStep(zoom: number | null, fitK: number, dir: 1 | -1, dpr: number): number | undefined {
+  const k = zoom === null ? fitK : zoomK(zoom, dpr);
+  return dir === 1 ? ZOOM_STEPS.find((s) => zoomK(s, dpr) > k) : [...ZOOM_STEPS].reverse().find((s) => zoomK(s, dpr) < k);
 }
 
 // "Fit · 3×" (crisp fit, CSS px per art px to one decimal), "Fit" (smooth downscale), "4×".

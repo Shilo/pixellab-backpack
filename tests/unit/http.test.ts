@@ -22,6 +22,19 @@ const storage = (m: Map<string, string>) => ({
   setItem: (k: string, v: string) => void m.set(k, v),
   removeItem: (k: string) => void m.delete(k),
 });
+/** BroadcastChannel stand-in: delivers at once to every other channel of the same name (each loaded module is a tab). */
+let posts: unknown[];
+class FakeChannel {
+  static all = new Set<FakeChannel>();
+  onmessage: ((e: { data: unknown }) => void) | null = null;
+  constructor(readonly name: string) {
+    FakeChannel.all.add(this);
+  }
+  postMessage(data: unknown) {
+    posts.push(data);
+    for (const c of FakeChannel.all) if (c !== this && c.name === this.name) c.onmessage?.({ data });
+  }
+}
 const tick = (ms = 0) => vi.advanceTimersByTimeAsync(ms);
 /** Settle a request without leaving an unhandled rejection. */
 const outcome = (p: Promise<unknown>) =>
@@ -30,7 +43,9 @@ const outcome = (p: Promise<unknown>) =>
     (err) => ({ value: undefined, err: err as Error & { kind: string; status?: number } }),
   );
 
-function loadModule() {
+/** A reload of this tab (the old page and its channel are gone), or with `newTab` a second tab beside it. */
+function loadModule(newTab = false) {
+  if (!newTab) FakeChannel.all.clear();
   vi.resetModules();
   return import('../../src/lib/api/http');
 }
@@ -42,6 +57,9 @@ beforeEach(async () => {
   session = new Map();
   pending = [];
   calls = [];
+  posts = [];
+  FakeChannel.all.clear();
+  vi.stubGlobal('BroadcastChannel', FakeChannel);
   vi.stubGlobal('localStorage', storage(local));
   vi.stubGlobal('sessionStorage', storage(session));
   vi.stubGlobal('navigator', { onLine: true });
@@ -364,22 +382,70 @@ test('turning Keep me signed in off removes the saved key even if the tab copy c
   expect([http.keptSignedIn(), local.has('pixellab-backpack:key-kept'), http.getKey()]).toEqual([false, false, KEY]);
 });
 
-test('a kept key forgotten or replaced in another tab is not kept here', async () => {
-  const on: Record<string, (e: unknown) => void> = {};
-  vi.stubGlobal('addEventListener', (type: string, cb: (e: unknown) => void) => void (on[type] = cb));
-  http = await loadModule();
-  http.setKey(KEY);
-  http.setKeepSignedIn(true);
+test('Forget key signs out every other tab, tab-only or kept, with a bare message; no tab answers', async () => {
   const L = 'pixellab-backpack:key-kept';
-  on.storage({ key: L, newValue: 'new-key-from-tab-b' });
-  expect(http.getKey()).toBe('new-key-from-tab-b');
-  on.storage({ key: 'something-else', newValue: null });
-  expect(http.getKey()).toBe('new-key-from-tab-b');
-  local.delete(L); // the other tab forgot
-  on.storage({ key: L, newValue: null });
-  expect([http.getKey(), http.keptSignedIn(), http.getCounters().status]).toEqual([null, false, 'key-lost']);
-  http.setKeepSignedIn(true); // nothing to write back
+  const tabOnly = await loadModule(true); // a duplicated tab: same tab key
+  http.setKeepSignedIn(true);
+  const kept = await loadModule(true); // a new tab reads the kept key
+  posts = [];
+  const out = [vi.fn(), vi.fn()];
+  tabOnly.onSignedOut(out[0]);
+  kept.onSignedOut(out[1]);
+  http.forgetKey();
+  expect(posts).toEqual(['signed-out']); // one message, from this tab only; never the key
+  expect([http.getKey(), tabOnly.getKey(), kept.getKey(), kept.keptSignedIn()]).toEqual([null, null, null, false]);
+  expect(out.map((f) => f.mock.calls.length)).toEqual([1, 1]);
+  expect([session.size, local.has(L)]).toEqual([0, false]);
+  expect((await outcome(tabOnly.apiGet('/characters'))).err?.kind).toBe('key-lost');
+  expect(calls).toHaveLength(0);
+});
+
+test('a kept tab follows the saved key: takes a replaced one, signs out when it goes; a tab-only tab ignores both', async () => {
+  const L = 'pixellab-backpack:key-kept';
+  const tabOnly = await loadModule(true);
+  http.setKeepSignedIn(true);
+  const kept = await loadModule(true);
+  const out = vi.fn();
+  kept.onSignedOut(out);
+  posts = [];
+  http.setKey('replaced-key-456');
+  expect(posts).toEqual(['key-changed']);
+  expect([kept.getKey(), tabOnly.getKey()]).toEqual(['replaced-key-456', KEY]);
+  http.setKeepSignedIn(false); // the saved key is deleted: kept tabs sign out (no "stopped working")
+  expect([kept.getKey(), kept.keptSignedIn(), kept.getCounters().status, tabOnly.getKey(), out.mock.calls.length]).toEqual([null, false, 'ok', KEY, 1]);
+  expect(posts).toEqual(['key-changed', 'key-changed']); // neither receiver answered
+  kept.setKeepSignedIn(true); // nothing to write back
   expect(local.has(L)).toBe(false);
+});
+
+test('a hung request times out after 30 s like a network failure: retried, counted, and blocked after 3', async () => {
+  const timers: AbortController[] = [];
+  const timeout = vi.spyOn(AbortSignal, 'timeout').mockImplementation(() => {
+    timers.push(new AbortController());
+    return timers.at(-1)!.signal;
+  });
+  const hang = () => {
+    timers.at(-1)!.abort(new DOMException('timed out', 'TimeoutError'));
+    pending.at(-1)!.fail(pending.at(-1)!.init!.signal!.reason);
+  };
+  const p = outcome(http.apiGet('/characters'));
+  await tick();
+  expect(timeout).toHaveBeenCalledWith(30_000);
+  hang();
+  await tick(2000);
+  expect(pending).toHaveLength(2);
+  expect(http.getCounters().status).toBe('ok');
+  hang();
+  await tick(4000);
+  hang();
+  expect((await p).err?.kind).toBe('blocked');
+  expect(http.getCounters()).toMatchObject({ status: 'blocked', sessionApi: 3 });
+  // The image host has the same timeout per request.
+  const pic = outcome(http.publicGet(`${IMG}/a.png`));
+  await tick();
+  expect(timeout).toHaveBeenCalledTimes(4);
+  hang();
+  expect((await pic).err?.kind).toBe('blocked');
 });
 
 test('keyHint shows at most the last 4 characters, and nothing for a short key', () => {
@@ -403,7 +469,7 @@ test('image-host requests go straight out, without the key, and do not count tow
   await tick();
   expect(calls).toHaveLength(20); // no queue, no burst limit
   expect((await Promise.all(ps)).every((r) => !r.err)).toBe(true);
-  expect(calls[0].init).toEqual({ method: 'GET', signal: undefined });
+  expect(calls[0].init).toEqual({ method: 'GET', signal: expect.any(AbortSignal) }); // the timeout; no headers
   expect(http.getCounters()).toMatchObject({ sessionApi: 0, todayApi: 0, imageHost: 20 });
 });
 

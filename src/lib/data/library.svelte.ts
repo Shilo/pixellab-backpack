@@ -5,11 +5,14 @@ import { CATEGORIES, type CategoryId } from '../categories';
 import { createFamilies, dedupeTilesets, groupStates, type Family } from '../api/families';
 import {
   apiGet,
+  forgetKey,
   getKey,
   HttpError,
+  IMAGE_HOST,
   keepLoading,
   keptSignedIn,
   keyHint,
+  onSignedOut,
   onStatus,
   publicGet,
   retry,
@@ -43,7 +46,7 @@ const unchecked = new Set<FamilyId>();
 function onImageHost(url: string): boolean {
   try {
     const u = new URL(url);
-    return u.protocol === 'https:' && u.hostname === 'backblaze.pixellab.ai';
+    return u.protocol === 'https:' && u.hostname === IMAGE_HOST;
   } catch {
     return false;
   }
@@ -246,30 +249,32 @@ class Library {
   keepLoading = (): void => keepLoading();
   retry = (): void => retry();
 
-  /** Clears the key only; the saved list stays. */
-  signOut = (): void => {
-    setKey(null);
-    this.hasKey = false;
-    this.keepSignedIn = keptSignedIn();
-    ran = false;
-    sync();
-  };
-
-  /** Forget key: the key, the saved copy and every memory copy go. Sends no request. */
+  /** Forget key: the key in every tab of this browser, the saved copy and every memory copy go. Sends no request. */
   forget = async (): Promise<void> => {
-    this.signOut();
-    this.families = {} as Record<FamilyId, FamilyState | undefined>;
-    this.errors = {};
-    this.loading = {};
-    this.avoided = 0;
-    blobs.clear();
-    pictures.clear();
-    details.clear();
+    forgetKey();
+    signedOut();
     await wipe(); // a failure rejects so Settings can say so; the key is already gone
   };
 }
 
 export const library = new Library();
+
+/** The key is gone from this tab (Forget here or in another tab): drop every memory copy; the plain key screen shows. */
+function signedOut(): void {
+  library.hasKey = false;
+  library.keepSignedIn = keptSignedIn();
+  library.families = {} as Record<FamilyId, FamilyState | undefined>;
+  library.errors = {};
+  library.loading = {};
+  library.avoided = 0;
+  blobs.clear();
+  pictures.clear();
+  details.clear();
+  unchecked.clear();
+  ran = false;
+  sync();
+}
+onSignedOut(signedOut);
 
 function sync(): void {
   library.status = net !== 'ok' ? net : checking ? 'checking' : ran ? 'ok' : 'idle';

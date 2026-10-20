@@ -63,6 +63,35 @@ describe('store', () => {
     expect(await loadFamilies(['ui'])).toEqual({ ui: fam });
   });
 
+  it('a family with one bad card or a bad shape loads as missing (checked again); the others still load', async () => {
+    const card = fam.cards[0];
+    const bad: unknown[] = [
+      { ...fam, cards: [card, { ...card, meta: undefined }] }, // an older tab's card without meta
+      { ...fam, cards: [{ ...card, key: 1 }] },
+      { ...fam, cards: [{ ...card, fp: null }] },
+      { ...fam, cards: [{ ...card, done: 'yes' }] },
+      { ...fam, cards: [null] },
+      { ...fam, cards: {} },
+      { ...fam, total: '1' },
+      { ...fam, checkedAt: undefined },
+      'junk',
+    ];
+    for (const b of bad) {
+      db.set('family:characters', b);
+      await saveFamily('ui', fam);
+      expect(await loadFamilies(['characters', 'ui'])).toEqual({ ui: fam });
+    }
+  });
+
+  it('a saved detail without a string fp or an animations list loads as missing', async () => {
+    for (const b of [{ ...detail, fp: 1 }, { ...detail, detail: { ...detail.detail, animations: null } }, { fp: 'f', at: 1 }, 'junk']) {
+      db.set('detail:k', b);
+      expect(await loadDetail('k')).toBeUndefined();
+    }
+    await saveDetail('k', detail);
+    expect(await loadDetail('k')).toEqual(detail);
+  });
+
   it('uses a database named from APP_ID', async () => {
     await loadMeta('any'); // the store is created lazily on first use, so this test does not depend on order
     expect(createStore).toHaveBeenCalledWith('pixellab-backpack', 'kv');

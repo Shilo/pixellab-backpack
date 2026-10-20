@@ -144,7 +144,19 @@ test('About shows the version and the outbound links, all safe', async ({ page }
     await expect(link).toHaveAttribute('target', '_blank');
     await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   }
-  expect((await page.request.get('/licenses.txt')).ok()).toBe(true);
+  const licences = await page.request.get('/licenses.txt');
+  expect(licences.ok()).toBe(true);
+  expect(await licences.text()).toMatch(/Svelte [\d.]+[\s\S]*MIT License[\s\S]*Svelte Contributors/); // the bundled runtime
+});
+
+test("a click in the sheet's own padding keeps Settings open; a click outside it closes", async ({ page }) => {
+  await start(page);
+  const dialog = await open(page);
+  const box = (await dialog.boundingBox())!;
+  await page.mouse.click(box.x + 6, box.y + box.height / 2); // the side padding: the dialog itself is the target
+  await expect(dialog).toBeVisible();
+  await page.mouse.click(2, 2);
+  await expect(dialog).toBeHidden();
 });
 
 test('no sideways scroll, and the keyboard reaches every control', async ({ page }) => {
@@ -251,4 +263,35 @@ test('Forget key in one tab signs out a second kept tab, which sends nothing wit
   await settle(tab, mock);
   expect(mock.hits.slice(at).filter((h) => h.host === 'api')).toEqual([]);
   expect(await deviceStorage(tab)).not.toContain(GOOD_KEY);
+});
+
+test('Forget key in one tab signs out a second "this tab only" tab, which then writes nothing back', async ({ page, context }) => {
+  const mock = await mockPixelLab(context);
+  await page.goto('/');
+  await connect(page);
+  await settle(page, mock);
+  const tab = await context.newPage();
+  await tab.goto('/');
+  await connect(tab); // its own tab-only copy of the key
+  await settle(tab, mock);
+  expect(await keptKey(tab)).toBeNull();
+
+  const at = mock.hits.length;
+  const dialog = await open(page);
+  await dialog.getByRole('button', { name: 'Forget key' }).click();
+  await page.getByRole('dialog', { name: 'Forget your API key?' }).getByRole('button', { name: 'Forget key' }).click();
+  await expect(page.getByRole('heading', { name: 'Your PixelLab art, all in one place' })).toBeVisible();
+  // The plain key screen: no library, no "Welcome back", no "stopped working".
+  await expect(tab.getByRole('heading', { name: 'Your PixelLab art, all in one place' })).toBeVisible();
+  await expect(tab.getByText('Welcome back!')).toHaveCount(0);
+  await expect(tab.getByText(/stopped working/)).toHaveCount(0);
+  await expect(tab.getByRole('link', { name: /^Characters, / })).toHaveCount(0);
+  expect(await tab.evaluate(() => sessionStorage.length)).toBe(0);
+  await tab.reload();
+  await expect(tab.getByLabel('PixelLab API key')).toBeVisible();
+  await settle(tab, mock);
+  expect(api(mock.hits.slice(at))).toEqual([]);
+  const stored = await deviceStorage(tab);
+  expect(stored).not.toContain('family:');
+  expect(stored).not.toContain(GOOD_KEY);
 });

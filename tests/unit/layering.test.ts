@@ -19,3 +19,7 @@ test('only http.ts and store.ts touch device storage', () => {
     offenders(/localStorage|sessionStorage|indexedDB|idb-keyval/, ['src/lib/api/http.ts', 'src/lib/data/store.ts']),
   ).toEqual([]);
 });
+
+test('the image host is named only in http.ts (one host rule)', () => {
+  expect(offenders(/backblaze\.pixellab\.ai/, ['src/lib/api/http.ts'])).toEqual([]);
+});

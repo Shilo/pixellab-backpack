@@ -1,4 +1,5 @@
-// T10 Viewer extras (mocked PixelLab): the 0.3 s dwell for one arrow press, reduced motion, and integer zoom at three pixel ratios.
+// T10 Viewer extras (mocked PixelLab): the 0.3 s dwell for one arrow press, reduced motion, and integer zoom at three pixel ratios
+// and at the two real window sizes.
 // 8 fps timing, frame step and loop-off are covered by t8-viewer.spec.ts's first test.
 import { expect, test, type Page } from '@playwright/test';
 import { connect, mockPixelLab, settle, type Mock } from '../fixtures/pixellab-mock';
@@ -6,8 +7,9 @@ import { connect, mockPixelLab, settle, type Mock } from '../fixtures/pixellab-m
 const viewer = (page: Page, name: string) => page.getByRole('dialog', { name, exact: true });
 const framesIn = (page: Page) => expect(page.getByText(/^Loading frames/)).toHaveCount(0);
 
-async function openCharacter(page: Page, name: string): Promise<Mock> {
+async function openCharacter(page: Page, name: string, size = 16): Promise<Mock> {
   const mock = await mockPixelLab(page);
+  mock.size = size;
   await page.goto('/');
   await connect(page);
   await page.getByRole('link', { name: /^Characters, / }).click();
@@ -71,7 +73,7 @@ const scaleIs = (page: Page, k: number) => expect.poll(() => crisp(page)).toBe(k
 
 for (const dpr of [1, 1.5, 2.625]) {
   test.describe(`device pixel ratio ${dpr}`, () => {
-    // A short window so 16 px art fits at a small scale and every zoom step lands above Fit.
+    // A short window so 16 px art fits at a small scale, with zoom steps on both sides of Fit.
     test.use({ deviceScaleFactor: dpr, viewport: { width: 480, height: 320 } });
 
     test('zoom Fit, 1:1 and every step keep a whole device-pixel scale', async ({ page }) => {
@@ -91,22 +93,61 @@ for (const dpr of [1, 1.5, 2.625]) {
       await expect(readout).toHaveText(/^Fit/);
       await scaleIs(page, fitK);
 
-      // Steps in until the top, each crisp and larger; then back out to Fit.
+      // Steps in until the top, each crisp and larger; then out to the bottom (1×, below Fit), each crisp and smaller.
+      const zin = menu.getByRole('button', { name: 'Zoom in' });
+      const zout = menu.getByRole('button', { name: 'Zoom out' });
       let last = fitK;
-      for (let i = 0; i < 9; i++) {
-        const before = await readout.textContent();
-        await menu.getByRole('button', { name: 'Zoom in' }).click();
-        if ((await readout.textContent()) === before) break;
+      for (let i = 0; i < 9 && (await zin.isEnabled()); i++) {
+        await zin.click();
         await expect.poll(() => crisp(page)).toBeGreaterThan(last);
         last = await crisp(page);
       }
       await expect(readout).toHaveText('16×');
-      for (let i = 0; i < 9 && !/^Fit/.test((await readout.textContent()) ?? ''); i++) {
-        await menu.getByRole('button', { name: 'Zoom out' }).click();
-        await crisp(page);
+      for (let i = 0; i < 9 && (await zout.isEnabled()); i++) {
+        await zout.click();
+        await expect.poll(() => crisp(page)).toBeLessThan(last);
+        last = await crisp(page);
       }
+      await expect(readout).toHaveText('1×');
+      await readout.click();
       await expect(readout).toHaveText(/^Fit/);
       await scaleIs(page, fitK);
     });
+  });
+}
+
+// The projects' own windows (1440×900 and 390×844) with the usual PixelLab sizes, where Fit is often above 16×:
+// − and + step by device scale through every step, below Fit too, and each is disabled at its end (02 §6.3).
+for (const size of [16, 32]) {
+  test(`zoom at the real window size with ${size} px art steps through every step and disables each button at its end`, async ({ page }) => {
+    await openCharacter(page, 'Character 1', size);
+    const fitK = await crisp(page);
+    const dpr = await page.evaluate(() => devicePixelRatio);
+    const kOf = (m: number) => Math.max(1, Math.round(m * dpr));
+    const STEPS = [1, 2, 3, 4, 6, 8, 12, 16];
+    await viewer(page, 'Character 1').getByRole('button', { name: 'More' }).click();
+    const menu = page.getByRole('dialog', { name: 'Viewer options' });
+    const readout = menu.getByRole('button', { name: /^Zoom: / });
+    const zin = menu.getByRole('button', { name: 'Zoom in' });
+    const zout = menu.getByRole('button', { name: 'Zoom out' });
+
+    // At Fit, + works only if a step is larger than Fit; − goes to the largest step below it.
+    await expect(zin).toBeEnabled({ enabled: STEPS.some((m) => kOf(m) > fitK) });
+    const below = STEPS.filter((m) => kOf(m) < fitK);
+    for (const m of below.reverse()) {
+      await zout.click();
+      await expect(readout).toHaveText(`${m}×`);
+      await scaleIs(page, kOf(m));
+    }
+    await expect(zout).toBeDisabled();
+    for (const m of STEPS.slice(1)) {
+      await zin.click();
+      await expect(readout).toHaveText(`${m}×`);
+      await scaleIs(page, kOf(m));
+    }
+    await expect(zin).toBeDisabled();
+    await readout.click();
+    await expect(readout).toHaveText(/^Fit/);
+    await scaleIs(page, fitK);
   });
 }

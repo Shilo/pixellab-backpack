@@ -32,9 +32,8 @@ const charAnims = (i: number) => (i % 3 ? [] : ['walk', 'breathing-idle']);
 /** Character rows 6 and 7 are two states of one character. */
 const GROUPED = [6, 7];
 
-/** A tiny RGBA PNG: a 16x16 two-colour checker with a 1px border, colours from the seed (crispness is easy to see). */
-function png(seed: number): Buffer {
-  const w = 16;
+/** A tiny RGBA PNG: a w×w (16 by default) two-colour checker with a 1px border, colours from the seed (crispness is easy to see). */
+function png(seed: number, w = 16): Buffer {
   const a = [(seed * 67) % 256, (seed * 131) % 256, (seed * 29 + 90) % 256];
   const raw = Buffer.alloc((w * 4 + 1) * w);
   for (let y = 0; y < w; y++)
@@ -79,6 +78,8 @@ export interface Mock {
   /** API requests whose path + query start with one of these answer 404 (a failure that is not retried). */
   fail: string[];
   counts: Record<string, Record<Fam, number>>;
+  /** Width and height of every image-host picture, in art pixels (16 by default). */
+  size: number;
 }
 
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization', 'access-control-allow-methods': 'GET' };
@@ -91,6 +92,7 @@ export async function mockPixelLab(target: Page | BrowserContext, counts: Partia
     mode: 'ok',
     fail: [],
     counts: { a: { ...DEFAULT_COUNTS, ...counts.a }, b: { ...DEFAULT_COUNTS, characters: 3, ...counts.b } },
+    size: 16,
   };
   for (const [acct, c] of Object.entries(mock.counts))
     for (const fam of Object.keys(c) as Fam[]) for (let i = 0; i < c[fam]; i++) if (unfinished(i)) mock.unfinishedIds.push(id(acct, fam, i));
@@ -177,7 +179,7 @@ export async function mockPixelLab(target: Page | BrowserContext, counts: Partia
     const req = route.request();
     mock.hits.push({ method: req.method(), url: req.url(), host: 'image', redirected: false, list: false, detail: false });
     if (mock.mode === 'blocked') return route.abort('connectionrefused');
-    return route.fulfill({ status: 200, headers: CORS, contentType: 'image/png', body: png(seed(req.url())) });
+    return route.fulfill({ status: 200, headers: CORS, contentType: 'image/png', body: png(seed(req.url()), mock.size) });
   });
 
   // Playwright does not route the request a fulfilled redirect leads to (it would reach the real host), so the

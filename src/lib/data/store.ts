@@ -9,18 +9,29 @@ export const SCHEMA = 2;
 let db: ReturnType<typeof createStore> | undefined;
 const store = () => (db ??= createStore(APP_ID, 'kv')); // lazy: no IndexedDB access at import time
 
-/** Reads only `family:<id>` keys (never saved details). Wipes first if the saved copy is another schema version. */
+// Saved records are checked on load: an older tab or a foreign record must never reach the screens. A bad one reads as missing.
+const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+const isCard = (c: unknown) => isObj(c) && typeof c.key === 'string' && typeof c.fp === 'string' && typeof c.done === 'boolean' && isObj(c.meta);
+const isFamily = (s: unknown): s is FamilyState =>
+  isObj(s) && Array.isArray(s.cards) && typeof s.total === 'number' && typeof s.checkedAt === 'number' && s.cards.every(isCard);
+
+/** Reads only `family:<id>` keys (never saved details). Wipes first if the saved copy is another schema version.
+ * A family with one bad card is left out, so it is checked again. */
 export async function loadFamilies(ids: FamilyId[]): Promise<Partial<Record<FamilyId, FamilyState>>> {
   const [schema, ...states] = await getMany(['meta:schema', ...ids.map((id) => 'family:' + id)], store());
   if (schema !== SCHEMA) {
     await wipe();
     return {};
   }
-  return Object.fromEntries(ids.flatMap((id, i) => (states[i] ? [[id, states[i]]] : [])));
+  return Object.fromEntries(ids.flatMap((id, i) => (isFamily(states[i]) ? [[id, states[i]]] : [])));
 }
 
 export const saveFamily = (id: FamilyId, state: FamilyState) => set('family:' + id, state, store());
-export const loadDetail = (key: string) => get<SavedDetail>('detail:' + key, store());
+/** A saved detail, or undefined when missing or not the expected shape (it is asked again). */
+export async function loadDetail(key: string): Promise<SavedDetail | undefined> {
+  const v = await get('detail:' + key, store());
+  return isObj(v) && typeof v.fp === 'string' && isObj(v.detail) && Array.isArray(v.detail.animations) ? (v as unknown as SavedDetail) : undefined;
+}
 export const saveDetail = (key: string, v: SavedDetail) => set('detail:' + key, v, store());
 export const loadMeta = <T>(k: string) => get<T>('meta:' + k, store());
 export const saveMeta = (k: string, v: unknown) => set('meta:' + k, v, store());

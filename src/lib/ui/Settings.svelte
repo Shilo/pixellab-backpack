@@ -56,6 +56,14 @@
     }
   }
 
+  // The dialog IS the sheet, so its padding is also the click target: close only for a click outside its box.
+  // (A keyboard click targets the focused control, never the sheet.)
+  function backdrop(e: MouseEvent) {
+    const r = sheet?.getBoundingClientRect();
+    if (e.target !== sheet || !r) return;
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) sheet?.close();
+  }
+
   const hint = $derived(library.hasKey ? library.keyHint() : null); // keyHint() is not reactive: hasKey re-reads it after a connect
 </script>
 
@@ -68,7 +76,7 @@
   class="sheet vt-scrim"
   aria-labelledby="st-title"
   onclose={onClose}
-  onclick={(e) => e.target === sheet && sheet?.close()}
+  onclick={backdrop}
 >
   <header>
     <h2 id="st-title">Settings</h2>

@@ -4,7 +4,7 @@ import { APP_ID } from '../app';
 
 const API = 'https://api.pixellab.ai/v2';
 const API_HOST = 'api.pixellab.ai';
-const IMAGE_HOST = 'backblaze.pixellab.ai';
+export const IMAGE_HOST = 'backblaze.pixellab.ai';
 const KEY_NAME = `${APP_ID}:key`; // sessionStorage: this tab only
 const KEPT_NAME = `${APP_ID}:key-kept`; // localStorage: only while "Keep me signed in" is on
 const COUNT_NAME = `${APP_ID}:api-count`; // localStorage: request times only, no data
@@ -18,6 +18,7 @@ const MAX_RETRIES = 2;
 const MAX_FAILS = 3; // consecutive failures before stopping
 const PAUSE = 60_000; // after the first 429
 const WINDOW = 5 * 60_000; // a second 429 inside this stops everything
+const TIMEOUT = 30_000; // per attempt: a hung fetch fails like a network failure (retried, counted, stops after 3)
 
 export type Status = 'ok' | 'slowed' | 'paused' | 'stopped' | 'offline' | 'blocked' | 'key-lost';
 export type HttpErrorKind = 'guard' | 'cap' | 'stopped' | 'key-lost' | 'offline' | 'blocked' | 'cancelled' | 'http';
@@ -80,6 +81,7 @@ export function keyHint(): string | null {
 /** Put the key in the store `on` picks and clear the other. No-op without a key. */
 function store(on: boolean): void {
   if (!key) return;
+  const was = kept;
   let ok = false;
   try {
     (on ? localStorage : sessionStorage).setItem(on ? KEPT_NAME : KEY_NAME, key);
@@ -96,6 +98,7 @@ function store(on: boolean): void {
     }
   }
   kept = on && ok;
+  if (was || kept) post('key-changed'); // the saved key was written, replaced or removed
 }
 
 export function setKeepSignedIn(on: boolean): void {
@@ -103,21 +106,37 @@ export function setKeepSignedIn(on: boolean): void {
 }
 
 export function setKey(k: string | null): void {
-  key = k || null;
-  if (key) store(kept);
-  else {
-    kept = false;
-    for (const s of [() => localStorage.removeItem(KEPT_NAME), () => sessionStorage.removeItem(KEY_NAME)]) {
-      try {
-        s();
-      } catch {
-        /* memory only */
-      }
-    }
-    // Waiting jobs would otherwise go out as "Bearer null".
-    for (let i = queue.length - 1; i >= 0; i--) if (queue[i].auth) fail(queue.splice(i, 1)[0], new HttpError('key-lost'));
+  if (k) {
+    key = k;
+    store(kept);
+    if (status === 'key-lost') setStatus('ok');
+  } else {
+    const was = kept;
+    dropKey();
+    if (was) post('key-changed'); // kept tabs re-read the saved key and sign out
   }
-  if (status === 'key-lost') setStatus('ok');
+}
+
+/** Forget key: this tab and every other tab of this browser, kept or tab-only, drop the key. */
+export function forgetKey(): void {
+  dropKey();
+  post('signed-out');
+}
+
+/** Clears the key from memory and both stores and fails waiting jobs that need it. Tells no other tab. */
+function dropKey(): void {
+  key = null;
+  kept = false;
+  for (const s of [() => localStorage.removeItem(KEPT_NAME), () => sessionStorage.removeItem(KEY_NAME)]) {
+    try {
+      s();
+    } catch {
+      /* memory only */
+    }
+  }
+  // Waiting jobs would otherwise go out as "Bearer null".
+  for (let i = queue.length - 1; i >= 0; i--) if (queue[i].auth) fail(queue.splice(i, 1)[0], new HttpError('key-lost'));
+  if (status === 'key-lost') setStatus('ok'); // a new key starts clean: the key screen is the plain one
 }
 
 // ---- status and activity ----
@@ -280,6 +299,9 @@ function stop(why: 'stopped' | 'blocked' = 'stopped'): void {
   retrying.clear();
 }
 
+/** The caller's signal plus the per-attempt timeout. A timeout throws a TimeoutError, not an AbortError, so it is not a cancel. */
+const timed = (s?: AbortSignal): AbortSignal => (s ? AbortSignal.any([s, AbortSignal.timeout(TIMEOUT)]) : AbortSignal.timeout(TIMEOUT));
+
 /** A thrown fetch: aborted, offline, or (browser online) unreachable: CORS, an extension, a firewall or an outage. */
 function netKind(e: unknown): 'cancelled' | 'offline' | 'blocked' {
   return (e as Error)?.name === 'AbortError' ? 'cancelled' : offline() ? 'offline' : 'blocked';
@@ -293,7 +315,7 @@ async function attempt(job: Job): Promise<void> {
   writeCount({ ...c, t: [...c.t, t0] });
   if (used() >= limit()) setStatus('paused');
   try {
-    const init: RequestInit = { method: 'GET', signal: job.signal };
+    const init: RequestInit = { method: 'GET', signal: timed(job.signal) };
     if (job.auth) init.headers = { Authorization: `Bearer ${key}` };
     let res: Response | undefined;
     try {
@@ -468,7 +490,7 @@ async function direct(url: string, o: Opts): Promise<Response> {
   const label = o.label ?? 'Picture';
   imageHost++;
   try {
-    const res = await fetch(url, { method: 'GET', signal: o.signal });
+    const res = await fetch(url, { method: 'GET', signal: timed(o.signal) });
     record('image', label, res.ok ? 'ok' : 'error', t0, res.status, Number(res.headers.get('content-length')) || undefined);
     return res;
   } catch (e) {
@@ -483,13 +505,39 @@ async function direct(url: string, o: Opts): Promise<Response> {
 if (typeof document !== 'undefined') document.addEventListener('visibilitychange', pump);
 globalThis.addEventListener?.('online', () => status === 'offline' && setStatus('ok'));
 globalThis.addEventListener?.('offline', () => setStatus('offline'));
-// Another tab changed the kept key: Forget there must not be written back from here.
-globalThis.addEventListener?.('storage', (e) => {
-  const ev = e as StorageEvent;
-  if (!kept || (ev.key !== null && ev.key !== KEPT_NAME)) return;
-  if (ev.newValue) key = ev.newValue;
-  else {
-    setKey(null);
-    setStatus('key-lost');
-  }
-});
+
+// ---- other tabs ----
+// One channel to this browser's other tabs. Messages are bare words, never the key: 'signed-out' (Forget key: every tab
+// drops its key and library) and 'key-changed' (the saved key was written, replaced or removed: a kept tab re-reads it).
+// A tab never answers a message with one of its own.
+type Message = 'signed-out' | 'key-changed';
+const channel = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(APP_ID);
+function post(m: Message): void {
+  channel?.postMessage(m);
+}
+const signedOutListeners = new Set<() => void>();
+
+/** Another tab signed this one out: the key is gone, the screen should drop what it holds. */
+export function onSignedOut(cb: () => void): () => void {
+  signedOutListeners.add(cb);
+  return () => signedOutListeners.delete(cb);
+}
+
+function signedOut(): void {
+  dropKey();
+  signedOutListeners.forEach((cb) => cb());
+}
+
+if (channel)
+  channel.onmessage = (e: MessageEvent) => {
+    if (e.data === 'signed-out') return signedOut();
+    if (e.data !== 'key-changed' || !kept) return;
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem(KEPT_NAME);
+    } catch {
+      /* unreadable: sign out */
+    }
+    if (saved) key = saved;
+    else signedOut();
+  };

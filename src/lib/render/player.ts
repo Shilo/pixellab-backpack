@@ -1,6 +1,6 @@
 export const DEFAULT_FPS = 8, MIN_FPS = 1, MAX_FPS = 30;
 
-export const clampFps = (f: number): number => (Number.isFinite(f) ? Math.min(MAX_FPS, Math.max(MIN_FPS, Math.round(f))) : DEFAULT_FPS);
+export const clampFps = (f: number): number => (Number.isNaN(f) ? DEFAULT_FPS : Math.min(MAX_FPS, Math.max(MIN_FPS, Math.round(f))));
 
 // Next frame on the clock: loops, or holds the last frame and reports ended.
 export function advance(i: number, n: number, loop: boolean): { i: number; ended: boolean } {

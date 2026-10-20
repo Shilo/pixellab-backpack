@@ -110,29 +110,36 @@ describe('zoomScale', () => {
 });
 
 describe('zoomStep', () => {
-  // fitK = device px per art px of Fit
-  test('in from Fit takes the first step above Fit', () => {
+  // fitK = device px per art px of Fit; undefined = no step that way (the button is disabled)
+  test('16 px art on a big screen (Fit 42): + is disabled, − goes to 16×, steps below Fit are reachable', () => {
+    expect(zoomStep(null, 42, 1, 1)).toBeUndefined();
+    expect(zoomStep(null, 42, -1, 1)).toBe(16);
+    expect(zoomStep(16, 42, -1, 1)).toBe(12);
+    expect(zoomStep(16, 42, 1, 1)).toBeUndefined();
+  });
+  test('from 1×: + goes to 2×, − is disabled', () => {
+    expect(zoomStep(1, 42, 1, 1)).toBe(2);
+    expect(zoomStep(1, 42, -1, 1)).toBeUndefined();
+    expect(zoomStep(1, 0.5, -1, 1)).toBeUndefined();
+  });
+  test('from Fit: the next step either way by device scale', () => {
     expect(zoomStep(null, 3, 1, 1)).toBe(4);
-    expect(zoomStep(null, 0.5, 1, 1)).toBe(1);
-    expect(zoomStep(null, 5, 1, 1)).toBe(6);
+    expect(zoomStep(null, 3, -1, 1)).toBe(2);
+    expect(zoomStep(null, 0.5, 1, 1)).toBe(1); // a smooth downscale
+    expect(zoomStep(null, 0.5, -1, 1)).toBeUndefined();
     expect(zoomStep(null, 3, 1, 1.5)).toBe(3); // 3 x 1.5 = 4.5 -> k 5 > 3
+    expect(zoomStep(null, 3, -1, 1.5)).toBe(1); // 2 -> k 3 is not below; 1 -> k 2 is
     expect(zoomStep(null, 8, 1, 2)).toBe(6); // 4 -> k 8 is not above; 6 -> k 12 is
+    expect(zoomStep(null, 8, -1, 2)).toBe(3); // k 6
   });
-  test('out steps down and lands on Fit at or below it', () => {
-    expect(zoomStep(8, 3, -1, 1)).toBe(6);
-    expect(zoomStep(4, 3, -1, 1)).toBeNull();
-    expect(zoomStep(1, 0.5, -1, 1)).toBe(null);
-    expect(zoomStep(null, 3, -1, 1)).toBeNull();
-    expect(zoomStep(6, 8, -1, 2)).toBeNull(); // 4 -> k 8 <= fit
-  });
-  test('the ends stay put', () => {
-    expect(zoomStep(16, 3, 1, 1)).toBe(16);
-    expect(zoomStep(null, 16, 1, 1)).toBeNull();
-    expect(ZOOM_STEPS.at(-1)).toBe(16);
-  });
-  test('in from a set zoom', () => {
+  test('from a set zoom, by its device scale, whatever Fit is', () => {
     expect(zoomStep(4, 3, 1, 1)).toBe(6);
-    expect(zoomStep(2, 5, 1, 1)).toBe(6); // a stale step below Fit still moves above it
+    expect(zoomStep(8, 3, -1, 1)).toBe(6);
+    expect(zoomStep(4, 3, -1, 1)).toBe(3);
+    expect(zoomStep(2, 5, 1, 1)).toBe(3);
+    expect(zoomStep(16, 3, 1, 1)).toBeUndefined();
+    expect(zoomStep(1, 3, 1, 2.625)).toBe(2); // k 3 -> k 5
+    expect(ZOOM_STEPS.at(-1)).toBe(16);
   });
 });
 

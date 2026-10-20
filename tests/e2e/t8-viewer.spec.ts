@@ -214,6 +214,31 @@ test("a detail that fails shows the error with Try again, which loads it", async
   await expect(msg).toHaveCount(0);
 });
 
+test("after three 503s stop the network, the viewer's Try again lifts the stop and loads; offline, it comes back once online", async ({ page, context }) => {
+  const mock = await openGrid(page, /^Characters, /);
+  mock.mode = 'down';
+  const v = await open(page, 'Character 1');
+  const msg = v.getByRole('status').filter({ hasText: "Couldn't load this asset's animations." });
+  await expect(msg).toBeVisible({ timeout: 15_000 }); // first try + 2 retries with backoff
+  expect(mock.hits.filter((h) => h.detail)).toHaveLength(3);
+  mock.mode = 'ok';
+  await msg.getByRole('button', { name: 'Try again' }).click();
+  await expect(v.locator('.vt-chip')).toHaveText('Breathing idle · South');
+  await expect(msg).toHaveCount(0);
+  expect(mock.hits.filter((h) => h.detail)).toHaveLength(4);
+
+  await context.setOffline(true);
+  await page.keyboard.press('ArrowRight');
+  const next = viewer(page, 'Character 2');
+  const off = next.getByRole('status').filter({ hasText: "This animation isn't saved on this device. Connect to the internet to see it." });
+  await expect(off).toBeVisible();
+  await expect(off.getByRole('button', { name: 'Try again' })).toHaveCount(0);
+  await context.setOffline(false);
+  await off.getByRole('button', { name: 'Try again' }).click();
+  await expect(off).toHaveCount(0);
+  await expect.poll(() => mock.hits.filter((h) => h.detail && h.url.endsWith('/a-characters-1')).length).toBe(1);
+});
+
 test('←/→ and swipes change the asset; Esc and Back close with one Back step; focus returns to the cell; the grid scroll is kept', async ({ page }) => {
   await openGrid(page, /^Characters, /);
   const grid = page.locator('main.grid');

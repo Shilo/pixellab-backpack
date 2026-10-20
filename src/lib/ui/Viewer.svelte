@@ -154,6 +154,8 @@
   const allDirs = $derived(detail ? [...new Set([-1, ...detail.animations.keys()].flatMap((a) => dirsFor(detail!, a)))] : []);
   const showChip = $derived(detail ? chipVisible(detail, states.length) : detailState === 'loading');
   const fitLabel = $derived(fit ? zoomLabel(zoom, fit.k, fit.smooth, devicePixelRatio) : 'Fit');
+  const zoomIn = $derived(fit ? zoomStep(zoom, fit.k, 1, devicePixelRatio) : undefined);
+  const zoomOut = $derived(fit ? zoomStep(zoom, fit.k, -1, devicePixelRatio) : undefined);
   // Zoomed: the art box takes the zoomed size so the stage scrolls natively over all of it (nothing clipped, nothing above 0).
   const zoomed = $derived(zoom !== null && fit ? zoomScale(fit.artW, fit.artH, zoom, devicePixelRatio) : null);
   const onmeasure = (m: { k: number; smooth: boolean; artW: number; artH: number }) => {
@@ -255,7 +257,13 @@
         ? "Couldn't load this asset's animations."
         : null,
   );
-  const retry = () => (detail ? framesTry++ : attempt++);
+  // Like App's Try again: lift the safety net's stop (or the daily pause) first, else the re-run fails at once.
+  const retry = () => {
+    if (library.status === 'paused') library.keepLoading();
+    else library.retry();
+    if (detail) framesTry++;
+    else attempt++;
+  };
 </script>
 
 <svelte:window {onkeydown} />
@@ -301,7 +309,7 @@
       <div class="glass-popover is-open vt-scrim card msg" role="status">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.6v5.2M12 16.3v.1" /></svg>
         <span>{failText}</span>
-        {#if detailState !== 'offline' && library.status !== 'offline'}
+        {#if library.status !== 'offline'}
           <button type="button" class="glass-btn glass-btn--tertiary glass-btn--sm glass-btn--auto" onclick={retry}>Try again</button>
         {/if}
       </div>
@@ -334,7 +342,9 @@
       opener={moreBtn}
       player={hasDetail ? player : null}
       zoomLabel={fitLabel}
-      onZoom={(d) => fit && setZoom(zoomStep(zoom, fit.k, d, devicePixelRatio))}
+      {zoomIn}
+      {zoomOut}
+      onZoom={setZoom}
       onZoomToggle={() => setZoom(zoom === null ? 1 : null)}
       backdrop={session.backdrop}
       onBackdrop={(i) => (session.backdrop = i)}

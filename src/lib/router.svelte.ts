@@ -40,6 +40,8 @@ export function closeActivity(): void {
 }
 
 // True when this tab pushed the viewer on top of its grid, so Back returns to that grid.
+// ponytail: module memory, so a reload on a viewer opened from the grid forgets it and closing leaves a duplicate grid
+// entry in history; keep the flag in history.state if that matters.
 let pushed = false;
 
 /** Closes the viewer: Back when this tab opened it from the grid, else the grid replaces it in place. */

@@ -25,4 +25,6 @@ test('clampFps stays within bounds', () => {
   expect(clampFps(12)).toBe(12);
   expect(clampFps(7.6)).toBe(8);
   expect(clampFps(NaN)).toBe(DEFAULT_FPS);
+  expect(clampFps(Infinity)).toBe(MAX_FPS);
+  expect(clampFps(-Infinity)).toBe(MIN_FPS);
 });
