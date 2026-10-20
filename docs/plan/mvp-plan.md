@@ -394,7 +394,7 @@ interface Family {
   artCostsApi: boolean;  // true: wait 0.3 s on screen first (tilesets, Tiles Pro, isometric)
 }
 export const FAMILIES: Family[];
-export const CATEGORIES: { id: string; label: string; families: Family['id'][] }[];
+// CATEGORIES lives in src/lib/categories.ts (one list shared by router, adapters and screens)
 
 // lib/data/check.ts: pure
 applyCheck(saved: FamilyState | undefined, page0: { total: number; cards: Card[] }, now: number): FamilyState
@@ -428,30 +428,30 @@ About 1 hour in desktop Chrome, using the console helper in [plan 06 §2.2](../d
 
 ### MVP build
 
-- [ ] **B1 Scaffold**: Vite + Svelte 5 + TypeScript at the project root; GlassKit vendored; `lib/app.ts` name constant; `public/_headers` served by `vite preview`; Vitest and Playwright; a test that fails if anything but `http.ts` calls `fetch`. Done when: an empty app builds and every check passes. *(needs nothing)*
-- [ ] **B2 Network module** `[P]` (`http.ts`): view-only guard, key holder, 2-at-a-time queue with user-first order, 2 per second, daily cap, at most 2 retries, back-off-then-stop, hidden-tab pause, status events, blocked-browser probe (UX-7). Done when: test T1 passes. *(needs B1)*
-- [ ] **B3 Family adapters** `[P]` (`families.ts`): the 7 families and the 4 MVP categories, on made-up fixtures shaped like research 01. Done when: test T3 passes. *(needs B1)*
-- [ ] **B4 Saved copy and check rules** `[P]` (`store.ts`, `check.ts`). Done when: test T2 passes. *(needs B1)*
-- [ ] **B5 Pixel art renderer** `[P]` (`fit.ts`, `PixelArt.svelte`). Done when: art is crisp at screen densities 1, 1.5, 2 and 3 and after a resize. *(needs B1)*
-- [ ] **B6 App shell** `[P]` (`App.svelte`, `router.svelte.ts`, `Dock.svelte`, `Notice.svelte`, `app.css`): home and category routes, browser Back, the dock with inert buttons. Done when: Back and ‹ Library both return home, and inert buttons cause no request and no navigation. *(needs B1)*
-- [ ] **B7 Library check service** (`library.svelte.ts`): open check (1-hour rule, shared across tabs), load more with the one-row overlap, 7-day expiry, 401 back to the key screen with the saved list kept (UX-23). Done when: test T6's request counts pass. *(needs B2, B3, B4)*
-- [ ] **B8 Key screen** `[P]` (`KeyScreen.svelte`): paste to test, Test key, Show, all its states. Done when: test T4 passes and the screen matches the `g1-connect` mockups. *(needs B6, B7)*
-- [ ] **B9 Library home** `[P]` (`LibraryHome.svelte`, `CategoryTile.svelte`): 4 tiles, mosaics from page 0, counts, empty categories hidden, all home states. Done when: it matches the `01-home` mockups without the Images, Maps and folder tiles. *(needs B5, B6, B7)*
-- [ ] **B10 Category grid** `[P]` (`CategoryGrid.svelte`, `AssetCell.svelte`): draws only rows on screen, loads more near the end, 0.3 s wait for costly art, scroll position kept when going back. Done when: test T5 passes and it matches the `03-category-open` mockups. *(needs B5, B6, B7)*
-- [ ] **B11 Costly art** (inside `families.ts`): tileset helpers resolved once and saved, Tiles Pro detail once, isometric download, nothing for unfinished or failed rows. Done when: a second visit to the Tilesets grid sends zero API requests (T6). *(needs B3, B10; confirm with Phase 0 Q4)*
+- [x] **B1 Scaffold**: Vite + Svelte 5 + TypeScript at the project root; GlassKit vendored; `lib/app.ts` name constant; `public/_headers` served by `vite preview`; Vitest and Playwright; a test that fails if anything but `http.ts` calls `fetch`. Done when: an empty app builds and every check passes. *(needs nothing)*
+- [x] **B2 Network module** `[P]` (`http.ts`): view-only guard, key holder, 2-at-a-time queue with user-first order, 2 per second, daily cap, at most 2 retries, back-off-then-stop, hidden-tab pause, status events, blocked-browser probe (UX-7). Done when: test T1 passes. *(needs B1)*
+- [x] **B3 Family adapters** `[P]` (`families.ts`): the 7 families and the 4 MVP categories, on made-up fixtures shaped like research 01. Done when: test T3 passes. *(needs B1)*
+- [x] **B4 Saved copy and check rules** `[P]` (`store.ts`, `check.ts`). Done when: test T2 passes. *(needs B1)*
+- [x] **B5 Pixel art renderer** `[P]` (`fit.ts`, `PixelArt.svelte`). Done when: art is crisp at screen densities 1, 1.5, 2 and 3 and after a resize. *(needs B1)*
+- [x] **B6 App shell** `[P]` (`App.svelte`, `router.svelte.ts`, `Dock.svelte`, `Notice.svelte`, `app.css`): home and category routes, browser Back, the dock with inert buttons. Done when: Back and ‹ Library both return home, and inert buttons cause no request and no navigation. *(needs B1)*
+- [x] **B7 Library check service** (`library.svelte.ts`): open check (1-hour rule, shared across tabs), load more with the one-row overlap, 7-day expiry, 401 back to the key screen with the saved list kept (UX-23). Done when: test T6's request counts pass. *(needs B2, B3, B4)*
+- [x] **B8 Key screen** `[P]` (`KeyScreen.svelte`): paste to test, Test key, Show, all its states. Done when: test T4 passes and the screen matches the `g1-connect` mockups. *(needs B6, B7)*
+- [x] **B9 Library home** `[P]` (`LibraryHome.svelte`, `CategoryTile.svelte`): 4 tiles, mosaics from page 0, counts, empty categories hidden, all home states. Done when: it matches the `01-home` mockups without the Images, Maps and folder tiles. *(needs B5, B6, B7)*
+- [x] **B10 Category grid** `[P]` (`CategoryGrid.svelte`, `AssetCell.svelte`): draws only rows on screen, loads more near the end, 0.3 s wait for costly art, scroll position kept when going back. Done when: test T5 passes and it matches the `03-category-open` mockups. *(needs B5, B6, B7)*
+- [x] **B11 Costly art** (inside `families.ts`): tileset helpers resolved once and saved, Tiles Pro detail once, isometric download, nothing for unfinished or failed rows. Done when: a second visit to the Tilesets grid sends zero API requests (T6). *(needs B3, B10; confirm with Phase 0 Q4)*
 - [ ] **B12 Real fixtures**: swap in the Phase 0 fixtures, apply Q5 and Q6, rerun every test. Done when: all tests pass on real shapes. *(needs Phase 0, B11)*
 
-- [ ] **B13 Activity panel** (`ui/Activity.svelte`, counters from `http.ts`): counters, live list, Copy log, `#activity` route, no key/IDs/links shown. Done when: every request in test T6 shows up as one entry with the right source and result. *(needs B2, B6)*
-- [ ] **B14 "…" menu with Refresh and Activity**: reruns the open check right away, at most once a minute. Done when: tapping it twice within a minute sends 7 requests, not 14. *(needs B6, B7)*
+- [x] **B13 Activity panel** (`ui/Activity.svelte`, counters from `http.ts`): counters, live list, Copy log, `#activity` route, no key/IDs/links shown. Done when: every request in test T6 shows up as one entry with the right source and result. *(needs B2, B6)*
+- [x] **B14 "…" menu with Refresh and Activity**: reruns the open check right away, at most once a minute. Done when: tapping it twice within a minute sends 7 requests, not 14. *(needs B6, B7)*
 
 ### MVP tests
 
-- [ ] **T1 Safety net** (unit) `[P]`: fake 429s, server errors and network drops; checks 2 at a time, 2 per second, the daily cap and "Keep loading", the retry limit, back-off then stop, no retry on 401/404/423. *(with B2)*
-- [ ] **T2 Check rules** (unit) `[P]`: every row of the table in concern 2, plus the overlap test (shift detected → reload) and the 7-day expiry. *(with B4)*
-- [ ] **T3 Adapters** (unit) `[P]`: each family turns a fixture page into cards; unfinished rows are marked not done; bad rows are dropped, never crash. *(with B3)*
-- [ ] **T4 Key screen** (e2e, mocked API) `[P]`: good key, wrong key, offline, blocked, welcome back; the key never appears in the address bar or in storage outside the tab. *(with B8)*
-- [ ] **T5 Navigation** (e2e) `[P]`: home → category → scroll loads more → back → home, by ‹ Library and by browser Back; desktop 1440 px and phone 390 px; no sideways scroll; keyboard reaches every working control. *(with B10)*
-- [ ] **T6 Request counter** (e2e) `[P]`: first open = 7 API requests (+ up to 4 tileset helpers for the mosaic); back within an hour = 0; key pasted in a new tab within the hour = 1; another account's key wipes the saved copy; only GET requests; no key in any URL; no request for unfinished rows; the daily-cap banner appears (cap lowered for the test). *(with B7, B11)*
+- [x] **T1 Safety net** (unit) `[P]`: fake 429s, server errors and network drops; checks 2 at a time, 2 per second, the daily cap and "Keep loading", the retry limit, back-off then stop, no retry on 401/404/423. *(with B2)*
+- [x] **T2 Check rules** (unit) `[P]`: every row of the table in concern 2, plus the overlap test (shift detected → reload) and the 7-day expiry. *(with B4)*
+- [x] **T3 Adapters** (unit) `[P]`: each family turns a fixture page into cards; unfinished rows are marked not done; bad rows are dropped, never crash. *(with B3)*
+- [x] **T4 Key screen** (e2e, mocked API) `[P]`: good key, wrong key, offline, blocked, welcome back; the key never appears in the address bar or in storage outside the tab. *(with B8)*
+- [x] **T5 Navigation** (e2e) `[P]`: home → category → scroll loads more → back → home, by ‹ Library and by browser Back; desktop 1440 px and phone 390 px; no sideways scroll; keyboard reaches every working control. *(with B10)*
+- [x] **T6 Request counter** (e2e) `[P]`: first open = 7 API requests (+ up to 4 tileset helpers for the mosaic); back within an hour = 0; key pasted in a new tab within the hour = 1; another account's key wipes the saved copy; only GET requests; no key in any URL; no request for unfinished rows; the daily-cap banner appears (cap lowered for the test). *(with B7, B11)*
 - [ ] **T7 Real-key check** (owner-run, from a checklist the builder writes, B-2): open the MVP with your key and DevTools; count requests on first open, on a reopen within the hour, and the next day. Done when: the counts match the "Recommended MVP" row in concern 2 (allowing for new assets). *(last)*
 
 ### Deferred backlog (suggested order)

@@ -23,6 +23,18 @@
 
 **What's in the repo.** Only this final mockup (`mockups/full/`, including its 174 screenshots, about 171 MB) and its sample data (`mockups/shared/`, including the owner's PixelLab sample art) are committed. The earlier explorations (`mockups/option-*`, `mockups/recommended/`, `mockups/simple/`) are git-ignored and kept locally only, so links to them in the docs work only on the machine that has them. To regenerate screenshots: `node mockups/full/tools/render.js mockups/full/base <port>`, then `python mockups/full/tools/gallery.py mockups/full`.
 
+
+## Run the MVP
+
+The MVP (API-key screen, library home, category grids, Activity panel, Refresh) lives at the repo root. It needs Node 22+ and, for end-to-end tests, Microsoft Edge.
+
+```bash
+npm install
+npm run dev
+```
+
+Checks: `npm run check` (types), `npm test` (unit), `npm run e2e` (end-to-end, mocked PixelLab, desktop and phone), `npm run build` then `npm run preview` (production build with the security headers). Paste your own PixelLab API key on the first screen; it stays in that browser tab only. Open the Activity panel from the "…" menu to see every request the app sends.
+
 ## What it is
 
 - **One library for everything PixelLab lets you list.** Characters, Objects (including map objects), Images (Creator gallery), Tilesets, Tiles, Maps and UI share one search, one sort and one scope menu. PixelLab's own site spreads them over 7+ separate libraries.
