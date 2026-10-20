@@ -74,8 +74,9 @@
       titleOn = true;
       const fade = setTimeout(() => (titleOn = false), 2000);
       // ponytail: costly art (tilesets...) never resolved yet waits 0.3 s like the grid, so flipping past sends nothing.
+      // No abort signal: a cancelled costly picture would be dropped from the cache and asked a second time.
       const costly = library.family(familyId).artCostsApi && !card.thumb;
-      const artT = setTimeout(() => library.art(card, familyId, ctrl.signal).then((b) => cur === key && (art = b)), costly ? COSTLY_WAIT_MS : 0);
+      const artT = setTimeout(() => library.art(card, familyId).then((b) => cur === key && (art = b)), costly ? COSTLY_WAIT_MS : 0);
       let detT: ReturnType<typeof setTimeout> | undefined;
       if (hasDetail) {
         detailState = 'loading';
@@ -351,7 +352,7 @@
      must cover the Info panel at 700), the "…" menu 1000+. Nothing here has a transform or filter, so the menus' fixed boxes use the window. */
   .viewer { position: fixed; inset: 0; z-index: 950; --cx: 50%; --side: 0px; }
   .stage { position: fixed; inset: 0; background: radial-gradient(760px 560px at var(--cx) 48%, #2a2c34, #16171c 58%, #0c0c0f); }
-  .art { position: absolute; inset: 104px 72px 116px; overflow: hidden; touch-action: none; }
+  .art { position: absolute; inset: 104px 72px 116px; overflow: hidden; touch-action: pan-y pinch-zoom; } /* horizontal swipes reach us; pinch stays */
   .art.zoomed { inset: 0 var(--side) 0 0; overflow: auto; touch-action: auto; }
   .box { position: relative; width: 100%; height: 100%; min-width: 100%; min-height: 100%; }
 

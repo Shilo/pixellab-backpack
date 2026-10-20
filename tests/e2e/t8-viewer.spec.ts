@@ -127,6 +127,11 @@ test('a grouped character shows one cell, and its chip switches to the Armored s
   await expect(v.locator('.vt-chip')).toContainText('Armored');
   expect(page.url()).not.toBe(url);
   await expect(page).toHaveURL(KEY_URL);
+  // Closing from the other state returns focus to the group's one cell.
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Character 7', exact: true })).toBeFocused();
 });
 
 test('a 1-direction object plays its animation with no direction rose', async ({ page }) => {

@@ -99,11 +99,15 @@
     const key = reveal;
     if (key === revealed || !el || !m) return;
     revealed = key;
-    const i = key ? items.findIndex((it) => it.card.key === key) : -1;
+    // A grouped character's other state is shown by its group's one card.
+    const hit = key ? library.find(categoryId, key) : null;
+    const g = hit?.card.meta.group_id;
+    const i = hit ? items.findIndex((it) => it.card.key === key || (typeof g === 'string' && !!g && it.familyId === hit.familyId && it.card.meta.group_id === g)) : -1;
     if (i < 0) return;
     const top = m.top + Math.floor(i / m.cols) * m.stride;
     if (top < el.scrollTop || top + m.stride > el.scrollTop + m.viewH) el.scrollTop = scrollTop = Math.max(0, top - (m.viewH - m.stride) / 2);
-    tick().then(() => el?.querySelector<HTMLElement>(`a[data-key="${key}"]`)?.focus({ preventScroll: true }));
+    const shownKey = items[i].card.key;
+    tick().then(() => el?.querySelector<HTMLElement>(`a[data-key="${shownKey}"]`)?.focus({ preventScroll: true }));
   });
 
   // Next pages only when the page reaches near the end of a family's cards. A family is asked again only after its
