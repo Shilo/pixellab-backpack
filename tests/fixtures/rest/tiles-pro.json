@@ -1,0 +1,41 @@
+{
+  "tiles": [
+    {
+      "id": "p0000000-0000-4000-8000-000000000001",
+      "name": "Test Pro 1",
+      "description": "road tiles",
+      "tile_type": "square_topdown",
+      "tile_size": 32,
+      "n_tiles": 16,
+      "tile_view": "high top-down",
+      "created_at": "2026-01-01T00:00:00Z",
+      "status": "completed"
+    },
+    {
+      "id": "p0000000-0000-4000-8000-000000000002",
+      "name": "Test Pro 2",
+      "description": "road tiles",
+      "tile_type": "square_topdown",
+      "tile_size": 32,
+      "n_tiles": 16,
+      "tile_view": "high top-down",
+      "created_at": "2026-01-01T00:00:00Z",
+      "status": "processing"
+    },
+    {
+      "id": "p0000000-0000-4000-8000-000000000003",
+      "name": "Test Pro 3",
+      "description": "road tiles",
+      "tile_type": "square_topdown",
+      "tile_size": 32,
+      "n_tiles": 16,
+      "tile_view": "high top-down",
+      "created_at": "2026-01-01T00:00:00Z",
+      "status": "failed"
+    },
+    {
+      "status": "completed"
+    }
+  ],
+  "total": 3
+}

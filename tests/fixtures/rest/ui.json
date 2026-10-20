@@ -1,0 +1,33 @@
+{
+  "ui_assets": [
+    {
+      "id": "u0000000-0000-4000-8000-000000000001",
+      "name": "Test Panel",
+      "prompt": "a panel",
+      "size": {
+        "width": 128,
+        "height": 96
+      },
+      "image_url": "https://backblaze.pixellab.ai/file/pixellab-characters/ui/u0/u1/full.png?t=1",
+      "status": "completed",
+      "created_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "u0000000-0000-4000-8000-000000000002",
+      "name": "Test Running",
+      "prompt": "a button",
+      "size": {
+        "width": 64,
+        "height": 32
+      },
+      "image_url": null,
+      "status": "processing",
+      "created_at": "2026-01-02T00:00:00Z"
+    },
+    {
+      "name": "No id",
+      "image_url": "https://backblaze.pixellab.ai/file/pixellab-characters/y.png"
+    }
+  ],
+  "total": 2
+}

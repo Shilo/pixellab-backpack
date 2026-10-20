@@ -1,0 +1,53 @@
+{
+  "objects": [
+    {
+      "id": "o0000000-0000-4000-8000-000000000001",
+      "name": "Test Barrel",
+      "prompt": "a barrel",
+      "size": {
+        "width": 32,
+        "height": 32
+      },
+      "directions": 1,
+      "created_at": "2026-01-01T00:00:00Z",
+      "view": "side",
+      "preview_url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/u0/o1/rotations/unknown.png",
+      "tags": [],
+      "status": "completed"
+    },
+    {
+      "id": "o0000000-0000-4000-8000-000000000002",
+      "name": null,
+      "prompt": "a crate with no name",
+      "size": {
+        "width": 32,
+        "height": 32
+      },
+      "directions": 4,
+      "created_at": "2026-01-02T00:00:00Z",
+      "preview_url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/u0/o2/rotations/south.png",
+      "status": null
+    },
+    {
+      "id": "o0000000-0000-4000-8000-000000000003",
+      "name": "Test Failed",
+      "prompt": "x",
+      "size": {
+        "width": 32,
+        "height": 32
+      },
+      "directions": 1,
+      "created_at": "2026-01-03T00:00:00Z",
+      "preview_url": null,
+      "status": "failed"
+    },
+    {
+      "id": "",
+      "name": "Empty id",
+      "status": "completed"
+    },
+    "bad"
+  ],
+  "total": 3,
+  "usage": null
+}

@@ -1,0 +1,9 @@
+{
+  "storage_urls": {
+    "tile_0": "https://backblaze.pixellab.ai/file/pixellab-tiles/u0/p1/tile_0.png",
+    "tile_1": "https://backblaze.pixellab.ai/file/pixellab-tiles/u0/p1/tile_1.png"
+  },
+  "kind": "tiles",
+  "tile_rules": null,
+  "usage": null
+}
