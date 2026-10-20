@@ -29,8 +29,8 @@ export function joinNextPage(saved: FamilyState, offset: number, page: Card[], n
 
 export const isFresh = (state: FamilyState | undefined, now: number) => !!state && now - state.checkedAt < CHECK_TTL_MS;
 
-// ponytail: pageSize defaults to 100; callers for 50-row families (tilesets-side, tiles-pro) must pass 50.
-export function dropExpiredDeep(state: FamilyState, now: number, pageSize = 100): FamilyState {
+/** pageSize is the family's page-0 size (100, or 50 for tilesets-side and tiles-pro); required so a caller cannot forget it. */
+export function dropExpiredDeep(state: FamilyState, now: number, pageSize: number): FamilyState {
   if (state.deepLoadedAt === null || now - state.deepLoadedAt < DEEP_TTL_MS) return state;
   return { ...state, cards: state.cards.slice(0, pageSize), deepLoadedAt: null };
 }
