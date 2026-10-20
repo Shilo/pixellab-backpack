@@ -10,16 +10,16 @@
 
 | | |
 |---|---|
-| Research and design | **Complete** (2026-10-18): 10 research docs, reviews R1–R5 (R5 is the final QA pass), 8 design docs, 3 explored mockups and 1 recommended mockup |
+| Research and design | **Simplicity redesign** (2026-10-19): the owner rejected the earlier mockups as too busy. Three simplicity spikes (research 10–12) and three static concepts led to [design 08](docs/design/08-simplicity-redesign.md), "Just the Art". It now awaits owner review. In total: 13 research docs, reviews R1–R5, 9 design docs, 3 simple concepts and 4 earlier interactive mockups |
 | App code | **None yet.** It will be scaffolded at the project root, beside `docs/` and `mockups/`, with a local `git init`; CI (GitHub Actions) is added once a remote exists |
-| Next step | **Phase 0**: about half a day of owner-run checks with a real API key ([plan §2](docs/design/06-implementation-plan.md)). Phase 1 tasks that need no Phase 0 result can start in parallel on synthetic fixtures, with every gated value at its safe default ([plan §3.1](docs/design/06-implementation-plan.md)) |
+| Next step | **Owner review of [design 08](docs/design/08-simplicity-redesign.md)**, then **Phase 0**: about half a day of owner-run checks with a real API key ([plan §2](docs/design/06-implementation-plan.md)). Phase 1 tasks that need no Phase 0 result can start in parallel on synthetic fixtures, with every gated value at its safe default ([plan §3.1](docs/design/06-implementation-plan.md)) |
 
 ## What it is
 
-- **One library for everything PixelLab lets you list.** Characters, Objects (including map objects), Images (Creator gallery), Tilesets, Tiles, Maps and UI share one search, one sort and one row of type chips. PixelLab's own site spreads them over 7+ separate libraries.
+- **One library for everything PixelLab lets you list.** Characters, Objects (including map objects), Images (Creator gallery), Tilesets, Tiles, Maps and UI share one search, one sort and one scope menu. PixelLab's own site spreads them over 7+ separate libraries.
 - **Crisp at every size.** Sprites are drawn at a whole number of device pixels. Art bigger than its cell is shown whole and smoothly fitted. Nothing is cropped or scaled with CSS transforms.
-- **Playback that matches PixelLab.** It plays at 8 fps by default and has a direction compass, animations and states, a frame filmstrip, an fps stepper, loop, and five backdrops for judging pixels.
-- **Folders and favorites.** They are local and many-to-many, with 2×2 cover mosaics and a JSON backup.
+- **Playback that matches PixelLab.** It plays at 8 fps by default, with animations, directions and states one chip away, and speed, frame step, loop, zoom and five backdrops one menu away.
+- **Folders and favorites.** They are local and many-to-many, open as an overlay, and have a JSON backup.
 - **Every download type.** PNG (original bytes at 1×, or an N× upscale), GIF, sprite sheet + Aseprite JSON, all frames, PixelLab originals, and uncapped multi-asset or whole-account ZIPs.
 - **Hand-offs, not edits.** Anything that creates, edits or spends goes through a labelled "Open in PixelLab ↗" link. Tools that can cost money say "May use PixelLab credits".
 - **Desktop and mobile.** It covers phone portrait and landscape through ultrawide, with touch, mouse, keyboard and screen reader. There are no hover-only actions, and the baseline is WCAG 2.2 AA.
@@ -52,33 +52,33 @@ flowchart LR
 - The MCP client calls only an allowlist: `list_images`, `get_image` (Creator gallery refs only, behind a regex), `list_maps`, `view_map` and a few read-only getters. Once per session it checks PixelLab's tool annotations and switches a feature off if they change. It never calls `list_projects` (whose response embeds a credentialed git URL) or `get_map_object` (which can save).
 - End-to-end tests assert zero non-GET `/v2` requests and zero MCP calls outside the allowlist.
 
-**Not in the public API:** fonts, VFX "My effects", portraits, talking animations, uploads and Game Builder projects. Instead of fake chips, the app shows one honest note that links to PixelLab.
+**Not in the public API:** fonts, VFX "My effects", portraits, talking animations, uploads and Game Builder projects. Instead of fake types, the app shows one honest note that links to PixelLab.
 
 **CORS verdict (live header captures, 2026-10-18): feasible with no proxy.** The REST v2 and MCP endpoints reflect any origin, allow credentials, and cache preflights for 600 s. Media on `backblaze.pixellab.ai` sends `Access-Control-Allow-Origin: *` with a one-year cache. There are two exceptions. The Creator gallery's presigned S3 `download_url` has no CORS, so the app uses `get_image`'s inline frames instead. `Retry-After` is not exposed, so the app backs off blindly with jitter. This behavior is undocumented and could be tightened. The fallback order is: ask PixelLab, then a Tauri desktop wrapper, then a proxy each user deploys for themselves. A shared proxy that sees everyone's keys is never acceptable. Details: [research 02](docs/research/02-browser-integration-and-security.md), [R1](docs/reviews/R1-research-cross-review.md).
 
 ## Recommendation
 
-### Design: "Quiet Studio, lifted"
+### Design: "Just the Art" (simplicity redesign)
 
-No explored option won outright. A had the best shell and phone model, B the best single-asset page and the best looks, and C the best bulk and frame-inspection tools. The hybrid builds on A's familiar layout and takes the best part of each. It is retuned to one neutral art surface shared by grid and viewer, one ice-blue accent, and light and dark themes that follow the system. The full spec is in [07](docs/design/07-recommended-design.md), and the mockup that illustrates it is [mockups/recommended/](mockups/recommended/index.html).
+The owner rejected every earlier mockup as too busy: a sidebar full of folders, a top bar full of buttons and a dense viewer. The redesign follows iOS Photos and Unsplash: the art fills the screen, and everything else is one labelled menu away. The full spec is [design 08](docs/design/08-simplicity-redesign.md); its rulings are S-1 to S-17 in the [decision log](docs/design/00-decision-log.md).
 
-| From | Taken |
-|---|---|
-| **A · Quiet Studio** | Shell (sidebar ≥ 1200 px, rail on tablet and phone landscape, floating pill + round search on phone), captioned uniform grid, modal viewer with a docked Info panel or bottom sheet, immersive phone-landscape viewer, ice-blue accent |
-| **B · Gallery Wall** | Inline compass and fps in the transport row, download tiles with one-line descriptions, museum-label Info hierarchy (in the system sans), whole-card focus ring, 2×2 folder mosaics |
-| **C · Soft Pixel Workbench** | Frame filmstrip (replaces the scrubber), selection-summary panel, labelled "Open in PixelLab ↗" button, non-blocking partial-failure toast |
-| **Dropped** | A's click-to-select inspector and dwell prefetch. A click, tap, Enter or Space always opens the viewer |
+- **Base: Concept 1 "Just the Art"** ([mockups/simple/1-just-the-art/](mockups/simple/1-just-the-art/README.md)).
+  - **First screen, 4 controls:** "All assets ▾" (the title switches between all assets, Favorites, the 7 types and every folder), Search (`/`), Select and "…".
+  - **Detail, 5 controls + 1:** ✕, ♡, ⓘ, "…" and "Download GIF ▾", plus a "Walk · East ▾" chip only for assets with a choice of animation, direction or state. The asset name shows briefly on open, then fades. ⓘ opens a drawer with an Apple-style grouped list.
+- **Borrowed from Concept 2** ([mockups/simple/2-home-screen/](mockups/simple/2-home-screen/README.md)): a quiet name under each tile, one right-click / long-press menu (Open, Favorite, Add to folder…, Download…, Select), and folders that open as an overlay.
+- **Concept 3** ([mockups/simple/3-library-tiles/](mockups/simple/3-library-tiles/README.md)): its category tiles are kept only as a possible future overview screen.
+- **Rules:** every hidden action is also in a labelled menu (nothing is hover-only or gesture-only). Selection swaps the top controls for a floating bottom bar (count, Download, Add to folder, Favorite, ✕). Speed, frame step, zoom, backdrop and the extra download formats live in menus.
+- **Unchanged:** scope (01), behaviour, data and download semantics (02), architecture and security (05) and the plan (06).
 
-| Measure ([R3a](docs/reviews/R3a-mockup-ux-review.md), [R3b](docs/reviews/R3b-mockup-visual-a11y-review.md)) | A | B | C |
-|---|---|---|---|
-| Rubric total /100 after mockup review (preliminary) | **75.5** (89) | 74 (74.5) | 72.5 (76.5) |
-| Viewports passed, of 17 | **12** | 8 | 8 |
-| Phone viewer: share of height given to art | **~64%** | ~46% | ~42% |
-| Blurry downscaled thumbnails at 1920×1080 | 8 | **6** | 38 |
-| Visual polish (1–5) | 3.5 | **5** | 3.5 |
+![Concept 1: the library grid](mockups/simple/1-just-the-art/01-home.png)
 
-- **Why not B:** it was the prettiest page on a light desktop and the weakest gallery everywhere else. Phone shelves showed only 2–6 thumbnails under 34–49% chrome. The full-page detail view separates watching from acting. Its plum accent turns pink in dark mode, and card labels clip at 200% text.
-- **Why not C:** its captionless cells made people identify assets by art alone, and its small cells turned 38 of 72 thumbnails blurry at 1080p. The always-on stage was cramped, its amber accent fill measured 2.33:1, and it was the most complex to build.
+![Concept 1: the "All assets" menu replaces the sidebar](mockups/simple/1-just-the-art/04-scope-menu.png)
+
+![Concept 1: the detail view](mockups/simple/1-just-the-art/02-detail.png)
+
+![Concept 1: the detail view with Info open](mockups/simple/1-just-the-art/03-detail-info.png)
+
+**Earlier recommendation, superseded.** The "Quiet Studio, lifted" hybrid combined option A's shell with the best parts of B and C, after two mockup reviews ([R3a](docs/reviews/R3a-mockup-ux-review.md), [R3b](docs/reviews/R3b-mockup-visual-a11y-review.md)). Its layout and viewer controls are replaced by 08. Its tokens and accessibility invariants ([07](docs/design/07-recommended-design.md) §5, §7) remain the baseline until they are retuned.
 
 ### Implementation
 
@@ -109,23 +109,31 @@ It is paired with `Referrer-Policy: no-referrer`, `nosniff`, a locked-down `Perm
 
 | Phase | Goal | Exit gate |
 |---|---|---|
-| **0 · Gate** (~½ day, owner, real key) | 14 checks, P0-1 to P0-14 (the plan's numbering is canonical): media hosts and CORS, read cost (balance before and after), rate limits at concurrency 2/4/8, `get_image` side effects, map thumbnail cost, MCP text fixtures, hand-off URLs, export timing | Results recorded in `docs/research/10-phase0-results.md` (to be created); Images flag and Play-previews default decided |
+| **0 · Gate** (~½ day, owner, real key) | 14 checks, P0-1 to P0-14 (the plan's numbering is canonical): media hosts and CORS, read cost (balance before and after), rate limits at concurrency 2/4/8, `get_image` side effects, map thumbnail cost, MCP text fixtures, hand-off URLs, export timing | Results recorded in `docs/research/13-phase0-results.md` (to be created); Images flag and Play-previews default decided |
 | **1 · MVP** | Connect, sync of the 7 REST families, grid, viewer + player, Info panel, favorites and folders, selection, PNG and PixelLab-original downloads, Settings, keymap | Acceptance criteria + a 10-minute demo with the owner |
 | **2 · MCP + downloads** | Maps and (gated) Images via MCP; GIF, sheet, frames and N× in the worker; multi-asset and bulk ZIP; folder backup | Acceptance criteria; balance unchanged after a full sync |
 | **3 · Polish + release** | Help overlay, storage settings, performance and accessibility audits, device matrix, optional PWA manifest, release prep | Every brief §9 target met; **PixelLab contacted and answered** before any public launch |
 
 ## See the mockups
 
-No build, no server, no network. **Open any `index.html` straight from disk** (double-click it, or drag it into an evergreen browser). Any non-empty key "connects", the word `bad` shows the invalid-key error, and **Use sample library** skips the form. Nothing you type is stored.
+**Simplicity concepts (start here).** Static desktop renders (dark, 1440×900 at 2×). Each folder has the PNGs, a README with its control counts, hidden-function map, phone mapping and weaknesses, and the small HTML files that rendered the PNGs.
+
+| Concept | Images | Notes |
+|---|---|---|
+| **1 · Just the Art (recommended base)** | [home](mockups/simple/1-just-the-art/01-home.png) · [detail](mockups/simple/1-just-the-art/02-detail.png) · [detail + Info](mockups/simple/1-just-the-art/03-detail-info.png) · [scope menu](mockups/simple/1-just-the-art/04-scope-menu.png) | [README](mockups/simple/1-just-the-art/README.md); illustrates design 08, which wins where they differ |
+| 2 · Home Screen (borrowed parts) | [home](mockups/simple/2-home-screen/01-home.png) · [detail](mockups/simple/2-home-screen/02-detail.png) · [detail + Info](mockups/simple/2-home-screen/03-detail-info.png) · [folder open](mockups/simple/2-home-screen/04-folder-open.png) · [context menu](mockups/simple/2-home-screen/05-context-menu.png) | [README](mockups/simple/2-home-screen/README.md); 08 takes its tile names, context menu and folder overlay |
+| 3 · Library Tiles | [home](mockups/simple/3-library-tiles/01-home.png) · [category](mockups/simple/3-library-tiles/02-category.png) · [detail](mockups/simple/3-library-tiles/03-detail.png) · [detail + Info](mockups/simple/3-library-tiles/04-detail-info.png) | [README](mockups/simple/3-library-tiles/README.md); a possible future overview screen, not v1 |
+
+**Earlier explorations (interactive, superseded by design 08).** No build, no server, no network. **Open any `index.html` straight from disk** (double-click it, or drag it into an evergreen browser). Any non-empty key "connects", the word `bad` shows the invalid-key error, and **Use sample library** skips the form. Nothing you type is stored.
 
 | Mockup | Open | Notes |
 |---|---|---|
-| **Recommended (start here)** | [mockups/recommended/index.html](mockups/recommended/index.html) | The hybrid; illustrates design 07 and 02, which win where it differs ([README](mockups/recommended/README.md)) |
-| A · Quiet Studio | [index.html](mockups/option-a-quiet-studio/index.html) · [README](mockups/option-a-quiet-studio/README.md) | Explored option; frozen |
-| B · Gallery Wall | [index.html](mockups/option-b-gallery-wall/index.html) · [README](mockups/option-b-gallery-wall/README.md) | Explored option; frozen |
-| C · Soft Pixel Workbench | [index.html](mockups/option-c-soft-pixel-workbench/index.html) · [README](mockups/option-c-soft-pixel-workbench/README.md) | Explored option; frozen |
+| Recommended hybrid "Quiet Studio, lifted" | [index.html](mockups/recommended/index.html) · [README](mockups/recommended/README.md) | Earlier exploration; illustrates design 07 |
+| A · Quiet Studio | [index.html](mockups/option-a-quiet-studio/index.html) · [README](mockups/option-a-quiet-studio/README.md) | Earlier exploration; frozen |
+| B · Gallery Wall | [index.html](mockups/option-b-gallery-wall/index.html) · [README](mockups/option-b-gallery-wall/README.md) | Earlier exploration; frozen |
+| C · Soft Pixel Workbench | [index.html](mockups/option-c-soft-pixel-workbench/index.html) · [README](mockups/option-c-soft-pixel-workbench/README.md) | Earlier exploration; frozen |
 
-Demo shortcuts: append a query string to `index.html`. Each mockup's README has the full list.
+Demo shortcuts for the earlier explorations: append a query string to `index.html`. Each mockup's README has the full list.
 
 | Append | Works in | Shows |
 |---|---|---|
@@ -145,7 +153,7 @@ These are owner-only. Each has a safe default, so nothing blocks Phase 0 except 
 | # | Decision | Default if undecided |
 |---|---|---|
 | 1 | Final product name, plus trademark and domain check. **Decide it before the first build real users touch:** the name is one constant in the code, but renaming later breaks backup imports | Keep "Vitrine" as the working name |
-| 2 | Accent color checked against PixelLab's brand palette | The ice blue in 07 §5 |
+| 2 | Accent color checked against PixelLab's brand palette | The ice blue in 07 §5, used only on the primary action (08) |
 | 3 | Whether to launch publicly, which host (it must send real headers), and the canonical URL | Cloudflare static assets, private URL |
 | 4 | When to contact PixelLab under ToS §2.2, and what to do with the answer | No public launch until answered |
 | 5 | Phase 0 approvals: **A1** accept the `get_image` gray area · **A2** one download of your own sprite sheet · **A3** acknowledge the burst test | A1 no → Images shows an honest "unavailable" card · A2 no → 8 fps stands · A3 no → API concurrency 2 |
@@ -157,7 +165,7 @@ These are owner-only. Each has a safe default, so nothing blocks Phase 0 except 
 Defaults set during design that you may override:
 - **"Folders"** as the second destination's name (instead of "Collections").
 - **Play previews on by default**, capped at 8 playing at once. The default is a build flag (`PREVIEWS_DEFAULT_ON`) that ships off if Phase 0 finds any read cost or a 429 at concurrency ≤ 2 (E-9).
-- **Tilesets and Tiles as separate chips**, matching the tabs in PixelLab's own Map Workshop.
+- **Tilesets and Tiles as separate types** in the scope menu, matching the tabs in PixelLab's own Map Workshop.
 
 ## Key risks
 
@@ -173,14 +181,14 @@ Defaults set during design that you may override:
 **Start here**
 1. This README.
 2. [Product brief](docs/design/01-product-brief.md): what, why, scope and success criteria.
-3. [Recommended design](docs/design/07-recommended-design.md) §1–2, then [the recommended mockup](mockups/recommended/index.html).
-4. [Decision log](docs/design/00-decision-log.md): every ruling, in one place. **Precedence** when sources disagree: the rulings and builder answers in 00, then 07 (visual) and 02 (behaviour), then 01, 03, 05 and 06, then the recommended mockup, then 04 and the option mockups.
+3. [Simplicity redesign](docs/design/08-simplicity-redesign.md) §6–7, then [Concept 1's images](mockups/simple/1-just-the-art/README.md).
+4. [Decision log](docs/design/00-decision-log.md): every ruling, in one place. **Precedence** when sources disagree: the S, F and B rulings in 00, then 08 (layout and controls), 02 (behaviour) and 07 (token values), then 01, 03, 05 and 06, then the simple-concept mockups, then the earlier explorations.
 5. **Builders:** [architecture](docs/design/05-architecture.md) §1, [implementation plan](docs/design/06-implementation-plan.md) §1–2, then the [UX spec](docs/design/02-ux-spec.md) as a reference.
 6. **Why it's built this way:** the [research report](docs/research/00-research-report.md).
 
 Length: **S** < 5k words · **M** 5–10k · **L** > 10k.
 
-**Research spikes 00–09**
+**Research spikes 00–12**
 
 | Doc | Purpose | Length |
 |---|---|---|
@@ -194,6 +202,9 @@ Length: **S** < 5k words · **M** 5–10k · **L** > 10k.
 | [docs/research/07-tech-stack-and-architecture.md](docs/research/07-tech-stack-and-architecture.md) | Vite vs Vite+, Svelte 5, libraries, module layout, budget | M |
 | [docs/research/08-visual-design-theming-responsive.md](docs/research/08-visual-design-theming-responsive.md) | Theme directions, tokens, responsive matrix, accessibility, branding | L |
 | [docs/research/09-verification-followups.md](docs/research/09-verification-followups.md) | Read-only round: 8 fps timing, frame layout, tool annotations, dead hosts | M |
+| [docs/research/10-apple-simplicity-patterns.md](docs/research/10-apple-simplicity-patterns.md) | Apple HIG, iOS 26 Photos, iCloud.com and Quick Look: progressive disclosure, control budgets, where minimalism failed | M |
+| [docs/research/11-home-screen-and-android-simplicity.md](docs/research/11-home-screen-and-android-simplicity.md) | iOS and Android home screens, Google Photos and Drive, Material 3: the home-screen metaphor, gestures, selection modes | M |
+| [docs/research/12-simplicity-first-products.md](docs/research/12-simplicity-first-products.md) | Unsplash, Linear, Raycast, Midjourney and others: visible-control inventories, budgets for Vitrine's library and detail screens | S |
 
 **Reviews R1–R5**
 
@@ -206,27 +217,31 @@ Length: **S** < 5k words · **M** 5–10k · **L** > 10k.
 | [docs/reviews/R4-builder-check.md](docs/reviews/R4-builder-check.md) | Builder-readiness check of the final design set: 8 questions and 10 smaller gaps, answered as B-1–B-18 in 00 | S |
 | [docs/reviews/R5-final-qa.md](docs/reviews/R5-final-qa.md) | Final QA: mockup test matrix and flows, link, privacy, consistency and Markdown sweeps; the fixes made, B-19–B-20, known limits and the verdict | S |
 
-**Design 00–07**
+**Design 00–08**
 
 | Doc | Purpose | Length |
 |---|---|---|
-| [docs/design/00-decision-log.md](docs/design/00-decision-log.md) | Every decision and the precedence order; final rulings F-1–F-16 and builder answers B-1–B-20 override everything else | S |
+| [docs/design/00-decision-log.md](docs/design/00-decision-log.md) | Every decision and the precedence order; redesign rulings S-1–S-17, then the final rulings F-1–F-16 and builder answers B-1–B-20, override everything else | S |
 | [docs/design/01-product-brief.md](docs/design/01-product-brief.md) | Intent, users, jobs, goals, non-goals, scope, success criteria, owner decisions | S |
 | [docs/design/02-ux-spec.md](docs/design/02-ux-spec.md) | Behavior: routes, flows, cards, Info fields per type, viewer, downloads, states, keymap, copy | L |
 | [docs/design/03-mockup-requirements.md](docs/design/03-mockup-requirements.md) | Acceptance checklist for the recommended mockup | S |
 | [docs/design/04-design-options.md](docs/design/04-design-options.md) | Historical record of options A, B and C: layouts, tokens, rubric | L |
 | [docs/design/05-architecture.md](docs/design/05-architecture.md) | Modules, data model, API and MCP layer, sync, rendering, downloads, security, tests, deploy | L |
 | [docs/design/06-implementation-plan.md](docs/design/06-implementation-plan.md) | Phase 0 checks, Phase 1–3 tasks, acceptance, risks, owner decisions | M |
-| [docs/design/07-recommended-design.md](docs/design/07-recommended-design.md) | The hybrid: layout per form factor, wireframes, tokens, components, motion | M |
+| [docs/design/07-recommended-design.md](docs/design/07-recommended-design.md) | The earlier hybrid; its layout and viewer controls are superseded by 08, its tokens and accessibility invariants still apply | M |
+| [docs/design/08-simplicity-redesign.md](docs/design/08-simplicity-redesign.md) | The simplicity redesign: research summary, the three concepts, control counts, the recommendation, where every function lives, phone mapping | S |
 
-**Mockups** (each folder holds `index.html`, `app.js` and `styles.css`)
+**Mockups** (the `simple/` folders hold PNGs, a README and their HTML render sources; the earlier folders hold `index.html`, `app.js` and `styles.css`)
 
 | Path | Purpose |
 |---|---|
-| [mockups/recommended/](mockups/recommended/index.html) | "Quiet Studio, lifted": illustrates design 07 and 02, ranked below them ([README](mockups/recommended/README.md)) |
-| [mockups/option-a-quiet-studio/](mockups/option-a-quiet-studio/README.md) | Option A: library + grid-side inspector |
-| [mockups/option-b-gallery-wall/](mockups/option-b-gallery-wall/README.md) | Option B: showcase shelves + full-page detail |
-| [mockups/option-c-soft-pixel-workbench/](mockups/option-c-soft-pixel-workbench/README.md) | Option C: three-pane contact sheet with a live stage |
+| [mockups/simple/1-just-the-art/](mockups/simple/1-just-the-art/README.md) | Concept 1, the recommended base: title switcher, 4-control grid, 5 + 1 viewer controls; illustrates design 08 |
+| [mockups/simple/2-home-screen/](mockups/simple/2-home-screen/README.md) | Concept 2: home-screen tiles with names, dock, folder overlay, context menu (08 borrows the names, menu and overlay) |
+| [mockups/simple/3-library-tiles/](mockups/simple/3-library-tiles/README.md) | Concept 3: App Library-style category tiles; a possible future overview screen |
+| [mockups/recommended/](mockups/recommended/index.html) | Earlier exploration: the "Quiet Studio, lifted" hybrid that illustrated design 07 ([README](mockups/recommended/README.md)) |
+| [mockups/option-a-quiet-studio/](mockups/option-a-quiet-studio/README.md) | Earlier exploration, option A: library + grid-side inspector |
+| [mockups/option-b-gallery-wall/](mockups/option-b-gallery-wall/README.md) | Earlier exploration, option B: showcase shelves + full-page detail |
+| [mockups/option-c-soft-pixel-workbench/](mockups/option-c-soft-pixel-workbench/README.md) | Earlier exploration, option C: three-pane contact sheet with a live stage |
 | [mockups/shared/](mockups/shared/README.md) | Sample dataset (`sample-data.js`, 77 assets), `pixel-utils.js` (integer scaling, shared ticker), image provenance |
 
 ## Process
@@ -235,3 +250,4 @@ Length: **S** < 5k words · **M** 5–10k · **L** > 10k.
 2. **Specs:** a brief, UX spec, architecture and plan (01–06) came next. A devil's-advocate spec review (R2) followed, and its changes were folded into the final rulings.
 3. **Mockups:** three options (A, B, C) were built in parallel on shared sample data. Two independent reviews followed: UX (R3a, 186 screenshots) and visual and accessibility (R3b, 204 page states).
 4. **Convergence:** the hybrid spec (07), final rulings F-1–F-16 (00) and the recommended mockup came out of those reviews. A builder check (R4) closed the design phase; its answers are B-1–B-18 (00). A final QA pass (R5) re-tested the recommended mockup, swept links, privacy and consistency, and added B-19–B-20.
+5. **Simplicity redesign:** the owner rejected every mockup as too busy. Three simplicity spikes (research 10–12) and three static concepts (`mockups/simple/`) led to design 08 and rulings S-1–S-17 (00).

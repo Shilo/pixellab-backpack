@@ -1,5 +1,7 @@
 # 07 — Recommended Design: "Quiet Studio, lifted"
 
+> **Superseded in part.** Layout/visual and viewer-control sections superseded by [08-simplicity-redesign.md](08-simplicity-redesign.md) (owner feedback 2026-10-19); behavior, data, security, and download semantics still apply. The §5 token values and §7 accessibility invariants remain the baseline until 08's token retune (08 §10 #6).
+
 Working name **Vitrine**, *Unofficial gallery for your PixelLab assets*. Status: canonical visual and layout spec, 2026-10-18.
 
 **What this document owns:** the final layout per form factor, the visual language, the tokens, component values, motion, and the visual accessibility invariants of the one recommended design.

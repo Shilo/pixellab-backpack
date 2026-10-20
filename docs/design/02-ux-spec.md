@@ -1,5 +1,7 @@
 # 02 — UX and Interaction Specification: Vitrine
 
+> **Superseded in part.** Layout/visual and viewer-control sections superseded by [08-simplicity-redesign.md](08-simplicity-redesign.md) (owner feedback 2026-10-19); behavior, data, security, and download semantics still apply. 08 §11 lists the affected sections.
+
 Working name **Vitrine**, *Unofficial gallery for your PixelLab assets*. This document owns **what the app does and how it behaves**. Visual design (color, type, icon style, exact spacing) lives in `07-recommended-design.md`; it may restyle anything here, but may not change behavior, column counts, scaling rules, or control availability. The precedence order across docs and mockups is at the top of `00-decision-log.md` (B-5).
 
 Baseline: `docs/reviews/R1-research-cross-review.md` (D1–D31), research `01`–`09`, the orchestrator rulings R-1 to R-10 and F-1 to F-16, and the builder answers B-1 to B-20, all listed in `00-decision-log.md`. Where this doc makes a new call it is marked **(decision)** with a one-line rationale.

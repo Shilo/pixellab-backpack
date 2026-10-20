@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vitrine: Library</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  main { width: 1120px; margin: 0 auto; padding-top: 8px; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px 28px; }
+  .tile { display: block; color: inherit; text-decoration: none; }
+  .mosaic {
+    position: relative; aspect-ratio: 4 / 2.9; background: var(--tile); border-radius: 24px; padding: 9px;
+    display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 7px;
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .mosaic > i, .mini > i { background: var(--cell); border-radius: 16px; }
+  .mini { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 5px; }
+  .mini > i { border-radius: 11px; }
+  .label { display: flex; justify-content: space-between; align-items: baseline; padding: 11px 6px 0; }
+  .label b { font-weight: 600; font-size: 16px; letter-spacing: -.012em; }
+  .label span { color: var(--text2); font-variant-numeric: tabular-nums; }
+  h2 { font-size: 13px; font-weight: 600; color: var(--text2); margin: 46px 6px 14px; letter-spacing: 0; }
+  /* Folders: same tile, with a stacked edge so "mine" reads differently from automatic types. */
+  .folder .mosaic::before {
+    content: ""; position: absolute; left: 18px; right: 18px; top: -9px; height: 20px; z-index: -1;
+    border-radius: 14px 14px 0 0; background: #24252a; box-shadow: inset 0 1px 0 var(--line);
+  }
+  .tiles.mine { position: relative; z-index: 0; }
+</style>
+</head>
+<body>
+<header class="bar">
+  <span class="wordmark">Vitrine</span>
+  <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><span>Search 77 assets</span><kbd>/</kbd></div>
+  <div class="end"><button class="round" aria-label="More"><svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg></button></div>
+</header>
+<main>
+  <div class="tiles" id="types"></div>
+  <h2>Favorites and folders</h2>
+  <div class="tiles mine" id="mine"></div>
+</main>
+<script src="../../shared/pixel-utils.js"></script>
+<script src="bbox.js"></script>
+<script src="art.js"></script>
+<script>
+// [label, count, cells, folder?]. A cell is "asset" or "asset|fit|s". 4 items or fewer: 4 big cells.
+// More: 3 big cells plus a 2x2 mini cluster (the App Library pattern).
+const T = [
+  ['Characters', 4, ['char-android-walk-east-f00', 'char-orb-mage-south', 'char-hooded-mage-south-east', 'char-hooded-mage-detailed-south-west']],
+  ['Objects', 23, ['obj-bear-trap-open', 'obj-treasure-chest-closed', 'obj-crimson-lance', 'item-red-health-potion', 'item-iron-helmet', 'item-lantern', 'item-ruby-ring']],
+  ['Images', 25, ['creator-goblin-idle-f00', 'creator-white-bird-east', 'vfx-meteor-f12', 'creator-slime-sheet|cover|1', 'creator-fire-skill-icons|cover|1', 'creator-food-atlas|cover|1', 'creator-block-textures-16|cover|2']],
+  ['Tilesets & tiles', 14, ['tileset-topdown-dirt-grass-detailed|cover|5', 'tileset-topdown-stone-floor-wall|cover|5', 'iso-grass-block', 'tileset-side-frozen-ledge|full|0', 'iso-stone-slab', 'tilespro-wooden-stairs|full|0', 'tileset-side-dirt-grass|full|0']],
+  ['Maps', 4, ['map-meadow-ruins|cover|2', 'mapobj-ruined-apartment', 'mapobj-wooden-staircase-west', 'mapobj-stone-steps-east']],
+  ['UI', 7, ['ui-skill-icon-frames|cover|1', 'ui-gilded-panel-kit|cover|1', 'ui-stone-9slice-kit|cover|1', 'ui-rts-command-bar|cover|1', 'ui-fantasy-hud|cover|1', 'ui-rts-components|cover|1', 'font-tiny-mono-atlas|cover|2']]
+];
+const M = [
+  ['Favorites', 10, ['char-android-walk-south-f00', 'vfx-meteor-f12', 'map-meadow-ruins|cover|2', 'tileset-topdown-dirt-grass-detailed|cover|2', 'creator-goblin-idle-f00', 'tileset-side-frozen-ledge|cover|1', 'obj-bear-trap-open']],
+  ['Hero party', 8, ['char-orb-mage-south-east', 'char-hooded-mage-detailed-south', 'obj-crimson-lance', 'char-android-walk-south-f00', 'item-iron-longsword', 'item-oak-magic-staff-crystal', 'item-mage-robe'], 1],
+  ['Dungeon kit', 10, ['obj-treasure-chest-open', 'obj-bear-trap-closed', 'tileset-topdown-stone-floor-wall|cover|3', 'mapobj-wooden-staircase-west', 'iso-stone-slab', 'tileset-side-castle|cover|1', 'tilespro-wooden-stairs|cover|1'], 1],
+  ['UI pack', 10, ['ui-fantasy-hud|cover|1', 'ui-skill-icon-frames|cover|1', 'creator-fire-skill-icons|cover|1', 'ui-rts-components|cover|1', 'font-tiny-mono-atlas|cover|1', 'creator-cyan-skill-icons|cover|1', 'creator-skill-icons-pro|cover|1'], 1],
+  ['1-bit platformer', 5, ['tileset-side-castle|full|0', 'tileset-side-frozen-ledge|full|0', 'tileset-side-fang-ridge|full|0', 'tileset-side-rooted-soil|cover|1', 'tileset-side-worn-stone|cover|1'], 1],
+  ['Favorites to export', 6, ['vfx-meteor-f12', 'creator-goblin-idle-f00', 'creator-slime-sheet|cover|1', 'char-android-walk-south-f00', 'map-meadow-ruins|cover|1', 'tileset-topdown-dirt-grass-detailed|cover|1'], 1]
+];
+const cell = c => { const [a, fit, s] = c.split('|'); return `<i data-art="${a}" data-pad="${fit === 'full' ? 0.1 : 0.05}"${fit ? ` data-fit="${fit}" data-s="${s}"` : ''}></i>`; };
+const tile = ([name, n, cells, folder]) => {
+  const big = cells.length <= 4 ? cells : cells.slice(0, 3), rest = cells.length <= 4 ? [] : cells.slice(3);
+  return `<a class="tile${folder ? ' folder' : ''}" href="#"><div class="mosaic">${big.map(cell).join('')}${rest.length ? `<div class="mini">${rest.map(cell).join('')}</div>` : ''}</div>
+    <div class="label"><b>${name}</b><span>${n}</span></div></a>`;
+};
+types.innerHTML = T.map(tile).join('');
+mine.innerHTML = M.map(tile).join('');
+renderArt();
+</script>
+</body>
+</html>

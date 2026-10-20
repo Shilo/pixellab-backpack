@@ -33,7 +33,7 @@ The visual direction is resolved: the "Quiet Studio, lifted" hybrid in `07-recom
 2. **No tokens in files.** The token is typed into a `prompt()` box. It lives only in that tab's memory and never enters console history, files, commands, screenshots or notes.
 3. **Record only** hosts, path patterns (ids replaced with `<uuid>`), field names and types, counts, sizes, timings, and pass/fail. **Never record** ids, full URLs, prompts, names, balances, the user id or account totals beyond order of magnitude.
 4. **Results go to:**
-   - `docs/research/10-phase0-results.md` (new).
+   - `docs/research/13-phase0-results.md` (new).
    - Shape-only fixtures in `tests/fixtures/rest/` and `tests/fixtures/mcp/`, with values replaced by placeholders.
 5. **Do not generate, edit, tag or delete anything in PixelLab** (any tab, any agent) between P0-1's baseline and P0-14, or the read-cost check is void.
 6. **Stop on surprise.** Any spend, any write, or any non-allowlisted tool behaviour stops Phase 0. The design is revisited first.
@@ -98,7 +98,7 @@ Skipped on purpose: 09 #6 (`get_lip_sync`). Talking animations are a v1 non-goal
 
 | Output | Where |
 |---|---|
-| Results table (one row per check: result, numbers, decision) | `docs/research/10-phase0-results.md` |
+| Results table (one row per check: result, numbers, decision) | `docs/research/13-phase0-results.md` |
 | Shape-only REST fixtures | `tests/fixtures/rest/*.json` |
 | Placeholder MCP text fixtures | `tests/fixtures/mcp/*.txt` |
 | Doc edits | 05 §4.1 (permits), §4.4 (hosts), §5.3 (preview default), §5.4 (map/image rows), §3.3 (object grouping), §14; 02 §3.11 (hand-off table) if P0-12 changes it |
@@ -134,7 +134,7 @@ Skipped on purpose: 09 #6 (`get_lip_sync`). Talking animations are a v1 non-goal
 - Tasks 1.1–1.4, 1.6, 1.7, 1.9, 1.10 and 1.13 need no Phase 0 output. They may start before Phase 0 runs, on contract-shaped synthetic fixtures (research 01, 09).
 - Every Phase 0-dependent value is one named constant held at its failed or declined default: `VITE_IMAGES=false`, the API lane at 2 permits, library-page hand-offs, and the rest of 05 §14.
 - Task 1.5 builds `normalize.ts` from the P0-4 fixtures, so it and every task that depends on it (1.8, 1.11, 1.12, 1.14–1.21) start after the results are recorded. Task 1.22 runs last; its real-key and device items are owner-run (B-2).
-- When `docs/research/10-phase0-results.md` lands: set the constants from it, swap in the real fixtures, and rerun the unit and e2e suites.
+- When `docs/research/13-phase0-results.md` lands: set the constants from it, swap in the real fixtures, and rerun the unit and e2e suites.
 
 | # | Task | Depends | Lane | Size | Done when |
 |---|---|---|---|---|---|
@@ -159,7 +159,7 @@ Skipped on purpose: 09 #6 (`get_lip_sync`). Talking animations are a v1 non-goal
 | 1.19 | Single-asset downloads: Download menu (S8, ≤ 4 items; Phase 1 shows only its PNG and PixelLab original (ZIP) items; the primary for animated types reads "Download ZIP", B-11, and for an animated object with no rotation images "Download sprite sheet", the official object sheet, B-20) for PNG 1× (still view, single image, tileset sheet, tile, UI, isometric) and PixelLab originals (character ZIP, object sheet, Tiles Pro ZIP); `save.ts` (`<a download>`, compact S11 share sheet); slugged filenames | 1.14 | A | M | e2e: PNG byte-identical to the fixture; originals saved under slugged names |
 | 1.20 | Settings v1: connection (status with last 4, balance, Test, Keep me signed in toggle + stop confirm, Forget key confirm, rotate-key link), library (Sync now, Play previews, grid size, default backdrop), appearance, keyboard toggle, about (with the not-in-API note) | 1.7, 1.17 | C | M | e2e: turning Keep me signed in off deletes snapshot and cache immediately; Forget dialog options |
 | 1.21 | Keymap (02 §9.3, incl. Space opens a card) + single-key shortcuts off switch | 1.13, 1.18 | B | S | e2e: every ✓ key disabled when off; functions still reachable by controls |
-| 1.22 | Phase 1 verification pass: network recorder on every e2e; storage assertions per mode; axe on Phase 1 screens; manual password-manager save prompt in Chrome/Firefox/Safari (S15); `sessionStorage` new-tab and session-restore behaviour (G18); iOS long-press callout (G20); DPR 1.25/1.5/2.625 snapping (G15); first-card time with a real token. The builder writes the checklist; the owner runs the real-key, browser and device items (B-2) | all | — | M | Checklist signed by the owner in `docs/research/10-phase0-results.md` §Phase 1 checks |
+| 1.22 | Phase 1 verification pass: network recorder on every e2e; storage assertions per mode; axe on Phase 1 screens; manual password-manager save prompt in Chrome/Firefox/Safari (S15); `sessionStorage` new-tab and session-restore behaviour (G18); iOS long-press callout (G20); DPR 1.25/1.5/2.625 snapping (G15); first-card time with a real token. The builder writes the checklist; the owner runs the real-key, browser and device items (B-2) | all | — | M | Checklist signed by the owner in `docs/research/13-phase0-results.md` §Phase 1 checks |
 
 **Parallelism:** after 1.1, lanes A (1.2–1.8), B (1.9) and C (1.10) run in parallel. 1.11 joins them. After that, lane B (1.13 → 1.14 → 1.16, 1.21) and lane C (1.12, 1.15, 1.17 → 1.18, 1.20) run side by side. 1.19 sits in lane A after 1.14.
 

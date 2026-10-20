@@ -1,0 +1,113 @@
+:root {
+  --text: #f3f4f8;
+  --text-2: rgba(232, 236, 246, .58);
+  --hair: rgba(255, 255, 255, .10);
+  --glass: rgba(44, 48, 62, .42);
+  --glass-hi: rgba(56, 60, 76, .66);
+  --well: rgba(255, 255, 255, .055);
+  --accent: #4b8cff;
+  --blur: blur(30px) saturate(1.7);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font: 13px/1.35 -apple-system, "SF Pro Text", "SF Pro", "Segoe UI Variable Text", "Segoe UI Variable", system-ui, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(1100px 760px at 14% -12%, rgba(98, 96, 196, .30), transparent 62%),
+    radial-gradient(1000px 760px at 104% 112%, rgba(34, 118, 132, .26), transparent 60%),
+    linear-gradient(180deg, #181c2a, #0c0e14);
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; background: none; border: 0; }
+svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+canvas { display: block; }
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10), inset 0 0 0 1px rgba(255, 255, 255, .06), 0 18px 50px rgba(0, 0, 0, .35);
+}
+
+/* Home grid: the content is the interface */
+.home-grid {
+  display: grid; grid-template-columns: repeat(8, 104px); column-gap: 44px; row-gap: 26px;
+  justify-content: center; padding: 72px 0 160px;
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 120px), transparent calc(100% - 20px));
+          mask-image: linear-gradient(#000 calc(100% - 120px), transparent calc(100% - 20px));
+  height: 100vh;
+}
+.tile { display: grid; justify-items: center; gap: 9px; text-decoration: none; color: inherit; position: relative; }
+.icon {
+  width: 104px; height: 104px; border-radius: 26px; display: grid; place-items: center; position: relative;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .075), rgba(255, 255, 255, .035));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), inset 0 0 0 1px rgba(255, 255, 255, .045), 0 10px 26px rgba(0, 0, 0, .22);
+}
+.label { max-width: 124px; font-size: 12.5px; font-weight: 500; color: rgba(243, 244, 248, .88); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0, 0, 0, .4); }
+.folder .icon {
+  background: rgba(205, 212, 235, .17);
+  grid-template-columns: 36px 36px; grid-template-rows: 36px 36px; gap: 8px; place-content: center;
+}
+.folder .icon > span { display: grid; place-items: center; border-radius: 9px; background: rgba(0, 0, 0, .14); }
+.icon .ring { width: 34px; height: 34px; border-radius: 50%; background: conic-gradient(rgba(255,255,255,.85) 0 62%, rgba(255,255,255,.18) 0); -webkit-mask: radial-gradient(circle, transparent 12px, #000 13px); mask: radial-gradient(circle, transparent 12px, #000 13px); }
+.pending .label { color: var(--text-2); }
+.badge { position: absolute; top: -7px; right: -7px; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 12px; background: #eceef4; color: #15171d; font-size: 13px; font-weight: 600; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+
+/* Dock */
+.dock { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); display: flex; gap: 6px; padding: 8px; border-radius: 32px; z-index: 5; }
+.search { width: 300px; height: 48px; border-radius: 24px; display: flex; align-items: center; gap: 10px; padding: 0 16px; background: rgba(255, 255, 255, .08); color: var(--text-2); font-size: 15px; }
+.search kbd { margin-left: auto; font: 12px/1 inherit; color: rgba(232, 236, 246, .38); border: 1px solid rgba(255, 255, 255, .14); border-radius: 6px; padding: 3px 6px; }
+.pill { height: 48px; border-radius: 24px; display: inline-flex; align-items: center; gap: 6px; padding: 0 18px; font-size: 15px; font-weight: 500; }
+.pill svg { width: 15px; height: 15px; opacity: .6; stroke-width: 2.2; }
+.round { width: 48px; height: 48px; border-radius: 24px; display: grid; place-items: center; }
+
+/* Overlays (folder, context menu) */
+.scrim { position: fixed; inset: 0; z-index: 10; background: rgba(8, 10, 16, .38); -webkit-backdrop-filter: blur(26px) saturate(1.3); backdrop-filter: blur(26px) saturate(1.3); }
+.folder-open { position: fixed; inset: 0; z-index: 11; display: grid; place-content: center; justify-items: center; gap: 22px; }
+.folder-title { display: flex; align-items: center; gap: 12px; font: 600 30px/1.1 -apple-system, "SF Pro Display", "Segoe UI Variable Display", system-ui, sans-serif; letter-spacing: -.01em; }
+.folder-title .round { width: 36px; height: 36px; background: rgba(255,255,255,.10); }
+.folder-panel { padding: 40px 44px 36px; border-radius: 44px; display: grid; grid-template-columns: repeat(4, 104px); column-gap: 44px; row-gap: 26px; background: rgba(205, 212, 235, .13); }
+.folder-meta { color: var(--text-2); font-size: 13px; }
+.lifted { position: fixed; z-index: 12; }
+.lifted .icon { box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 24px 60px rgba(0,0,0,.55); background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06)); }
+.menu { position: fixed; z-index: 12; width: 250px; border-radius: 18px; overflow: hidden; background: var(--glass-hi); padding: 6px 0; }
+.menu button { width: 100%; height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-size: 14.5px; }
+.menu button + button { box-shadow: inset 0 1px 0 rgba(255,255,255,.07); }
+.menu .gap { height: 7px; background: rgba(0, 0, 0, .22); }
+.menu button.hl { background: rgba(255, 255, 255, .09); }
+.menu svg { width: 18px; height: 18px; opacity: .85; }
+.menu .sub { color: var(--text-2); font-size: 13px; margin-left: auto; margin-right: 10px; }
+
+/* Detail */
+.detail { background: #0c0c0f; }
+.stage { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(760px 560px at 50% 48%, #2a2c34, #16171c 58%, #0c0c0f); }
+.info .stage { right: 412px; }
+.fab { position: fixed; z-index: 3; }
+.close { top: 24px; left: 24px; width: 46px; height: 46px; border-radius: 23px; display: grid; place-items: center; }
+.title { top: 26px; left: 50%; transform: translateX(-50%); text-align: center; }
+.info .title { display: none; }
+.title b { display: block; font-size: 15px; font-weight: 600; }
+.title span { color: var(--text-2); font-size: 12.5px; }
+.tools { top: 24px; right: 24px; display: flex; padding: 0 4px; height: 46px; border-radius: 23px; align-items: center; }
+.info .tools { right: 428px; }
+.tools button { width: 42px; height: 38px; border-radius: 19px; display: grid; place-items: center; }
+.tools button.on { background: rgba(255, 255, 255, .92); color: #111319; }
+.actions { bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 8px; border-radius: 32px; }
+.info .actions { left: calc((100% - 412px) / 2); }
+.primary { background: var(--accent); color: #fff; font-weight: 600; box-shadow: 0 6px 20px rgba(75, 140, 255, .35); }
+.primary svg { opacity: .9; }
+.primary .split { width: 1px; height: 22px; background: rgba(255,255,255,.35); margin: 0 4px 0 6px; }
+
+/* Info sheet: iOS grouped list floating on glass */
+.sheet { position: fixed; z-index: 4; top: 16px; right: 16px; bottom: 16px; width: 380px; border-radius: 30px; padding: 30px 22px 22px; display: flex; flex-direction: column; gap: 22px; background: var(--glass-hi); overflow: hidden; }
+.sheet h2 { font: 600 24px/1.15 -apple-system, "SF Pro Display", "Segoe UI Variable Display", system-ui, sans-serif; letter-spacing: -.01em; }
+.sheet h2 + p { color: var(--text-2); font-size: 14px; margin-top: 4px; }
+.group { border-radius: 14px; background: rgba(255, 255, 255, .06); }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 16px; min-height: 40px; padding: 0 14px; font-size: 14px; }
+.row + .row { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07); }
+.row > span:first-child { color: var(--text-2); }
+.row svg { width: 14px; height: 14px; opacity: .45; stroke-width: 2.2; }
+.gh { display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px 7px; color: var(--text-2); font-size: 13px; }
+.gh button { color: var(--text); font-size: 13px; font-weight: 500; }
+.prompt { padding: 12px 14px; font-size: 14px; line-height: 1.45; }
+.ext { margin-top: auto; text-align: center; color: var(--text-2); font-size: 13.5px; text-decoration: none; }

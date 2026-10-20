@@ -1,0 +1,10 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Vitrine Menu</title><link rel="stylesheet" href="vitrine.css"></head><body>
+<script src="../../shared/sample-data.js"></script><script src="../../shared/pixel-utils.js"></script><script src="vitrine.js"></script>
+<script>
+home();
+const a = byId.obj_0009, r = document.querySelector('[data-id=obj_0009]').getBoundingClientRect(), t = assetTile(a);
+t.classList.add('lifted'); t.style.left = r.left + 'px'; t.style.top = r.top + 'px';
+const m = h(`<div class="menu glass"><button class="hl">Open${I.open}</button><button>Favorite${I.heart}</button><button>Add to folder…${I.folder}</button><button>Download…<span class="sub">PNG</span>${I.down}</button><div class="gap"></div><button>Select${I.check}</button></div>`);
+m.style.left = (r.left - 8) + 'px'; m.style.top = (r.top + 136) + 'px';
+document.body.append(h('<div class="scrim"></div>'), t, m); ready();
+</script></body></html>
