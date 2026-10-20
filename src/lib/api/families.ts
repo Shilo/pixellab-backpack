@@ -1,6 +1,7 @@
 // One adapter per PixelLab asset family: list pages -> Cards, one picture per Card, and (characters, objects) one detail.
 // Reads only (GET). Transport is injected so this file never touches the network itself; only http.ts does.
 import type { Anim, Card, Detail, Dir, FamilyId, Page } from '../types';
+import { HttpError } from './http';
 
 export type Transport = {
   apiGet: <T>(path: string, o?: { user?: boolean; signal?: AbortSignal; label?: string }) => Promise<T>;
@@ -123,8 +124,9 @@ type Spec = {
   detail?: DetailFn;
 };
 
+// A real answer meaning "no picture" is an HttpError of kind 'http': callers keep it as a miss and never ask again this session.
 async function okBlob(res: Response): Promise<Blob> {
-  if (!res.ok) throw new Error(`picture request failed (${res.status})`);
+  if (!res.ok) throw new HttpError('http', res.status);
   return res.blob();
 }
 
@@ -173,7 +175,7 @@ const SPECS: Spec[] = [
       });
       const urls = d?.storage_urls ?? {};
       const thumb = str(urls.tile_0) ?? Object.values(urls).map(str).find(Boolean) ?? null;
-      if (!thumb) throw new Error('no picture link');
+      if (!thumb) throw new HttpError('http');
       return { blob: await okBlob(await t.publicGet(thumb, { signal, label: 'Tiles Pro · picture' })), thumb };
     },
   },
@@ -212,7 +214,7 @@ function make(t: Transport, s: Spec): Family {
     async art(card, signal) {
       if (!card.done) throw new Error('no picture for an unfinished or failed asset');
       if (s.costly) return s.costly(t, card, signal);
-      if (!card.thumb) throw new Error('no picture link');
+      if (!card.thumb) throw new HttpError('http');
       return { blob: await okBlob(await t.publicGet(card.thumb, { signal, label: `${s.label} · picture` })) };
     },
     ...(s.detail && {

@@ -99,3 +99,32 @@ test('a key that stops working mid-session asks to reconnect, not "Welcome back"
   await expect(page.getByText('Your API key stopped working.', { exact: false })).toBeVisible();
   await expect(page.getByText('Welcome back!')).toHaveCount(0);
 });
+
+test("a key test cancelled during PixelLab's 429 pause: Try again waits out the pause instead of lifting it", async ({ page }) => {
+  await page.clock.install(); // time flows normally; fastForward skips the 60 s pause
+  await mockPixelLab(page);
+  let asked = 0;
+  await page.route('https://api.pixellab.ai/v2/characters?**', (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    return ++asked === 1 ? route.fulfill({ status: 429, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization' } }) : route.fallback();
+  });
+  const visibility = (state: 'hidden' | 'visible') =>
+    page.evaluate((s) => {
+      Object.defineProperty(document, 'visibilityState', { value: s, configurable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    }, state);
+  await page.goto('/');
+  await page.getByLabel('PixelLab API key').fill(GOOD_KEY);
+  await page.getByRole('button', { name: 'Test key' }).click();
+  await expect.poll(() => asked).toBe(1); // first 429: the test waits out a 60 s pause behind "Testing…"
+  await page.waitForTimeout(300);
+  await visibility('hidden'); // switching tabs cancels the waiting test
+  await expect(page.getByRole('heading', { name: "PixelLab isn't answering right now." })).toBeVisible();
+  await visibility('visible');
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await page.waitForTimeout(1500);
+  expect(asked).toBe(1); // nothing sent inside the pause
+  await page.clock.fastForward('01:05');
+  await expect(page.getByRole('link', { name: /^Characters, / })).toBeVisible();
+  expect(asked).toBe(2);
+});

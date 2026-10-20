@@ -339,6 +339,23 @@ describe('art', () => {
     expect(h.publicGet).toHaveBeenCalledTimes(5); // 2 for f, 1 for g (a real answer stays)
   });
 
+  it('a costly picture that answers 404, or a Tiles Pro row with no picture link, is asked once per session', async () => {
+    const lib = await tab();
+    await lib.connect('key');
+    vi.clearAllMocks();
+    const tileset = lib.families.tilesets!.cards[0];
+    h.publicGet.mockResolvedValueOnce(new Response(null, { status: 404 })); // the helper's answer
+    expect(await lib.art(tileset, 'tilesets')).toBeNull();
+    expect(await lib.art(tileset, 'tilesets')).toBeNull();
+    expect(h.publicGet).toHaveBeenCalledOnce();
+
+    h.apiGet.mockResolvedValueOnce({ storage_urls: {} } as never);
+    const pro = lib.families['tiles-pro']!.cards[0];
+    expect(await lib.art(pro, 'tiles-pro')).toBeNull();
+    expect(await lib.art(pro, 'tiles-pro')).toBeNull();
+    expect(h.apiGet).toHaveBeenCalledOnce();
+  });
+
   it('resolves costly art once, saves the link, then reuses it on later visits', async () => {
     const lib = await tab();
     await lib.connect('key');

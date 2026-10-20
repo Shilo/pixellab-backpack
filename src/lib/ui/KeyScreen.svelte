@@ -43,7 +43,7 @@
   });
 
   const again = () => {
-    library.retry();
+    library.recover(); // lifts a stop only: a 429 pause still holds
     test();
   };
   // Full-width states: the test could not finish, so there is nothing to say about the key.

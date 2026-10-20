@@ -143,12 +143,12 @@ describe('art cost', () => {
     expect(log.image).toEqual([art.thumb]);
   });
 
-  test('a failed picture request throws (no retry here)', async () => {
+  test('a failed picture request throws a real-answer HttpError (no retry here; callers keep it as a miss)', async () => {
     const f = fake();
     f.t.publicGet = async () => new Response('', { status: 423 });
     const fam = createFamilies(f.t).find((x) => x.id === 'tilesets')!;
     const card = (await fam.list(0)).cards[0];
-    await expect(fam.art(card)).rejects.toThrow(/423/);
+    await expect(fam.art(card)).rejects.toMatchObject({ name: 'HttpError', kind: 'http', status: 423 });
   });
 });
 

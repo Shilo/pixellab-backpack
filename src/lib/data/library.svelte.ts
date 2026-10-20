@@ -231,7 +231,7 @@ class Library {
       p = publicGet(url, { signal, label: `${byId[familyId].label} · frame` })
         .then((res) => (res.ok ? res.blob() : null))
         .catch((e) => {
-          // Cancelled, offline, timed out ...: a later call tries again. A real answer (404 ...) stays null.
+          // Transient (cancelled, offline, timed out ...): a later call tries again. A real answer (HttpError 'http') stays null.
           if (signal?.aborted || !(e instanceof HttpError && e.kind === 'http')) pictures.delete(url);
           return null;
         });
@@ -246,9 +246,8 @@ class Library {
   };
   keyHint = (): string | null => keyHint();
 
-  /** "Keep loading" after the daily pause, and "Try again" after a stop: the network module's own switches. */
+  /** "Keep loading" after the daily pause: the network module's own switch. */
   keepLoading = (): void => keepLoading();
-  retry = (): void => retry();
   /** Every screen's Try again, before it asks again: lifts a stop or the daily pause. Any other status is left alone,
    * so PixelLab's 429 pause and its "second 429 stops" rule hold. */
   recover = (): void => {
@@ -348,7 +347,8 @@ async function loadArt(card: Card, familyId: FamilyId, signal?: AbortSignal): Pr
     }
     return blob;
   } catch (e) {
-    // Cancelled, offline, timed out, paused, stopped or key lost: let a later call try again. A real answer (404, 423 ...) stays null.
+    // Transient (cancelled, offline, timed out, paused, stopped, key lost): a later call tries again.
+    // A real answer (HttpError 'http': 404, 423, no picture link ...) stays null, so a costly picture is asked once.
     if (signal?.aborted || !(e instanceof HttpError && e.kind === 'http')) blobs.delete(card.key);
     return null;
   }
