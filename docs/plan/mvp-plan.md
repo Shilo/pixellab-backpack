@@ -456,8 +456,8 @@ About 1 hour in desktop Chrome, using the console helper in [plan 06 §2.2](../d
 
 ### Deferred backlog (suggested order)
 
-- [ ] Settings: Forget key, "Keep me signed in", About (needed before anyone but you uses the app)
-- [ ] Viewer for one asset: player for characters and objects, still views for the rest, Info; groups character states into one card
+- [ ] Settings: Forget key, "Keep me signed in", About (needed before anyone but you uses the app). **Planned in the [Phase 2 plan](phase2-plan.md).**
+- [ ] Viewer for one asset: player for characters and objects, still views for the rest, Info; groups character states into one card. **Planned in the [Phase 2 plan](phase2-plan.md).**
 - [ ] Full refresh in "…": re-read every saved page, never pictures; 60-second cooldown
 - [ ] Search over the saved list, and "All assets" through the search panel
 - [ ] Favorites and folders, with a local card snapshot so a folder opens with 0 requests (R6 §4.3); needs the final name first
