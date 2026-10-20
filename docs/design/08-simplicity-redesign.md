@@ -342,3 +342,35 @@ Tablets use the desktop layout with touch input rules. Touch targets stay at lea
 | Mockups | `mockups/recommended/` and options A, B and C become earlier explorations | `mockups/shared/` data and assets |
 
 All data, security, privacy, view-only and export decisions (D1–D31, R-1 to R-10, B-1 to B-20, AR-1 to AR-7) still stand, except B-5 (precedence, now S-1) and B-10 (Grid placement, now S-10); B-19's wording stands and its chip moves into the library "…" (S-8).
+
+## 12. Concept 4: Glass Library (added after owner feedback)
+
+The owner asked for a mix of Concept 2 and Concept 3: Concept 2's glass theming and floating UI (all content full screen, navigation in a floating bottom dock) with Concept 3's App Library layout for the content. It is a candidate alongside the recommendation in §6; the owner decides. ([README and storyboard](../../mockups/simple/4-glass-library/README.md))
+
+- **Home:** six category tiles with mosaic previews and counts, then Favorites and folders as tiles. One floating glass dock: Library, Search, "…" (3 controls).
+- **Navigation:** the dock changes role by context: search panel, category breadcrumb (‹ Library · Objects, Search, Select, "…"), selection bar, viewer dock.
+- **Detail:** same 5 + 1 controls as §6, all floating glass.
+- **Trade-offs:** one extra click before full-size art (as in Concept 3); "All assets" is reached through the search panel; glass over bright art needs a stronger scrim in a real build.
+
+| Step | What the user did | Image |
+|---|---|---|
+| 1 | Opens the app | ![](../../mockups/simple/4-glass-library/01-home.png) |
+| 2 | Presses Search or `/` | ![](../../mockups/simple/4-glass-library/02-search-focused.png) |
+| 3 | Clicks the Objects tile | ![](../../mockups/simple/4-glass-library/03-category-open.png) |
+| 4 | Right-clicks an asset | ![](../../mockups/simple/4-glass-library/04-context-menu.png) |
+| 5 | Presses Select, picks 3 assets | ![](../../mockups/simple/4-glass-library/05-select-mode.png) |
+| 6 | Opens a character | ![](../../mockups/simple/4-glass-library/06-detail.png) |
+| 7 | Presses ⓘ | ![](../../mockups/simple/4-glass-library/07-detail-info.png) |
+| 8 | Opens the Download menu | ![](../../mockups/simple/4-glass-library/08-download-menu.png) |
+| 9 | Opens a folder from home | ![](../../mockups/simple/4-glass-library/09-folder-open.png) |
+| 10 | Presses the dock "…" | ![](../../mockups/simple/4-glass-library/10-more-menu.png) |
+
+## 13. Inspiration links
+
+| Inspiration | Used in | Link |
+|---|---|---|
+| iOS 26 Photos (Library and Collections, viewer) | Concepts 1, all detail views | [MacRumors: iOS 26 Photos app](https://www.macrumors.com/guide/ios-26-photos-app/) · [9to5Mac: everything new in Photos for iOS 26](https://9to5mac.com/2025/10/23/heres-everything-new-for-apple-photos-in-ios-26/) · [Apple: browse your photo library](https://support.apple.com/guide/iphone/browse-your-photo-library-iph7d24753a5/ios) · [Apple: browse your photo collections](https://support.apple.com/guide/iphone/browse-your-photo-collections-iph4f36c4148/ios) |
+| iOS home screen, folders, Liquid Glass | Concepts 2, 4 | [Apple Newsroom: iOS 26 (Liquid Glass home screen)](https://www.apple.com/newsroom/2025/06/apple-elevates-the-iphone-experience-with-ios-26/) · [Apple: organize apps in folders](https://support.apple.com/guide/iphone/organize-your-apps-in-folders-iph822ece7dd/ios) · [Apple Newsroom: Liquid Glass design](https://www.apple.com/newsroom/2025/06/apple-introduces-a-delightful-and-elegant-new-software-design/) |
+| iOS App Library | Concepts 3, 4 | [Apple: find and use your apps in App Library](https://support.apple.com/guide/iphone/find-your-apps-in-app-library-iph87abad19a/ios) |
+| iCloud.com tile homepage | Concepts 3, 4 | [Apple: customize and use the homepage tiles on iCloud.com](https://support.apple.com/guide/icloud/customize-and-use-the-homepage-tiles-mm048a5aa9cc/icloud) · [9to5Mac: redesigned iCloud web interface](https://9to5mac.com/2022/11/16/icloud-web-interface-redesign-beta/) |
+| Unsplash photo page | Concept 1 download button | [unsplash.com](https://unsplash.com/) |
