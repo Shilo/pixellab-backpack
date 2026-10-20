@@ -245,6 +245,7 @@ Length: **S** < 5k words · **M** 5–10k · **L** > 10k.
 | [docs/research/15-glasskit-review.md](docs/research/15-glasskit-review.md) | GlassKit library review: reference only, don't ship |
 | [mockups/simple/themes/f-glasskit/](mockups/simple/themes/f-glasskit/README.md) | Concept 4 built with GlassKit v1.27.0's real CSS (vendored, MIT) plus a Vitrine override file |
 | [mockups/simple/themes/g-glass-material/](mockups/simple/themes/g-glass-material/README.md) | Concept 4 in "Glass, built like Material": glass look with a solid dark base, vibrant selection bar, high-contrast Download (08 §15) |
+| [mockups/simple/themes/h-glasskit-material/](mockups/simple/themes/h-glasskit-material/README.md) | Concept 4 on GlassKit plus a 44-line material.css override (option 2b) |
 | [mockups/recommended/](mockups/recommended/index.html) | Earlier exploration: the "Quiet Studio, lifted" hybrid that illustrated design 07 ([README](mockups/recommended/README.md)) |
 | [mockups/option-a-quiet-studio/](mockups/option-a-quiet-studio/README.md) | Earlier exploration, option A: library + grid-side inspector |
 | [mockups/option-b-gallery-wall/](mockups/option-b-gallery-wall/README.md) | Earlier exploration, option B: showcase shelves + full-page detail |

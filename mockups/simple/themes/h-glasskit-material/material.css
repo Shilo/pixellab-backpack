@@ -1,0 +1,44 @@
+/* Theme H "GlassKit + Material": theme F (GlassKit v1.27.0 unmodified + app.css) with theme G's Material 3 Expressive
+   rules on top. Loaded last. Tokens first; selectors only where no GlassKit or app token reaches. */
+
+/* 1. Tokens */
+:root, [data-theme="dark"] {
+  --vt-accent: #a8c7fa; --vt-accent-on: #062e6f;            /* M3 dark primary / on-primary */
+  --gl-color-primary: var(--vt-accent); --gl-color-primary-dark: #8fb3f0;   /* pastel Download, checkbox fill */
+  --gl-color-on-primary: var(--vt-accent-on);                 /* dark label and tick on the pastel fill */
+}
+.vt-scrim { --vt-scrim: rgb(22 24 33 / .78); }               /* dock, capsule, ✕: solid dark base under the glass */
+.vt-scrim.hi { --vt-scrim: rgb(24 26 35 / .88); }            /* menus, search panel, Info panel */
+/* Selection mode: the same dock in the vibrant scheme (accent-filled glass, white ink) */
+.vt-dock:has(.vt-count) { --vt-scrim: rgb(12 72 176 / .84); --gl-icon-muted: #fff; --gl-border-subtle: rgb(255 255 255 / .26); }
+.glass-btn--primary { --gl-inset-strong: inset 0 1px 0 rgb(255 255 255 / .6); }   /* glass edge: white top rim */
+.vdock .vt-dock { --gl-radius-btn: 16px; }                    /* viewer Download: extended-button corners, not a pill */
+.vt-caps { --gl-tab-bar-active-bg: rgb(215 227 248 / .20); --gl-tab-bar-active-color: #e3ecfc; }   /* ⓘ on: tonal, not white */
+
+/* 2. Blur only on floating roots (dock, capsule, pills, menus, sheet, overlay). GlassKit also blurs controls nested
+   inside them and every checkbox; a 0px blur token would still leave a backdrop root, so switch the filter off. */
+:is(.glass-input, .glass-checkbox__box, .glass-btn--tertiary, .glass-list, .glass-badge, .glass-toggle__track, .glass-card) {
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+
+/* 3. Shape and state cues */
+.vt-caps .glass-tab-bar__item.is-active { border-radius: 12px; }   /* ⓘ on: round becomes a rounded square, icon fills */
+.vt-caps .is-active circle { fill: currentColor; }
+.vt-caps .is-active path { stroke: #1d2535; }
+.cell.sel .sq { border-radius: 32px; background: rgb(168 199 250 / .10); box-shadow: inset 0 0 0 3px var(--vt-accent); }
+.cell.sel .nm { color: var(--gl-color-text); }
+.vt-dock :is(.vt-back, .vt-back ~ .glass-tab-bar__item:not(.vt-icon)) { background: var(--gl-surface-3); }   /* ‹ Library, Select read as buttons */
+.vt-split .glass-btn:first-child { border-inline-end: 0; }   /* split divider: dark on pastel instead of a white seam */
+.vt-split .glass-btn + .glass-btn { border-inline-start-color: rgb(6 46 111 / .32); box-shadow: var(--gl-shadow-btn-primary), var(--gl-inset-strong); }
+/* Info list: separate rounded rows (2px gaps, 16px outer / 4px inner corners) instead of one card with dividers */
+.vt-panel .glass-list { gap: 2px; background: none; border: 0; box-shadow: none; overflow: visible; }
+.vt-panel .glass-list__item { background: var(--gl-surface-1); border-radius: 4px; }
+.vt-panel .glass-list__item:first-child { border-start-start-radius: 16px; border-start-end-radius: 16px; }
+.vt-panel .glass-list__item:last-child { border-end-start-radius: 16px; border-end-end-radius: 16px; }
+.vt-panel .glass-list__item::after { display: none; }
+
+/* 4. Focus: M3 indicator, 3px at a 2px offset; white inside the vibrant bar */
+:is(.glass-btn, .glass-pill, .glass-tab-bar__item, .glass-list__item--interactive, .glass-segmented__item, .glass-badge--interactive, .glass-input):focus-visible,
+.glass-checkbox__input:focus-visible + .glass-checkbox__box { outline: 3px solid var(--vt-accent); outline-offset: 2px; }
+.vt-dock:has(.vt-count) :focus-visible { outline-color: #fff; }
+.vt-split .glass-btn:focus-visible { outline-color: var(--vt-accent-on); outline-offset: -6px; }   /* outside, it would land on the other half */
