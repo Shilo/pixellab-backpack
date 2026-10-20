@@ -1,8 +1,0 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Vitrine Folder</title><link rel="stylesheet" href="vitrine.css"></head><body>
-<script src="../../shared/sample-data.js"></script><script src="../../shared/pixel-utils.js"></script><script src="vitrine.js"></script>
-<script>
-home();
-const f = D.folders[0], ov = h(`<div class="folder-open"><div class="folder-title">${f.name}<button class="round" aria-label="Folder actions">${I.more}</button></div><div class="folder-panel"></div><div class="folder-meta">${f.assetIds.length} assets</div></div>`);
-f.assetIds.forEach(id => ov.children[1].append(assetTile(byId[id])));
-document.body.append(h('<div class="scrim"></div>'), ov); ready();
-</script></body></html>

@@ -1,8 +1,8 @@
-# Rendered mockup screenshots: regenerate locally, never commit
-mockups/**/*.png
-
-# Owner's own PixelLab art used as mockup sample data: private, never publish
-mockups/shared/assets/
+# Earlier mockup explorations: kept locally, not published.
+# Only the final full mockup (mockups/full/) and its sample data (mockups/shared/) are committed.
+mockups/option-*/
+mockups/recommended/
+mockups/simple/
 
 # OS and editor files
 .DS_Store

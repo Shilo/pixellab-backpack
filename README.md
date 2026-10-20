@@ -19,7 +19,7 @@
 
 [mockups/full/](mockups/full/base/README.md) shows every feature of the chosen design (Concept 4 layout, GlassKit theme) at desktop 1440×900 and phone 390×844: 87 screens across connect and settings, browsing, the viewer for each asset type, and folders, favorites and downloads. Open `mockups/full/gallery.html` to flip through them, or `mockups/full/base/index.html#<screen-id>` for a live screen.
 
-**Images are not committed.** Rendered screenshots (`*.png` under `mockups/`) and the owner's PixelLab sample art (`mockups/shared/assets/`) are git-ignored, so image links in these docs only work on a machine that has them. To regenerate screenshots: `node mockups/full/tools/render.js mockups/full/base <port>`, then `python mockups/full/tools/gallery.py mockups/full`. The mockups need sample art in `mockups/shared/assets/` (see [mockups/shared/README.md](mockups/shared/README.md)).
+**What's in the repo.** Only this final mockup (`mockups/full/`, including its 174 screenshots, about 171 MB) and its sample data (`mockups/shared/`, including the owner's PixelLab sample art) are committed. The earlier explorations (`mockups/option-*`, `mockups/recommended/`, `mockups/simple/`) are git-ignored and kept locally only, so links to them in the docs work only on the machine that has them. To regenerate screenshots: `node mockups/full/tools/render.js mockups/full/base <port>`, then `python mockups/full/tools/gallery.py mockups/full`.
 
 ## What it is
 
