@@ -12,3 +12,6 @@ desktop.ini
 # Local scratch and tooling
 .local/
 node_modules/
+
+# Temporary browser profiles from mockups/full/tools/render.js
+mockups/full/tools/edge-prof-*/
