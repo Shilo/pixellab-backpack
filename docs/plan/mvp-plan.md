@@ -151,12 +151,38 @@ What it can miss: an edit to an old asset deep in the list, if nothing else chan
 | Back off, then stop | First 429: drop to 1 at a time and pause for 60 seconds. A second 429 within 5 minutes, or 3 failures in a row: stop everything and show "PixelLab isn't answering right now. [Try again]" |
 | Hidden tab | Waiting work is cancelled while the tab is hidden |
 
+### Plain answers (owner questions, 2026-10-19)
+
+**What does "sync everything" (1,235 requests) actually consist of?** Two groups:
+
+| Group | What it is | Requests at your size (1,914 assets) | At 10,000 assets |
+|---|---|---|---|
+| List pages | Each family's list, 100 (or 50) rows per request: Characters 5, Objects 3, UI 1, Top-down tilesets 3, Sidescroller tilesets 3, Isometric 1, Tiles Pro 1, Images 17, Maps 1 | 35 | about 160 |
+| One-by-one pictures | Families whose list has no picture link: Top-down tilesets 219, Sidescroller 115, Tiles Pro 38, Isometric 4, Images 819, Maps 9 | about 1,200 | about 6,260 |
+| **Total, every open** | | **about 1,235** | **about 6,425** |
+
+Characters, objects and UI pictures are not in this table: they come from PixelLab's image host, not the API.
+
+**"Images" means only the Creator gallery category** (pictures made with PixelLab's Creator tool). Characters, objects, UI and tilesets all show their pictures in the MVP. Images and Maps are left out because each of their pictures costs its own request, and the request Images needs is labelled by PixelLab as "may change things" rather than "only reads" (it can save in some cases), so a view-only app avoids it until PixelLab confirms it is safe.
+
+**Tilesets cost one extra request per tileset, not one for all**, and only the first time that tileset appears on screen on that device. The answer is saved, so it is never asked again. Creator images would also need one request per image.
+
+**Why "only what's on screen, nothing saved" is about 21 per open.** One first page per family (9 with Images and Maps) plus the home screen's mosaic pictures that need their own request (about 12). Nothing is remembered, so every open, every category visit and every scroll pays again. Without Images and Maps it would be about 11 per open.
+
+**What "saved copy" means.** The list information the app already downloaded (names, sizes, picture links) is kept in your browser's own storage on that device. It is never sent anywhere. Pictures are kept by the browser's normal image cache. Your key is not part of it.
+
+**Why it is 7 at any library size.** On open the app reads only the first page of each of the 7 lists to see whether anything changed. The rest of the list loads only as you scroll, and is saved. The very first open on a new device is about 11 (the 7 checks plus about 4 tileset pictures in the home mosaic); after that it is 7.
+
+**What the hour means.** The app writes down when it last checked. If you open it again within an hour in the same browser, it shows the saved copy and sends nothing. It does not check every hour in the background; it only checks when you open the app and the last check is over an hour old. Opening and closing the app every few seconds costs 0 after the first open (a new tab in "this tab only" mode costs 1, for testing the pasted key).
+
+**Is there a manual check?** Yes, recommended for the MVP (see below): "Check for new assets" reruns the 7-request check right away, so a new asset doesn't wait up to an hour. It can be used at most once a minute.
+
 ### Should Sync fetch everything or only what's on screen?
 
 **Only what's on screen. Never everything.**
 - On open: one small check per family (7 + 7), or nothing within the hour.
 - While browsing: only the pages and pictures you scroll to, each once per device.
-- Manual Sync is **not in the MVP**. The check on open covers it. When Sync arrives later, it re-reads only the list pages already saved on the device, never the pictures, and it is disabled for 60 seconds after each use (R6 §5.1).
+- **Check for new assets (in the MVP, proposed):** reruns the 7-request first-page check on demand, at most once a minute. A full Sync that re-reads every saved page (never pictures) stays deferred.
 
 ### Questions for PixelLab (draft, R6 §6)
 
@@ -235,7 +261,7 @@ One short email. Every "yes" lowers the load further. The MVP does not wait for 
 
 Copy comes word for word from [02](../design/02-ux-spec.md) §12 and the mockups. Desktop and phone layouts both follow the mockups.
 
-**Visible but inert** (they do nothing yet, and say so to screen readers): Search, Select, the "…" menu and Settings (which lives in "…").
+**Visible but inert** (they do nothing yet, and say so to screen readers): Search, Select and Settings. The "…" menu works but shows only two items: **Check for new assets** and **Activity**.
 
 **Small MVP rules**
 - **Key mode:** "this tab only" (the safe default). "Keep me signed in" waits for Settings.
@@ -252,8 +278,8 @@ Copy comes word for word from [02](../design/02-ux-spec.md) §12 and the mockups
 | Downloads and Select | Needs the viewer and the download module |
 | Images (Creator gallery) | Its read tool isn't marked read-only (Phase 0 check P0-9), and it's the biggest API cost: 836 requests for one full scroll today |
 | Maps | Each picture is a server-side render |
-| Search, Settings, "…" menu | Visible but inert in the MVP |
-| Manual Sync | The check on open covers the MVP (concern 2) |
+| Search, Settings, Select | Visible but inert in the MVP |
+| Full Sync (re-read every saved page) | "Check for new assets" plus the check on open cover the MVP (concern 2) |
 | Cross-device sync | Concern 3 |
 
 **Images, Maps and the folder tiles: hidden, not disabled.** Hiding is simpler: no disabled style, no "coming soon" text, no tap that does nothing, and zero API requests. It also follows the existing rule that controls that don't apply are hidden (UX-19). They come back when their feature ships.
@@ -264,6 +290,23 @@ Copy comes word for word from [02](../design/02-ux-spec.md) §12 and the mockups
 - **Code:** each module has one job and a small interface (next section). New families, screens and features plug in without changing the network module or the saved-copy logic.
 
 **Status: DECIDED, awaiting your sign-off.**
+
+---
+
+## Concern 6: Activity log (developer mode)
+
+**Your idea.** A way to see what the app sends to PixelLab and when, available in production so anyone can check the load.
+
+**Recommendation: an "Activity" panel, in the MVP.**
+- **Open it from** the dock's "…" menu ("Activity") or by adding `#activity` to the address.
+- **Counters at the top:** API requests this session and today (with the daily cap), requests avoided thanks to the saved copy, pictures loaded from the image host, and the current status (OK, slowed, paused, stopped).
+- **A live list underneath, newest first:** time, what it was ("Characters · first page", "Tileset picture"), where it came from (PixelLab API, image host, saved copy, browser cache), result (OK, wrong key, too many requests, blocked by the daily cap), size and duration.
+- **Export:** "Copy log" puts a plain-text version on the clipboard so it can be shared in a bug report.
+- **Safe by design:** it never shows the key, asset IDs or picture links (IDs work like download keys). Entries say what was asked for, not the address.
+- **Honest limit:** the browser's tiny "may I?" checks (preflights) can't be seen by the page itself. The panel estimates them; the browser's own developer tools show the exact list.
+- **Cost:** it reads numbers the network module already keeps, so it adds no requests. The log lives only in memory and clears when the tab closes.
+
+**Status: PROPOSED** (decision 8).
 
 ---
 
@@ -280,6 +323,8 @@ Each has a recommended default. If you don't decide, the default applies and not
 | 5 | Run the 6 owner checks in [Phase 0](#phase-0-checks-owner-run-real-key) with your real key? | **Yes**, about 1 hour, read-only, no spending | They confirm the data shapes and two unknowns the MVP relies on |
 | 6 | Daily cap of 1,000 API requests per device | **Keep 1,000** | A daily visit uses 7. Scrolling through every Tilesets & tiles item uses about 376, once per device |
 | 7 | Final name | **Deferred** (concern 1) | Free to change during the MVP |
+| 8 | Add the Activity panel to the MVP? | **Yes** | Lets you and PixelLab see the real load at any time (concern 6) |
+| 9 | Add "Check for new assets" to the MVP? | **Yes**, once a minute at most | Otherwise new assets wait up to an hour; costs the same 7 requests |
 
 ---
 
@@ -394,6 +439,9 @@ About 1 hour in desktop Chrome, using the console helper in [plan 06 §2.2](../d
 - [ ] **B11 Costly art** (inside `families.ts`): tileset helpers resolved once and saved, Tiles Pro detail once, isometric download, nothing for unfinished or failed rows. Done when: a second visit to the Tilesets grid sends zero API requests (T6). *(needs B3, B10; confirm with Phase 0 Q4)*
 - [ ] **B12 Real fixtures**: swap in the Phase 0 fixtures, apply Q5 and Q6, rerun every test. Done when: all tests pass on real shapes. *(needs Phase 0, B11)*
 
+- [ ] **B13 Activity panel** (`ui/Activity.svelte`, counters from `http.ts`): counters, live list, Copy log, `#activity` route, no key/IDs/links shown. Done when: every request in test T6 shows up as one entry with the right source and result. *(needs B2, B6)*
+- [ ] **B14 "…" menu with Check for new assets and Activity**: reruns the open check right away, at most once a minute. Done when: tapping it twice within a minute sends 7 requests, not 14. *(needs B6, B7)*
+
 ### MVP tests
 
 - [ ] **T1 Safety net** (unit) `[P]`: fake 429s, server errors and network drops; checks 2 at a time, 2 per second, the daily cap and "Keep loading", the retry limit, back-off then stop, no retry on 401/404/423. *(with B2)*
@@ -408,7 +456,7 @@ About 1 hour in desktop Chrome, using the console helper in [plan 06 §2.2](../d
 
 - [ ] Settings: Forget key, "Keep me signed in", About (needed before anyone but you uses the app)
 - [ ] Viewer for one asset: player for characters and objects, still views for the rest, Info; groups character states into one card
-- [ ] Manual Sync in "…": re-read saved pages only, never pictures; 60-second cooldown
+- [ ] Full Sync in "…": re-read every saved page, never pictures; 60-second cooldown
 - [ ] Search over the saved list, and "All assets" through the search panel
 - [ ] Favorites and folders, with a local card snapshot so a folder opens with 0 requests (R6 §4.3); needs the final name first
 - [ ] Select mode and downloads (single asset first, then multi-asset ZIP)
