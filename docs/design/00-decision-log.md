@@ -37,6 +37,7 @@ The owner rejected every earlier mockup as too busy (2026-10-19). These rulings 
 | S-16 | 02 §9.3's keymap stands (`L`, ←/→, `[` `]`, `,` `.`, `+` `-`, `Z`, `F`, `I`, `D`, `x`); the concept READMEs' different keys are not adopted | Behaviour is 02's; browser keys are never taken | 02 §9.3 | active |
 | S-17 | Concept 3's library tiles are only a possible future empty-search or overview screen, not v1 | An extra click before any art; small libraries look padded | Concept 3 README | superseded by S-18 |
 | S-18 | **Owner choice (2026-10-19): Concept 4 "Glass Library" is the chosen layout** — full-screen App Library-style category tiles and large edge-to-edge asset cells, all navigation/search/options in a floating bottom dock that overlaps the content; detail screen 5 + 1 floating controls. Visual theme still open (glass is one candidate) | Owner preferred its minimalism, intuitiveness, and use of screen space | owner feedback; 08 §12 | active |
+| S-19 | Recommended theme: "Glass, built like Material" — glass look on floating surfaces with a solid dark base (≥ 70% tint), standard/vibrant dock states, ≥ 4.5:1 primary, ≥ 3:1 focus rings, blur only on floating surfaces; own ~150-line glass layer; GlassKit as reference only (fallback: vendored v1.27.0 + override) | Owner likes glass; Material's rules fix glass's readability and a11y gaps; GlassKit review findings | research 14, 15; 08 §15 | proposed — owner decides |
 
 ## 1. Final rulings (F)
 

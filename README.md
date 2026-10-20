@@ -242,6 +242,8 @@ Length: **S** < 5k words · **M** 5–10k · **L** > 10k.
 | [mockups/simple/4-glass-library/](mockups/simple/4-glass-library/README.md) | Concept 4 (owner's chosen layout): Concept 2 glass dock + Concept 3 library tiles; 10-step navigation storyboard |
 | [mockups/simple/themes/](docs/design/08-simplicity-redesign.md#14-theme-options-for-concept-4) | Concept 4 in five alternative themes: Tonal Dock (Material), Mica Command (Fluent), Quiet Graphite, Nothing Mono, Pixel Bezel |
 | [docs/research/14-floating-ui-themes.md](docs/research/14-floating-ui-themes.md) | Research: modern floating-UI themes and five theme concepts |
+| [docs/research/15-glasskit-review.md](docs/research/15-glasskit-review.md) | GlassKit library review: reference only, don't ship |
+| [mockups/simple/themes/f-glasskit/](mockups/simple/themes/f-glasskit/README.md) | Concept 4 built with GlassKit v1.27.0's real CSS (vendored, MIT) plus a Vitrine override file |
 | [mockups/recommended/](mockups/recommended/index.html) | Earlier exploration: the "Quiet Studio, lifted" hybrid that illustrated design 07 ([README](mockups/recommended/README.md)) |
 | [mockups/option-a-quiet-studio/](mockups/option-a-quiet-studio/README.md) | Earlier exploration, option A: library + grid-side inspector |
 | [mockups/option-b-gallery-wall/](mockups/option-b-gallery-wall/README.md) | Earlier exploration, option B: showcase shelves + full-page detail |

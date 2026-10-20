@@ -391,3 +391,25 @@ The owner chose Concept 4's layout (S-18) and asked for themes beyond iOS glass.
 | E · Pixel Bezel | Retro-modern hardware keys | Chamfered keys, hard shadows, pixel numerals, mint Download, marching-ants selection | [e-pixel-bezel](../../mockups/simple/themes/e-pixel-bezel/README.md) |
 
 Note from research 14: the glass baseline's white-on-blue Download label is 3.65:1, below the 4.5:1 text minimum; any final theme must fix it.
+
+## 15. GlassKit review and theme recommendation
+
+**GlassKit** ([review](../research/15-glasskit-review.md), [mockup](../../mockups/simple/themes/f-glasskit/README.md)): MIT, v1.27.0, no dependencies. Verdict: **reference only, don't ship.**
+
+- **Size:** about 13 KB gzip minified, though the README claims 6.5 KB, and roughly two-thirds of it is components Vitrine doesn't use.
+- **Accessibility:** focus rings are removed or below 3:1, the default placeholder and muted text are below 4.5:1, and there is no forced-colors or reduced-transparency support.
+- **Readability over pixel art:** its 8–22% white glass fails contrast; the mockup only passes because Vitrine's own dark base sits under the glass.
+- **Blur cost:** up to 22 blur layers on one screen.
+- **Missing pieces:** no split button, side panel, or popover positioning, focus handling or keyboard support.
+- **Bus factor:** one maintainer, five releases in five days.
+
+**Recommendation (orchestrator; owner decides): "Glass, built like Material".** Keep the iOS glass *look* the owner likes for every floating surface, built with Material 3 Expressive's *rules*:
+
+| Take from glass (Concept 4 / GlassKit as reference) | Take from Material 3 Expressive (theme A) |
+|---|---|
+| Translucent, blurred dock, capsules, menus and info panel | A solid dark base under every glass surface (≥ 70% tint) so text contrast never depends on the art underneath |
+| Soft white hairline and highlight, pill shapes | Standard dock for browsing, **vibrant** (accent-filled) bar for selection mode |
+| Floating detail controls over full-screen art | One high-contrast primary action (Download), at least 4.5:1, plus visible focus rings of at least 3:1 |
+| Blur only on the few floating surfaces (dock, open menu, panel), never per tile | Spring motion and shape change on press and on dock role switches |
+
+Implementation: write Vitrine's own small glass layer (about 150 lines of CSS custom properties, using GlassKit's tokens as a reference) instead of vendoring GlassKit. It keeps the look, stays light, and avoids GlassKit's accessibility gaps. If the owner still prefers vendoring, the fallback is the f-glasskit setup: v1.27.0 pinned and unmodified, its LICENSE next to it, plus a Vitrine override file, never loaded from a CDN.
