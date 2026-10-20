@@ -337,6 +337,31 @@ test('a job waiting to retry is dropped, not sent as "Bearer null", when the key
   expect(calls).toHaveLength(1);
 });
 
+test('turning Keep me signed in off removes the saved key even if the tab copy cannot be written', async () => {
+  http.setKeepSignedIn(true);
+  vi.stubGlobal('sessionStorage', { ...storage(session), setItem: () => { throw new Error('full'); } });
+  http.setKeepSignedIn(false);
+  expect([http.keptSignedIn(), local.has('pixellab-backpack:key-kept'), http.getKey()]).toEqual([false, false, KEY]);
+});
+
+test('a kept key forgotten or replaced in another tab is not kept here', async () => {
+  const on: Record<string, (e: unknown) => void> = {};
+  vi.stubGlobal('addEventListener', (type: string, cb: (e: unknown) => void) => void (on[type] = cb));
+  http = await loadModule();
+  http.setKey(KEY);
+  http.setKeepSignedIn(true);
+  const L = 'pixellab-backpack:key-kept';
+  on.storage({ key: L, newValue: 'new-key-from-tab-b' });
+  expect(http.getKey()).toBe('new-key-from-tab-b');
+  on.storage({ key: 'something-else', newValue: null });
+  expect(http.getKey()).toBe('new-key-from-tab-b');
+  local.delete(L); // the other tab forgot
+  on.storage({ key: L, newValue: null });
+  expect([http.getKey(), http.keptSignedIn(), http.getCounters().status]).toEqual([null, false, 'key-lost']);
+  http.setKeepSignedIn(true); // nothing to write back
+  expect(local.has(L)).toBe(false);
+});
+
 test('keyHint shows at most the last 4 characters, and nothing for a short key', () => {
   expect(http.keyHint()).toBe('-123');
   http.setKey('short');

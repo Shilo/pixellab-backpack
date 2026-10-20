@@ -80,13 +80,22 @@ export function keyHint(): string | null {
 /** Put the key in the store `on` picks and clear the other. No-op without a key. */
 function store(on: boolean): void {
   if (!key) return;
+  let ok = false;
   try {
     (on ? localStorage : sessionStorage).setItem(on ? KEPT_NAME : KEY_NAME, key);
-    (on ? sessionStorage : localStorage).removeItem(on ? KEY_NAME : KEPT_NAME);
-    kept = on;
+    ok = true;
   } catch {
-    /* memory only (or the old store keeps it) */
+    /* memory only */
   }
+  // Turning the saved copy off removes it even if the tab copy could not be written; turning it on keeps the old copy if the write failed.
+  if (ok || !on) {
+    try {
+      (on ? sessionStorage : localStorage).removeItem(on ? KEY_NAME : KEPT_NAME);
+    } catch {
+      /* memory only */
+    }
+  }
+  kept = on && ok;
 }
 
 export function setKeepSignedIn(on: boolean): void {
@@ -468,3 +477,13 @@ async function direct(url: string, o: Opts): Promise<Response> {
 if (typeof document !== 'undefined') document.addEventListener('visibilitychange', pump);
 globalThis.addEventListener?.('online', () => status === 'offline' && setStatus('ok'));
 globalThis.addEventListener?.('offline', () => setStatus('offline'));
+// Another tab changed the kept key: Forget there must not be written back from here.
+globalThis.addEventListener?.('storage', (e) => {
+  const ev = e as StorageEvent;
+  if (!kept || (ev.key !== null && ev.key !== KEPT_NAME)) return;
+  if (ev.newValue) key = ev.newValue;
+  else {
+    setKey(null);
+    setStatus('key-lost');
+  }
+});
