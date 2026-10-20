@@ -3,7 +3,7 @@
 import { APP_ID } from '../app';
 import { CATEGORIES } from '../categories';
 import { createFamilies, type Family } from '../api/families';
-import { apiGet, getKey, HttpError, onStatus, publicGet, setKey, type Status } from '../api/http';
+import { apiGet, getKey, HttpError, keepLoading, onStatus, publicGet, retry, setKey, type Status } from '../api/http';
 import type { Card, FamilyId, FamilyState, Page } from '../types';
 import { applyCheck, dropExpiredDeep, isFresh, joinNextPage } from './check';
 import { loadFamilies, saveFamily, wipe } from './store';
@@ -29,6 +29,8 @@ class Library {
   errors = $state<Partial<Record<FamilyId, string>>>({});
   /** A verified key is held: false shows the key screen (the saved list stays). */
   hasKey = $state(!!getKey());
+  /** First-page requests the saved copy made unnecessary (fresh families, Refresh within a minute). Shown in Activity. */
+  avoided = $state(0);
 
   /** CATEGORIES with a count and up to 4 mosaic cards (page 0, done cards only). */
   categories = $derived(
@@ -78,7 +80,10 @@ class Library {
   openCheck = (opts: { force?: boolean } = {}): Promise<void> => {
     if (running) return running;
     if (opts.force) {
-      if (Date.now() - lastForce < REFRESH_GAP) return Promise.resolve();
+      if (Date.now() - lastForce < REFRESH_GAP) {
+        this.avoided += adapters.length;
+        return Promise.resolve();
+      }
       lastForce = Date.now();
     }
     running = (async () => {
@@ -89,6 +94,7 @@ class Library {
       await locked(async () => {
         await adopt();
         const ids = adapters.map((f) => f.id).filter((id) => opts.force || !isFresh(this.families[id], Date.now()));
+        this.avoided += adapters.length - ids.length;
         if (!ids.length) return;
         checking = true;
         sync();
@@ -131,6 +137,10 @@ class Library {
     if (!p) blobs.set(card.key, (p = loadArt(card, familyId, signal)));
     return p;
   };
+
+  /** "Keep loading" after the daily pause, and "Try again" after a stop: the network module's own switches. */
+  keepLoading = (): void => keepLoading();
+  retry = (): void => retry();
 
   /** Clears the key only; the saved list stays. */
   signOut = (): void => {

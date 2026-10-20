@@ -13,7 +13,7 @@
 </script>
 
 {#if none && allLoaded && !waiting}
-  <main class="home-empty">
+  <main class="vt-state">
     <div class="glass-empty vt-scrim">
       <span class="glass-empty__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2" /><rect x="13" y="4" width="7" height="7" rx="2" /><rect x="4" y="13" width="7" height="7" rx="2" /><rect x="13" y="13" width="7" height="7" rx="2" /></svg></span>
       <h2 class="glass-empty__title">Nothing here yet.</h2>
@@ -40,41 +40,8 @@
 {/if}
 
 <style>
-  .home-empty {
-    position: fixed;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    padding: 24px 24px 140px;
-  }
-  .glass-empty {
-    max-width: 460px;
-    box-sizing: border-box;
-    padding: 40px 40px 34px;
-    gap: 10px;
-    border-radius: 28px;
-    border: 1px solid var(--gl-border-subtle);
-    background: linear-gradient(var(--gl-surface-2), var(--gl-surface-2)), var(--vt-scrim);
-    backdrop-filter: blur(var(--gl-blur));
-    -webkit-backdrop-filter: blur(var(--gl-blur));
-    box-shadow: var(--gl-shadow-modal);
-  }
-  .glass-empty .glass-empty__icon { width: 60px; height: 60px; margin-bottom: 6px; background: var(--gl-surface-3); border: 1px solid var(--gl-border-subtle); color: var(--gl-color-text); }
-  .glass-empty .glass-empty__icon svg { width: 26px; height: 26px; }
-  .glass-empty .glass-empty__title { font-size: 22px; letter-spacing: -0.01em; }
-  .glass-empty .glass-empty__text { font-size: 15px; max-width: 34ch; color: var(--vt-text-2); }
-  .glass-empty .glass-empty__action { margin-top: 18px; gap: 10px; }
-  .glass-empty .glass-btn { height: 44px; padding: 0 20px; gap: 8px; text-decoration: none; }
-
   .mosaic > i.sk {
     background: linear-gradient(110deg, rgba(255, 255, 255, 0.035) 30%, rgba(255, 255, 255, 0.085) 50%, rgba(255, 255, 255, 0.035) 70%);
   }
   .skl { display: block; width: 42%; height: 14px; margin: 4px 0; border-radius: 7px; background: rgba(255, 255, 255, 0.08); }
-
-  @media (max-width: 600px) {
-    .home-empty { padding: 16px 16px 120px; }
-    .glass-empty { padding: 32px 22px 24px; }
-    .glass-empty .glass-empty__action { width: 100%; flex-direction: column-reverse; }
-    .glass-empty .glass-btn { height: auto; min-height: 48px; width: 100%; padding: 12px 18px; line-height: 1.3; }
-  }
 </style>

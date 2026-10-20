@@ -59,7 +59,10 @@
 </script>
 
 <script lang="ts">
-  // The Activity panel: every request this tab sent to PixelLab, live. Reads only the network module's counters and log.
+  // The Activity panel: every request this tab sent to PixelLab, live. Reads the network module's counters and log,
+  // plus the library's count of requests the saved copy made unnecessary.
+  import { library } from '../data/library.svelte';
+
   let { open, onClose }: { open: boolean; onClose: () => void } = $props();
 
   let counters = $state(getCounters());
@@ -107,6 +110,7 @@
       <div><dt>API requests today</dt><dd>{counters.todayApi} of {counters.dailyCap}</dd></div>
       <div><dt>Image-host loads</dt><dd>{counters.imageHost}</dd></div>
       <div><dt>Status</dt><dd>{statusName(counters.status)}</dd></div>
+      <div class="wide"><dt>Requests avoided by the saved copy</dt><dd>{library.avoided}</dd></div>
     </dl>
     <p class="note">Browsers also send PixelLab a small hidden permission check before key requests, which this list cannot show. Estimate: about {estimatePreflights(entries)}.</p>
 
@@ -142,6 +146,7 @@
   h2 { font-size: 22px; font-weight: 600; }
   .sub { margin-top: 4px; font-size: 13px; color: var(--gl-color-text-muted); }
   .counters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .counters .wide { grid-column: 1 / -1; }
   .counters div { padding: 8px 12px; border-radius: 14px; background: var(--gl-surface-1); border: 1px solid var(--gl-border-subtle); }
   dt { font-size: 12px; color: var(--gl-color-text-muted); }
   dd { margin-top: 2px; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }

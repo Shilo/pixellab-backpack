@@ -22,6 +22,8 @@
 /* 2. Readability: a dark base under GlassKit's glass so white labels hold contrast over bright pixel art. */
 .vt-scrim { --vt-scrim: rgba(20, 22, 30, .62); --gl-icon-muted: rgba(255, 255, 255, .78); --gl-color-text-muted: rgba(255, 255, 255, .72); }
 .glass-tab-bar--floating.vt-scrim { background-color: var(--vt-scrim); }
+/* Menu and Activity sit over art and the dock: a near-opaque base so nothing shows through their text. */
+.glass-popover.vt-scrim { --vt-scrim: rgba(20, 22, 30, .94); }
 
 /* 3. Layout */
 html, body { height: 100%; overflow: hidden; margin: 0; }
@@ -47,9 +49,19 @@ svg.dots { fill: currentColor; stroke: none; }
 .grid { padding: 28px 32px 160px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; align-content: start; }
 .cell { position: relative; }
 .cell .sq { position: relative; aspect-ratio: 1; border-radius: 24px; background: rgba(255, 255, 255, .055); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .04); }
-.cell .sq > i { position: absolute; inset: 0; }
 .cell .nm { display: block; text-align: center; padding-top: 9px; font-size: 14px; color: var(--vt-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cell .nm small { color: var(--vt-text-3); font-size: 13px; }
+
+/* Full-screen state (empty, error, blocked): GlassKit's empty state on a readable glass card, clear of the dock. */
+.vt-state { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px 24px 140px; }
+.vt-state .glass-empty { max-width: 460px; box-sizing: border-box; padding: 40px 40px 34px; gap: 10px; border-radius: 28px; border: 1px solid var(--gl-border-subtle);
+  background: linear-gradient(var(--gl-surface-2), var(--gl-surface-2)), var(--vt-scrim); backdrop-filter: blur(var(--gl-blur)); -webkit-backdrop-filter: blur(var(--gl-blur)); box-shadow: var(--gl-shadow-modal); }
+.vt-state .glass-empty__icon { width: 60px; height: 60px; margin-bottom: 6px; background: var(--gl-surface-3); border: 1px solid var(--gl-border-subtle); color: var(--gl-color-text); }
+.vt-state .glass-empty__icon svg { width: 26px; height: 26px; }
+.vt-state .glass-empty__title { font-size: 22px; letter-spacing: -.01em; }
+.vt-state .glass-empty__text { font-size: 15px; max-width: 34ch; color: var(--vt-text-2); }
+.vt-state .glass-empty__action { margin-top: 18px; gap: 10px; }
+.vt-state .glass-btn { height: 44px; padding: 0 20px; gap: 8px; text-decoration: none; }
+.vt-state .glass-btn svg { width: 18px; height: 18px; }
 
 /* 4. Dock: GlassKit's floating tab bar, items in a row at 48px */
 .vt-dock { --gl-control-height: 48px; --gl-btn-height: 48px; --gl-radius-btn: 24px; --gl-font-size-btn: 15px; white-space: nowrap; }
@@ -91,7 +103,6 @@ svg.dots { fill: currentColor; stroke: none; }
   .grid { padding: var(--vt-top) var(--vt-m) 120px; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 10px; }
   .cell .sq { border-radius: 18px; }
   .cell .nm { font-size: 12.5px; padding-top: 6px; }
-  .cell .nm small { font-size: 12px; }
 
   /* Dock: full width, icon-only items. Hidden labels stay readable to screen readers. */
   .glass-tab-bar-dock { left: var(--vt-m); right: var(--vt-m); bottom: var(--vt-bot); transform: none; max-width: none; }
@@ -104,4 +115,9 @@ svg.dots { fill: currentColor; stroke: none; }
   .crumb { flex: 1; padding: 0 4px; }
 
   .vt-notice { bottom: calc(var(--vt-bot) + 80px); }
+
+  .vt-state { padding: var(--vt-top) 16px 120px; }
+  .vt-state .glass-empty { padding: 32px 22px 24px; }
+  .vt-state .glass-empty__action { width: 100%; flex-direction: column-reverse; }
+  .vt-state .glass-btn { height: auto; min-height: 48px; width: 100%; padding: 12px 18px; line-height: 1.3; }
 }

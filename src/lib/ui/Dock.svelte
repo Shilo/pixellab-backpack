@@ -30,11 +30,11 @@
         {@render soon('Search')}
       </button>
       <button type="button" class="glass-tab-bar__item" aria-disabled="true">
-        <span class="glass-tab-bar__label">Select</span>
+        <span class="glass-tab-bar__label" aria-hidden="true">Select</span>
         {@render soon('Select')}
       </button>
     {/if}
-    <button type="button" class="glass-tab-bar__item vt-icon" aria-disabled={onMore ? undefined : 'true'} onclick={onMore}>
+    <button type="button" class="glass-tab-bar__item vt-icon" aria-disabled={onMore ? undefined : 'true'} aria-haspopup={onMore ? 'menu' : undefined} onclick={onMore}>
       <span class="glass-tab-bar__icon"><svg viewBox="0 0 24 24" class="dots" aria-hidden="true"><circle cx="5.5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="18.5" cy="12" r="1.7" /></svg></span>
       {#if onMore}<span class="vt-sr">More</span>{:else}{@render soon('More')}{/if}
     </button>

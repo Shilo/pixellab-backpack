@@ -58,7 +58,7 @@
       <h2 class="glass-empty__title">PixelLab is blocking this browser</h2>
       <p class="glass-empty__text">PixelLab may have changed how its API works with websites. Nothing is wrong with your account.</p>
       <div class="glass-empty__action">
-        <button type="button" class="glass-btn glass-btn--primary glass-btn--auto" onclick={test}>
+        <button type="button" class="glass-btn glass-btn--primary glass-btn--auto" onclick={() => { library.retry(); test(); }}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.5-5.8M20 4v4.5h-4.5" /></svg>Try again
         </button>
       </div>
