@@ -33,34 +33,33 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 
 /* Content: full-screen, edge to edge, scrolls under the floating glass */
 main { position: fixed; inset: 0; overflow: hidden; }
-.fade { -webkit-mask-image: linear-gradient(#000 calc(100% - 40px), transparent); mask-image: linear-gradient(#000 calc(100% - 40px), transparent); }
 
 /* Library home: App Library tiles */
-.library { padding: 150px 60px 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0 24px; align-content: start; }
-.sec { grid-column: 1 / -1; font-size: 13px; font-weight: 600; color: var(--text-2); padding: 0 6px 12px; }
-.sec.mine { padding-top: 40px; }
+.library { padding: 28px 40px 160px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 28px; align-content: start; overflow: hidden; } /* bottom padding: the last row scrolls clear of the dock */
+.sec { grid-column: 1 / -1; font-size: 13px; font-weight: 600; color: var(--text-2); padding: 0 8px; margin-bottom: -14px; }
+.sec.mine { padding-top: 6px; }
 .tile { display: block; color: inherit; text-decoration: none; }
 .mosaic {
-  position: relative; aspect-ratio: 1; border-radius: 30px; padding: 8px;
-  display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px;
+  position: relative; aspect-ratio: 4 / 2.9; border-radius: 28px; padding: 9px;
+  display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 7px;
   background: rgba(16, 18, 26, .55); box-shadow: inset 0 0 0 1px var(--hair), 0 12px 30px rgba(0, 0, 0, .25);
 }
 .mosaic > i, .mini > i { background: rgba(255, 255, 255, .055); border-radius: 20px; }
-.mini { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 5px; }
+.mini { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px; }
 .mini > i { border-radius: 12px; }
 /* Folders (yours) use the lighter frosted fill of an iOS folder; types (automatic) are darker. */
 .folder .mosaic { background: rgba(205, 212, 235, .14); box-shadow: inset 0 1px 0 rgba(255,255,255,.10), inset 0 0 0 1px rgba(255,255,255,.06), 0 12px 30px rgba(0,0,0,.25); }
 .folder .mosaic > i, .folder .mini > i { background: rgba(0, 0, 0, .16); }
-.tlabel { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 8px 0; }
-.tlabel b { font-weight: 600; font-size: 15px; letter-spacing: -.012em; }
+.tlabel { display: flex; justify-content: space-between; align-items: baseline; padding: 11px 8px 0; }
+.tlabel b { font-weight: 600; font-size: 16px; letter-spacing: -.012em; }
 .tlabel span { color: var(--text-2); font-variant-numeric: tabular-nums; }
 
 /* Category grid */
-.grid { padding: 56px 64px 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 22px 24px; align-content: start; }
+.grid { padding: 28px 32px 160px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px 20px; align-content: start; }
 .cell { position: relative; }
-.cell .sq { position: relative; aspect-ratio: 1; border-radius: 24px; background: rgba(255, 255, 255, .055); box-shadow: inset 0 0 0 1px rgba(255,255,255,.04); }
+.cell .sq { position: relative; aspect-ratio: 1; border-radius: 26px; background: rgba(255, 255, 255, .055); box-shadow: inset 0 0 0 1px rgba(255,255,255,.04); }
 .cell .sq > i { position: absolute; inset: 0; }
-.cell .nm { display: block; text-align: center; padding-top: 8px; font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cell .nm { display: block; text-align: center; padding-top: 9px; font-size: 14px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cell .nm small { color: var(--text-3); font-size: 13px; }
 .cell .chk { position: absolute; right: 10px; bottom: 10px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: #f4f5f9; color: #12141b; box-shadow: 0 0 0 2px rgba(12,14,20,.6), 0 2px 8px rgba(0,0,0,.4); }
 .cell .chk svg { width: 16px; height: 16px; stroke-width: 2.6; }
@@ -138,7 +137,7 @@ main { position: fixed; inset: 0; overflow: hidden; }
 .ftitle { display: flex; align-items: center; gap: 12px; font: 600 30px/1.1 -apple-system, "SF Pro Display", "Segoe UI Variable Display", system-ui, sans-serif; letter-spacing: -.015em; }
 .ftitle .round { width: 38px; height: 38px; background: rgba(255,255,255,.12); }
 .ftitle .round svg { width: 18px; height: 18px; }
-.fpanel { width: 900px; padding: 34px 38px 30px; border-radius: 44px; background: rgba(205, 212, 235, .13); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px 26px; }
+.fpanel { width: 1160px; padding: 32px 36px 28px; border-radius: 44px; background: rgba(205, 212, 235, .13); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px 26px; }
 .fpanel .sq { background: rgba(0, 0, 0, .24); }
 .fpanel .nm { color: rgba(244,245,249,.82); }
 .fmeta { color: var(--text-2); font-size: 13px; }
@@ -147,7 +146,7 @@ main { position: fixed; inset: 0; overflow: hidden; }
 /* Viewer */
 .viewer { background: #0c0c0f; }
 .stage { position: fixed; inset: 0; background: radial-gradient(760px 560px at var(--cx, 50%) 48%, #2a2c34, #16171c 58%, #0c0c0f); }
-.stage > i { position: absolute; top: 96px; bottom: 112px; left: 0; right: 0; }
+.stage > i { position: absolute; inset: 0; } /* controls float over the canvas margin, so the art fits the whole window */
 .info .stage > i { right: 420px; }
 .info { --cx: calc((100% - 420px) / 2); }
 .fab { position: fixed; z-index: 3; }

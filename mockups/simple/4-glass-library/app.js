@@ -34,17 +34,17 @@ const T = [
   ['Characters', n('Characters'), ['char-android-walk-east-f00', 'char-orb-mage-south', 'char-hooded-mage-south-east', 'char-hooded-mage-detailed-south-west']],
   ['Objects', n('Objects'), ['obj-bear-trap-open', 'obj-treasure-chest-closed', 'obj-crimson-lance', 'item-red-health-potion', 'item-iron-helmet', 'item-lantern', 'item-ruby-ring']],
   ['Images', n('Images'), ['creator-goblin-idle-f00', 'creator-white-bird-east', 'vfx-meteor-f12', 'creator-slime-sheet|cover|1', 'creator-fire-skill-icons|cover|1', 'creator-food-atlas|cover|1', 'creator-block-textures-16|cover|2']],
-  ['Tilesets & tiles', n('Tilesets & tiles'), ['tileset-topdown-dirt-grass-detailed|cover|4', 'tileset-topdown-stone-floor-wall|cover|4', 'iso-grass-block', 'tileset-side-frozen-ledge|full|0', 'iso-stone-slab', 'tilespro-wooden-stairs|full|0', 'tileset-side-dirt-grass|full|0']],
+  ['Tilesets & tiles', n('Tilesets & tiles'), ['tileset-topdown-dirt-grass-detailed|cover|7', 'tileset-topdown-stone-floor-wall|cover|7', 'iso-grass-block', 'tileset-side-frozen-ledge|full|0', 'iso-stone-slab', 'tilespro-wooden-stairs|full|0', 'tileset-side-dirt-grass|full|0']],
   ['Maps', n('Maps'), ['map-meadow-ruins|cover|2', 'mapobj-ruined-apartment', 'mapobj-wooden-staircase-west', 'mapobj-stone-steps-east']],
-  ['UI', n('UI'), ['ui-skill-icon-frames|cover|1', 'ui-gilded-panel-kit|cover|1', 'ui-stone-9slice-kit|cover|1', 'ui-rts-command-bar|cover|1', 'ui-fantasy-hud|cover|1', 'ui-rts-components|cover|1', 'font-tiny-mono-atlas|cover|2']],
+  ['UI', n('UI'), ['ui-skill-icon-frames|cover|2', 'ui-gilded-panel-kit|cover|1', 'ui-stone-9slice-kit|cover|1', 'ui-rts-command-bar|cover|1', 'ui-fantasy-hud|cover|1', 'ui-rts-components|cover|1', 'font-tiny-mono-atlas|cover|2']],
 ];
 const M = [
-  ['Favorites', D.favorites.length, ['char-android-walk-south-f00', 'vfx-meteor-f12', 'map-meadow-ruins|cover|2', 'tileset-topdown-dirt-grass-detailed|cover|2', 'creator-goblin-idle-f00', 'tileset-side-frozen-ledge|cover|1', 'obj-bear-trap-open'], 1],
+  ['Favorites', D.favorites.length, ['char-android-walk-south-f00', 'vfx-meteor-f12', 'map-meadow-ruins|cover|2', 'tileset-topdown-dirt-grass-detailed|cover|4', 'creator-goblin-idle-f00', 'tileset-side-frozen-ledge|cover|2', 'obj-bear-trap-open'], 1],
   ['Hero party', fn('fld_01'), ['char-orb-mage-south-east', 'char-hooded-mage-detailed-south', 'obj-crimson-lance', 'char-android-walk-south-f00', 'item-iron-longsword', 'item-oak-magic-staff-crystal', 'item-mage-robe'], 1],
-  ['Dungeon kit', fn('fld_02'), ['obj-treasure-chest-open', 'obj-bear-trap-closed', 'tileset-topdown-stone-floor-wall|cover|3', 'mapobj-wooden-staircase-west', 'iso-stone-slab', 'tileset-side-castle|cover|1', 'tilespro-wooden-stairs|cover|1'], 1],
-  ['UI pack', fn('fld_03'), ['ui-fantasy-hud|cover|1', 'ui-skill-icon-frames|cover|1', 'creator-fire-skill-icons|cover|1', 'ui-rts-components|cover|1', 'font-tiny-mono-atlas|cover|1', 'creator-cyan-skill-icons|cover|1', 'creator-skill-icons-pro|cover|1'], 1],
-  ['1-bit platformer', fn('fld_04'), ['tileset-side-castle|full|0', 'tileset-side-frozen-ledge|full|0', 'tileset-side-fang-ridge|full|0', 'tileset-side-rooted-soil|cover|1', 'tileset-side-worn-stone|cover|1'], 1],
-  ['Favorites to export', fn('fld_05'), ['vfx-meteor-f12', 'creator-goblin-idle-f00', 'creator-slime-sheet|cover|1', 'char-android-walk-south-f00', 'map-meadow-ruins|cover|1', 'tileset-topdown-dirt-grass-detailed|cover|1'], 1],
+  ['Dungeon kit', fn('fld_02'), ['obj-treasure-chest-open', 'obj-bear-trap-closed', 'tileset-topdown-stone-floor-wall|cover|7', 'mapobj-wooden-staircase-west', 'iso-stone-slab', 'tileset-side-castle|cover|2', 'tilespro-wooden-stairs|cover|4'], 1],
+  ['UI pack', fn('fld_03'), ['ui-fantasy-hud|cover|1', 'ui-skill-icon-frames|cover|2', 'creator-fire-skill-icons|cover|2', 'ui-rts-components|cover|1', 'font-tiny-mono-atlas|cover|2', 'creator-cyan-skill-icons|cover|1', 'creator-skill-icons-pro|cover|1'], 1],
+  ['1-bit platformer', fn('fld_04'), ['tileset-side-castle|full|0', 'tileset-side-frozen-ledge|full|0', 'tileset-side-fang-ridge|full|0', 'tileset-side-rooted-soil|cover|2', 'tileset-side-worn-stone|cover|2'], 1],
+  ['Favorites to export', fn('fld_05'), ['vfx-meteor-f12', 'creator-goblin-idle-f00', 'creator-slime-sheet|cover|1', 'char-android-walk-south-f00', 'map-meadow-ruins|cover|1', 'tileset-topdown-dirt-grass-detailed|cover|4'], 1],
 ];
 const mcell = c => { const [a, fit, s] = c.split('|'); return `<i data-art="${a}" data-pad="${fit === 'full' ? 0.1 : 0.06}"${fit ? ` data-fit="${fit}" data-s="${s}"` : ''}></i>`; };
 const tile = ([name, count, cells, folder]) => {
@@ -71,12 +71,12 @@ const dockCat = `<nav class="dock glass"><button class="seg back">${I.back}Libra
 
 function home() { add(`<main class="library">${T.map(tile).join('')}<div class="sec mine">Favorites and folders</div>${M.map(tile).join('')}</main>`); }
 function category(selected = []) {
-  add(`<main class="grid fade${selected.length ? ' selecting' : ''}">${objects.map(a => cell(a, selected.includes(a.id))).join('')}</main>`);
+  add(`<main class="grid${selected.length ? ' selecting' : ''}">${objects.map(a => cell(a, selected.includes(a.id))).join('')}</main>`);
 }
 function viewer(info) {
   const a = byId.chr_0004;
   document.body.className = 'viewer' + (info ? ' info' : '');
-  add(`<div class="stage"><i data-art="char-android-walk-east-f03" data-fit="full" data-pad="0.02"></i></div>`,
+  add(`<div class="stage"><i data-art="char-android-walk-east-f03" data-fit="full" data-pad="0"></i></div>`,
     `<button class="fab close glass" aria-label="Close">${I.x}</button>`,
     `<div class="fab vtitle"><b>${a.name}</b><span>Character</span></div>`,
     `<div class="fab caps glass"><button aria-label="Favorite">${I.heart}</button><button class="${info ? 'on' : ''}" aria-label="Info">${I.info}</button><button aria-label="More">${I.more}</button></div>`,
@@ -144,7 +144,7 @@ const SCREENS = {
     add(m); at(m, r.right - 330, r.top - m.offsetHeight - 14);
   },
   '09-folder-open': () => {
-    home();
+    home(); document.querySelector('main').scrollTop = 1e4; // scrolled to the folders row
     const f = D.folders[0];
     add('<div class="scrim"></div>', `<div class="fopen"><div class="ftitle">${f.name}<button class="round" aria-label="Folder actions">${I.more}</button></div>
       <div class="fpanel">${f.assetIds.map(id => cell(byId[id])).join('')}</div><div class="fmeta">${f.assetIds.length} assets</div></div>`,
