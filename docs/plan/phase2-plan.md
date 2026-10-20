@@ -1,6 +1,6 @@
 # Phase 2 plan: Settings and the asset viewer
 
-Status: 2026-10-20. Builds on the MVP on branch `mvp` ([MVP plan](mvp-plan.md), [build log](mvp-build-log.md)). Where this plan and older design docs disagree, **this plan wins for Phase 2**; the MVP plan's rulings and Global Constraints still bind.
+Status: **Done** 2026-10-20 ([build log](phase2-build-log.md)). Builds on the MVP on branch `mvp` ([MVP plan](mvp-plan.md), [build log](mvp-build-log.md)). Where this plan and older design docs disagree, **this plan wins for Phase 2**; the MVP plan's rulings and Global Constraints still bind.
 
 ## Goal
 
