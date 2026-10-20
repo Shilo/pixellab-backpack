@@ -17,12 +17,14 @@ test('spacers keep the scroll height: kept rows + spacers = all rows', () => {
   expect(total).toBe(rows * m.stride - m.gap);
 });
 
-test('next pages are due only near the end of a family', () => {
+test('next pages are due only near the end of a family, inside or just below the page', () => {
   const segs = [
     { id: 'tilesets' as const, end: 100 },
     { id: 'tilesets-side' as const, end: 150 },
   ];
-  expect(dueFamilies(segs, 30, 5)).toEqual([]);
-  expect(dueFamilies(segs, 90, 5)).toEqual(['tilesets']);
-  expect(dueFamilies(segs, 140, 5)).toEqual(['tilesets', 'tilesets-side']);
+  expect(dueFamilies(segs, 0, 30, 5)).toEqual([]); // far from every end
+  expect(dueFamilies(segs, 70, 90, 5)).toEqual(['tilesets']); // within two rows of its end
+  expect(dueFamilies(segs, 125, 140, 5)).toEqual(['tilesets-side']); // tilesets ends above the page: not asked
+  expect(dueFamilies(segs, 95, 140, 5)).toEqual(['tilesets', 'tilesets-side']); // both ends in the page
+  expect(dueFamilies(segs, 400, 430, 5)).toEqual([]); // flung past everything
 });

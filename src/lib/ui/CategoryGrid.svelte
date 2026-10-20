@@ -25,9 +25,9 @@
   /** Height of the empty space standing in for `n` rows that are not in the page. */
   export const spacer = (n: number, m: Metrics): number => (n > 0 ? n * m.stride - m.gap : 0);
 
-  /** Families whose next page is due: the page reaches within two rows of the end of that family's cards. */
-  export function dueFamilies(segs: { id: FamilyId; end: number }[], lastShown: number, cols: number): FamilyId[] {
-    return segs.filter((s) => lastShown >= s.end - 2 * cols).map((s) => s.id);
+  /** Families whose next page is due: the end of that family's cards is inside the page or within two rows below it. */
+  export function dueFamilies(segs: { id: FamilyId; end: number }[], firstShown: number, lastShown: number, cols: number): FamilyId[] {
+    return segs.filter((s) => firstShown <= s.end && lastShown >= s.end - 2 * cols).map((s) => s.id);
   }
 </script>
 
@@ -97,18 +97,20 @@
     });
   });
 
-  // Next pages only when the page reaches near the end of a family's cards. A family is asked again only when its
-  // card count or total changed, so an empty or failed answer never turns into a request loop.
-  const tried = new Map<FamilyId, string>();
+  // Next pages only when the page reaches near the end of a family's cards. A family is asked again only after its
+  // cards changed since the last ask (a failed ask leaves them alone), and gives up after two asks that added nothing
+  // (e.g. a shifted list that reloads), so an empty or failed answer never turns into a request loop.
+  const asked = new Map<FamilyId, { cards: unknown; len: number; stalls: number }>();
   $effect(() => {
     if (!m) return;
-    for (const id of dueFamilies(segs, range[1] * m.cols, m.cols)) {
+    for (const id of dueFamilies(segs, range[0] * m.cols, range[1] * m.cols, m.cols)) {
       const s = library.families[id];
-      if (!s || library.loading[id]) continue;
-      const sig = `${s.cards.length}/${s.total}`;
-      if (s.cards.length >= s.total || tried.get(id) === sig) continue;
-      tried.set(id, sig);
-      void library.loadMore(id);
+      if (!s || library.loading[id] || s.cards.length >= s.total) continue;
+      const prev = asked.get(id);
+      if (prev?.cards === s.cards) continue;
+      const stalls = prev && s.cards.length <= prev.len ? prev.stalls + 1 : 0;
+      asked.set(id, { cards: s.cards, len: s.cards.length, stalls });
+      if (stalls < 2) void library.loadMore(id);
     }
   });
 </script>
