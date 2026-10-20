@@ -140,12 +140,14 @@ for (const size of [16, 32]) {
       await scaleIs(page, kOf(m));
     }
     await expect(zout).toBeDisabled();
+    await expect(readout).toBeFocused(); // the disabled button gives its focus to the readout
     for (const m of STEPS.slice(1)) {
       await zin.click();
       await expect(readout).toHaveText(`${m}×`);
       await scaleIs(page, kOf(m));
     }
     await expect(zin).toBeDisabled();
+    await expect(readout).toBeFocused();
     await readout.click();
     await expect(readout).toHaveText(/^Fit/);
     await scaleIs(page, fitK);

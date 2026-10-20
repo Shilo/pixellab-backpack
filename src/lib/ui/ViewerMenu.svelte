@@ -10,6 +10,7 @@
 </script>
 
 <script lang="ts">
+  import { tick } from 'svelte';
   import { DEFAULT_FPS, MAX_FPS, MIN_FPS } from '../render/player';
   import type { createPlayer } from '../render/player.svelte';
 
@@ -21,6 +22,16 @@
     backdrop: number; onBackdrop: (i: number) => void; link: string;
   } = $props();
   let panel = $state<HTMLDivElement>();
+  let readout = $state<HTMLButtonElement>();
+
+  // A zoom button that reaches its limit disables itself: focus moves to the readout instead of falling to the page.
+  async function zoom(z: number | undefined, e: MouseEvent) {
+    if (!z) return;
+    const btn = e.currentTarget as HTMLButtonElement;
+    onZoom(z);
+    await tick();
+    if (btn.disabled) readout?.focus();
+  }
 
   // Focus moves in and returns to the opener on close; Esc closes only this layer (capture phase keeps it from the viewer).
   $effect(() => {
@@ -40,7 +51,7 @@
   });
 </script>
 
-{#snippet sq(label: string, path: string, onclick: () => void, disabled = false)}
+{#snippet sq(label: string, path: string, onclick: (e: MouseEvent) => void, disabled = false)}
   <button type="button" class="glass-btn glass-btn--tertiary glass-btn--sm glass-btn--auto sq" aria-label={label} {disabled} {onclick}>
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d={path} /></svg>
   </button>
@@ -79,9 +90,9 @@
     <div class="row">
       <span class="title">Zoom</span>
       <span class="ctl">
-        {@render sq('Zoom out', 'M6 12h12', () => zoomOut && onZoom(zoomOut), !zoomOut)}
-        <button type="button" class="read readbtn" aria-label="Zoom: {zoomLabel}. Toggle Fit and 1:1" onclick={onZoomToggle}>{zoomLabel}</button>
-        {@render sq('Zoom in', 'M12 6v12M6 12h12', () => zoomIn && onZoom(zoomIn), !zoomIn)}
+        {@render sq('Zoom out', 'M6 12h12', (e) => zoom(zoomOut, e), !zoomOut)}
+        <button type="button" class="read readbtn" bind:this={readout} aria-label="Zoom: {zoomLabel}. Toggle Fit and 1:1" onclick={onZoomToggle}>{zoomLabel}</button>
+        {@render sq('Zoom in', 'M12 6v12M6 12h12', (e) => zoom(zoomIn, e), !zoomIn)}
       </span>
     </div>
     <div class="bd">

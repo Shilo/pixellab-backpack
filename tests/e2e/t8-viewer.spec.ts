@@ -239,6 +239,35 @@ test("after three 503s stop the network, the viewer's Try again lifts the stop a
   await expect.poll(() => mock.hits.filter((h) => h.detail && h.url.endsWith('/a-characters-1')).length).toBe(1);
 });
 
+test("during PixelLab's 429 pause the viewer's Try again keeps the pause, and a second 429 still stops everything", async ({ page }) => {
+  await page.clock.install(); // time flows normally; fastForward skips the 60 s pause
+  const mock = await openGrid(page, /^Characters, /);
+  const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization' };
+  // Character 1's frames fail on the image host (Try again shows, no API involved); Character 2's detail answers 429 twice.
+  await page.route('https://backblaze.pixellab.ai/file/a/a-characters-0/**', (route) => route.fulfill({ status: 404, headers: cors }));
+  let asked = 0;
+  await page.route('https://api.pixellab.ai/v2/characters/a-characters-1', (route) =>
+    route.request().method() === 'GET' && asked++ < 2 ? route.fulfill({ status: 429, headers: cors }) : route.fallback(),
+  );
+  const failed = (name: string) => viewer(page, name).getByRole('status').filter({ hasText: "Couldn't load this asset's animations." });
+
+  await open(page, 'Character 1');
+  await expect(failed('Character 1')).toBeVisible();
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(() => asked).toBe(1); // first 429: one at a time, 60 s pause
+  await page.keyboard.press('ArrowLeft');
+  await failed('Character 1').getByRole('button', { name: 'Try again' }).click();
+
+  await page.keyboard.press('ArrowRight');
+  await expect(viewer(page, 'Character 2')).toBeVisible();
+  await page.waitForTimeout(1500);
+  expect(asked).toBe(1); // the pause still holds: nothing sent
+  await page.clock.fastForward('01:05');
+  await expect.poll(() => asked).toBe(2);
+  await expect(failed('Character 2')).toBeVisible(); // a second 429 within 5 minutes stopped the queue
+  expect(mock.hits.filter((h) => h.detail && h.url.endsWith('/a-characters-1'))).toHaveLength(0); // never reached the mock
+});
+
 test('←/→ and swipes change the asset; Esc and Back close with one Back step; focus returns to the cell; the grid scroll is kept', async ({ page }) => {
   await openGrid(page, /^Characters, /);
   const grid = page.locator('main.grid');

@@ -56,6 +56,8 @@ const h = vi.hoisted(() => {
     setKey: vi.fn((k: string | null) => void ((st.key = k || null), st.key || (st.kept = false))),
     setKeepSignedIn: vi.fn((on: boolean) => void (st.kept = on)),
     forgetKey: vi.fn(() => void Object.assign(st, { key: null, kept: false })),
+    retry: vi.fn(),
+    keepLoading: vi.fn(),
     wipe: vi.fn(async () => st.db.clear()),
     // structuredClone throws on a Svelte proxy, just like IndexedDB.
     saveFamily: vi.fn(async (id: string, s: unknown) => void st.db.set(id, structuredClone(s))),
@@ -75,6 +77,8 @@ vi.mock('../../src/lib/api/http', () => ({
   keptSignedIn: () => h.st.kept && !!h.st.key,
   keyHint: () => null,
   setKeepSignedIn: h.setKeepSignedIn,
+  retry: h.retry,
+  keepLoading: h.keepLoading,
 }));
 vi.mock('../../src/lib/data/store', () => ({
   loadFamilies: async () => structuredClone(Object.fromEntries(h.st.db)),
@@ -316,6 +320,25 @@ describe('art', () => {
     expect(h.publicGet).not.toHaveBeenCalled();
   });
 
+  it('a picture that timed out (not an HttpError) is asked again by the next call; a 404 answer is not', async () => {
+    const lib = await tab();
+    await lib.connect('key');
+    vi.clearAllMocks();
+    const card = lib.families.characters!.cards[0];
+    h.publicGet.mockRejectedValueOnce(new DOMException('timed out', 'TimeoutError'));
+    expect(await lib.art(card, 'characters')).toBeNull();
+    expect(await lib.art(card, 'characters')).toBeInstanceOf(Blob);
+    expect(h.publicGet).toHaveBeenCalledTimes(2);
+
+    h.publicGet.mockRejectedValueOnce(new DOMException('timed out', 'TimeoutError'));
+    expect(await lib.picture(h.img('f'), 'characters')).toBeNull();
+    expect(await lib.picture(h.img('f'), 'characters')).toBeInstanceOf(Blob);
+    h.publicGet.mockResolvedValueOnce(new Response(null, { status: 404 }));
+    expect(await lib.picture(h.img('g'), 'characters')).toBeNull();
+    expect(await lib.picture(h.img('g'), 'characters')).toBeNull();
+    expect(h.publicGet).toHaveBeenCalledTimes(5); // 2 for f, 1 for g (a real answer stays)
+  });
+
   it('resolves costly art once, saves the link, then reuses it on later visits', async () => {
     const lib = await tab();
     await lib.connect('key');
@@ -460,6 +483,40 @@ describe('forget and keep signed in', () => {
     await lib.openCheck();
     expect(h.apiGet).toHaveBeenCalledOnce(); // only the late detail
     expect(h.st.db.size).toBe(0);
+  });
+
+  it('a check waiting on the cross-tab lock when the key is forgotten does not bring the library back', async () => {
+    const lib = await tab();
+    await lib.connect('key');
+    later(HOUR + 1);
+    let open!: () => void;
+    let waiting = false;
+    const gate = new Promise<void>((ok) => (open = ok));
+    const request = (_n: string, fn: () => Promise<void>) => ((waiting = true), gate.then(fn));
+    vi.stubGlobal('navigator', { locks: { request } });
+    try {
+      const check = lib.openCheck();
+      await vi.waitFor(() => expect(waiting).toBe(true)); // past the first saved-copy read, queued for the lock
+      h.st.key = null; // another tab forgot: its wipe has not finished yet, so the disk still holds the library
+      h.st.signedOutCb!();
+      vi.clearAllMocks();
+      open();
+      await check;
+      expect(lib.families).toEqual({});
+      expect(h.apiGet).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('Try again lifts only a stop or the daily pause; a 429 pause and every other status are left alone', async () => {
+    const lib = await tab();
+    for (const s of ['slowed', 'ok', 'offline', 'key-lost', 'stopped', 'blocked', 'paused']) {
+      h.st.statusCb!(s);
+      lib.recover();
+    }
+    expect(h.retry).toHaveBeenCalledTimes(2); // stopped, blocked
+    expect(h.keepLoading).toHaveBeenCalledOnce(); // paused
   });
 
   it('setKeepSignedIn forwards to the network module', async () => {

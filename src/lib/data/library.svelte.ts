@@ -150,6 +150,7 @@ class Library {
       ran = true;
       // One check across tabs: a tab that waited for the lock re-reads what the other tab saved.
       await locked(async () => {
+        if (!getKey()) return; // forgotten while waiting for the lock: never bring the library back into memory
         await adopt();
         const ids = adapters.map((f) => f.id).filter((id) => opts.force || unchecked.has(id) || !isFresh(this.families[id], Date.now()));
         this.avoided += adapters.length - ids.length;
@@ -230,8 +231,8 @@ class Library {
       p = publicGet(url, { signal, label: `${byId[familyId].label} · frame` })
         .then((res) => (res.ok ? res.blob() : null))
         .catch((e) => {
-          // Cancelled, offline ...: a later call tries again. A real answer (404 ...) stays null.
-          if (signal?.aborted || (e instanceof HttpError && e.kind !== 'http')) pictures.delete(url);
+          // Cancelled, offline, timed out ...: a later call tries again. A real answer (404 ...) stays null.
+          if (signal?.aborted || !(e instanceof HttpError && e.kind === 'http')) pictures.delete(url);
           return null;
         });
       pictures.set(url, p);
@@ -248,6 +249,12 @@ class Library {
   /** "Keep loading" after the daily pause, and "Try again" after a stop: the network module's own switches. */
   keepLoading = (): void => keepLoading();
   retry = (): void => retry();
+  /** Every screen's Try again, before it asks again: lifts a stop or the daily pause. Any other status is left alone,
+   * so PixelLab's 429 pause and its "second 429 stops" rule hold. */
+  recover = (): void => {
+    if (this.status === 'stopped' || this.status === 'blocked') retry();
+    else if (this.status === 'paused') keepLoading();
+  };
 
   /** Forget key: the key in every tab of this browser, the saved copy and every memory copy go. Sends no request. */
   forget = async (): Promise<void> => {
@@ -341,8 +348,8 @@ async function loadArt(card: Card, familyId: FamilyId, signal?: AbortSignal): Pr
     }
     return blob;
   } catch (e) {
-    // Cancelled, offline, paused, stopped or key lost: let a later call try again. A real answer (404, 423 ...) stays null.
-    if (signal?.aborted || (e instanceof HttpError && e.kind !== 'http')) blobs.delete(card.key);
+    // Cancelled, offline, timed out, paused, stopped or key lost: let a later call try again. A real answer (404, 423 ...) stays null.
+    if (signal?.aborted || !(e instanceof HttpError && e.kind === 'http')) blobs.delete(card.key);
     return null;
   }
 }

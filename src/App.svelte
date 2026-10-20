@@ -62,7 +62,7 @@
   }
   // Every Try again lifts a stop first, so a halted network module always recovers without a reload.
   const tryAgain = () => {
-    library.retry();
+    library.recover();
     void recheck();
   };
   const keepLoading = () => {

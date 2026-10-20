@@ -257,10 +257,9 @@
         ? "Couldn't load this asset's animations."
         : null,
   );
-  // Like App's Try again: lift the safety net's stop (or the daily pause) first, else the re-run fails at once.
+  // Like App's Try again: lift a stop (or the daily pause) first, else the re-run fails at once.
   const retry = () => {
-    if (library.status === 'paused') library.keepLoading();
-    else library.retry();
+    library.recover();
     if (detail) framesTry++;
     else attempt++;
   };
