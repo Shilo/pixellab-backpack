@@ -9,20 +9,26 @@ import { applyCheck, dropExpiredDeep, isFresh, joinNextPage } from './check';
 import { loadFamilies, saveFamily, wipe } from './store';
 
 export type LibraryStatus = 'idle' | 'checking' | Status;
-type Opts = { user?: boolean; signal?: AbortSignal; label?: string };
 
 const REFRESH_GAP = 60_000;
 
-// ponytail: families.ts labels offset 0 "page 1"; the plan's Activity label is "<Family> · first page".
-const firstPage = (o?: Opts) => o && { ...o, label: o.label?.replace(/ · page 1$/, ' · first page') };
-const adapters = createFamilies({ apiGet: <T>(p: string, o?: Opts) => apiGet<T>(p, firstPage(o)), publicGet });
+const adapters = createFamilies({ apiGet, publicGet });
 const byId = Object.fromEntries(adapters.map((f) => [f.id, f])) as Record<FamilyId, Family>;
+
+let net: Status = 'ok';
+let ran = false;
+let checking = false;
+let running: Promise<void> | null = null;
+let lastForce = -Infinity;
+const blobs = new Map<string, Promise<Blob | null>>();
 
 class Library {
   families = $state({} as Record<FamilyId, FamilyState | undefined>);
   status = $state<LibraryStatus>('idle');
   loading = $state<Partial<Record<FamilyId, boolean>>>({});
   errors = $state<Partial<Record<FamilyId, string>>>({});
+  /** A verified key is held: false shows the key screen (the saved list stays). */
+  hasKey = $state(!!getKey());
 
   /** CATEGORIES with a count and up to 4 mosaic cards (page 0, done cards only). */
   categories = $derived(
@@ -48,10 +54,12 @@ class Library {
       page = await byId.characters.list(0);
     } catch (e) {
       setKey(null); // ponytail: an unverified key is never kept; the key screen keeps the typed text
+      this.hasKey = false;
       if (e instanceof HttpError && e.kind === 'key-lost') return 'wrong-key';
       return e instanceof HttpError && e.kind === 'offline' ? 'offline' : 'blocked';
     }
     const saved = this.families.characters;
+    // ponytail: an account with 0 saved Characters cannot be told apart, so it keeps the copy (fresh families up to 1 h)
     const keys = new Set(saved?.cards.map((c) => c.key));
     if (keys.size && !page.cards.some((c) => keys.has(c.key))) {
       // Another account's saved copy: wipe it, then the check below runs for every family.
@@ -60,6 +68,7 @@ class Library {
       this.errors = {};
     }
     delete this.errors.characters;
+    this.hasKey = true;
     await put('characters', applyCheck(this.families.characters, page, Date.now()));
     await this.openCheck();
     return 'ok';
@@ -87,7 +96,7 @@ class Library {
           guarded(id, async (f) => {
             const page = await f.list(0);
             const saved = this.families[id];
-            await put(id, keep(saved, applyCheck(saved, page, Date.now())));
+            await put(id, applyCheck(saved, page, Date.now()));
           });
         await Promise.all(ids.map(check));
       });
@@ -108,7 +117,9 @@ class Library {
       const page = await f.list(n - 1); // page[0] must be the last row we hold
       const cur = this.families[id];
       const next = cur ? joinNextPage(cur, n, page.cards, Date.now()) : 'reload';
-      await put(id, next === 'reload' ? keep(cur, applyCheck(undefined, await f.list(0), Date.now())) : next);
+      // Reload: page 0 against the saved page 0 only, so unchanged pictures stay and the shifted deep rows go.
+      const top = cur && { ...cur, cards: cur.cards.slice(0, f.pageSize), deepLoadedAt: null };
+      await put(id, next === 'reload' ? applyCheck(top, await f.list(0), Date.now()) : next);
     });
   };
 
@@ -124,6 +135,7 @@ class Library {
   /** Clears the key only; the saved list stays. */
   signOut = (): void => {
     setKey(null);
+    this.hasKey = false;
     ran = false;
     sync();
   };
@@ -131,25 +143,20 @@ class Library {
 
 export const library = new Library();
 
-let net: Status = 'ok';
-let ran = false;
-let checking = false;
-let running: Promise<void> | null = null;
-let lastForce = -Infinity;
-const blobs = new Map<string, Promise<Blob | null>>();
-
 function sync(): void {
   library.status = net !== 'ok' ? net : checking ? 'checking' : ran ? 'ok' : 'idle';
 }
 onStatus((s) => {
   net = s;
+  if (s === 'key-lost') library.hasKey = false;
   sync();
 });
 
 const locked = (fn: () => Promise<void>): Promise<void> =>
   globalThis.navigator?.locks ? globalThis.navigator.locks.request(`${APP_ID}:check`, fn) : fn();
 
-/** Take every saved family that is newer than what this tab holds (all of them on first load). */
+/** Take every saved family that is newer than what this tab holds (all of them on first load).
+ * ponytail: with two tabs open, a picture link saved by one tab can be overwritten by the other's next save; it is resolved again later. */
 async function adopt(): Promise<void> {
   const disk = await loadFamilies().catch(() => ({}) as Awaited<ReturnType<typeof loadFamilies>>);
   for (const f of adapters) {
@@ -177,13 +184,6 @@ async function guarded(id: FamilyId, fn: (f: Family) => Promise<void>): Promise<
   } finally {
     library.loading[id] = false;
   }
-}
-
-/** Unchanged cards (same key and fp) keep their saved object, so a resolved picture link survives a check or reload.
- * ponytail: applyCheck already does this except when page 0 holds the whole list; this covers that case too. */
-function keep(saved: FamilyState | undefined, state: FamilyState): FamilyState {
-  const old = new Map(saved?.cards.map((c) => [c.key, c]));
-  return { ...state, cards: state.cards.map((c) => (old.get(c.key)?.fp === c.fp ? old.get(c.key)! : c)) };
 }
 
 async function loadArt(card: Card, familyId: FamilyId, signal?: AbortSignal): Promise<Blob | null> {

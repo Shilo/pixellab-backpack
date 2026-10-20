@@ -8,7 +8,10 @@ const same = (a: Card, b: Card) => a.key === b.key && a.fp === b.fp;
 
 /** Fold a fresh page 0 into the saved copy. */
 export function applyCheck(saved: FamilyState | undefined, page0: Page, now: number): FamilyState {
-  const replaced: FamilyState = { total: page0.total, cards: page0.cards, checkedAt: now, deepLoadedAt: null };
+  // Same asset + same fingerprint keeps the saved card (and its resolved picture), in every branch.
+  const old = new Map(saved?.cards.map((c) => [c.key, c]));
+  const cards = page0.cards.map((c) => (old.get(c.key)?.fp === c.fp ? old.get(c.key)! : c));
+  const replaced: FamilyState = { total: page0.total, cards, checkedAt: now, deepLoadedAt: null };
   if (!saved) return replaced;
   const n = page0.cards.length;
   const added = page0.total - saved.total;
@@ -16,9 +19,7 @@ export function applyCheck(saved: FamilyState | undefined, page0: Page, now: num
   if (n >= page0.total || added < 0 || added >= n || saved.cards.length < n - added) return replaced;
   // New rows sit on top; every other row of page 0 must be the same asset as the saved row it replaces.
   for (let i = added; i < n; i++) if (page0.cards[i].key !== saved.cards[i - added].key) return replaced;
-  // Same asset + same fingerprint keeps the saved card (and its resolved picture); otherwise the fresh card wins.
-  const head = page0.cards.map((c, i) => (i >= added && same(c, saved.cards[i - added]) ? saved.cards[i - added] : c));
-  return { ...saved, total: page0.total, cards: [...head, ...saved.cards.slice(n - added)], checkedAt: now };
+  return { ...saved, total: page0.total, cards: [...cards, ...saved.cards.slice(n - added)], checkedAt: now };
 }
 
 /** Append the page that was requested starting one row back; 'reload' when the list shifted. */

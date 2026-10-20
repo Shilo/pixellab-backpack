@@ -122,6 +122,9 @@ describe('open check', () => {
     expect(h.apiGet.mock.calls[0][1]).toMatchObject({ label: 'Characters · first page' });
     expect(h.st.db.size).toBe(7);
     expect(lib.status).toBe('ok');
+    expect(lib.hasKey).toBe(true);
+    lib.signOut();
+    expect(lib.hasKey).toBe(false);
     const tiles = lib.categories.find((c) => c.id === 'tiles')!;
     expect(tiles.count).toBe(12);
     expect(tiles.mosaic.map((m) => m.familyId)).toEqual(['tilesets', 'tilesets', 'tilesets', 'tilesets-side']);
@@ -178,6 +181,7 @@ describe('open check', () => {
     expect(await lib.connect('bad')).toBe('wrong-key');
     expect(h.apiGet).toHaveBeenCalledOnce();
     expect(h.st.key).toBeNull();
+    expect(lib.hasKey).toBe(false);
   });
 
   it('a lost key during a check keeps the saved list', async () => {
@@ -187,6 +191,7 @@ describe('open check', () => {
     const lib = await tab();
     await lib.openCheck();
     expect(lib.status).toBe('key-lost');
+    expect(lib.hasKey).toBe(false);
     expect(lib.families.characters?.cards).toHaveLength(3);
   });
 });
@@ -215,6 +220,28 @@ describe('loadMore', () => {
     h.apiGet.mockClear();
     await lib.loadMore('ui'); // 3 of 3 loaded
     expect(lists()).toHaveLength(0);
+  });
+
+  it('a reload keeps resolved pictures and does not reload again on the next scroll', async () => {
+    fill('a', { 'tiles-pro': 120 });
+    const lib = await tab();
+    await lib.connect('key');
+    await lib.art(lib.families['tiles-pro']!.cards[0], 'tiles-pro');
+    await lib.loadMore('tiles-pro');
+    expect(lib.families['tiles-pro']?.cards).toHaveLength(99);
+
+    h.st.lists['tiles-pro'].rows.splice(60, 1); // a deep deletion: page 0 unchanged, deep rows shift
+    h.st.lists['tiles-pro'].total = 119;
+    h.apiGet.mockClear();
+    await lib.loadMore('tiles-pro');
+    expect(lists()).toEqual(['/tiles-pro?limit=50&offset=98', '/tiles-pro?limit=50&offset=0']);
+    expect(lib.families['tiles-pro']?.cards).toHaveLength(50);
+    expect(lib.families['tiles-pro']?.cards[0].thumb).toBe(h.img('a-tiles-pro-0'));
+
+    h.apiGet.mockClear();
+    await lib.loadMore('tiles-pro');
+    expect(lists()).toEqual(['/tiles-pro?limit=50&offset=49']);
+    expect(lib.families['tiles-pro']?.cards).toHaveLength(99);
   });
 });
 

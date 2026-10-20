@@ -72,6 +72,21 @@ describe('applyCheck', () => {
     expect(r.cards).toHaveLength(4);
     expect(r.cards[0].key).toBe('k100');
   });
+
+  // A resolved picture link (costly families) must survive every replace branch, or each check re-spends API requests.
+  const withThumbs = (cs: Card[]) => cs.map((c) => ({ ...c, thumb: 'img' + c.key }));
+
+  it('a short list keeps resolved pictures of unchanged rows', () => {
+    const r = applyCheck(state(3, withThumbs(cards(0, 3))), { total: 4, cards: [card(100), ...cards(0, 3)] }, 9);
+    expect(r.cards.map((c) => c.thumb)).toEqual([null, 'imgk0', 'imgk1', 'imgk2']);
+  });
+
+  it('a deletion keeps resolved pictures of unchanged rows, but not of changed ones', () => {
+    const page = [card(1), { ...card(2), fp: '2b' }, ...cards(3, 3)];
+    const r = applyCheck(state(12, withThumbs(cards(0, 8)), 5), { total: 11, cards: page }, 9);
+    expect(r.cards.map((c) => c.thumb)).toEqual(['imgk1', null, 'imgk3', 'imgk4', 'imgk5']);
+    expect(r.deepLoadedAt).toBeNull();
+  });
 });
 
 describe('joinNextPage', () => {

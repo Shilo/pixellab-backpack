@@ -156,7 +156,7 @@ describe('list details', () => {
     await fam.list(99);
     await fam.list(100);
     expect(log.api).toEqual(['/characters?limit=100&offset=0', '/characters?limit=100&offset=99', '/characters?limit=100&offset=100']);
-    expect(log.labels).toEqual(['Characters · page 1', 'Characters · page 2', 'Characters · page 2']);
+    expect(log.labels).toEqual(['Characters · first page', 'Characters · page 2', 'Characters · page 2']);
     const card = (await fam.list(0)).cards[0];
     await fam.art(card);
     expect(log.labels.at(-1)).toBe('Characters · picture');
