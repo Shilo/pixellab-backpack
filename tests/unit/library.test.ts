@@ -42,6 +42,7 @@ const h = vi.hoisted(() => {
       }
       const [base, query = ''] = path.split('?');
       if (base.startsWith('/tiles-pro/')) return { storage_urls: { tile_0: img(base.slice(11)) } };
+      if (/^\/(characters|objects)\//.test(base)) return { rotation_urls: { south: img('r') }, animations: [] };
       const [id, [, rows]] = Object.entries(SHAPE).find(([, s]) => s[0] === base)!;
       const q = new URLSearchParams(query);
       const off = Number(q.get('offset'));
@@ -50,6 +51,7 @@ const h = vi.hoisted(() => {
     }),
     publicGet: vi.fn(async () => new Response(new Blob(['png']), { status: 200 })),
     setKey: vi.fn((k: string | null) => void (st.key = k || null)),
+    setKeepSignedIn: vi.fn(),
     wipe: vi.fn(async () => st.db.clear()),
     // structuredClone throws on a Svelte proxy, just like IndexedDB.
     saveFamily: vi.fn(async (id: string, s: unknown) => void st.db.set(id, structuredClone(s))),
@@ -63,12 +65,17 @@ vi.mock('../../src/lib/api/http', () => ({
   setKey: h.setKey,
   getKey: () => h.st.key,
   onStatus: (cb: (s: string) => void) => ((h.st.statusCb = cb), () => {}),
+  keptSignedIn: () => false,
+  keyHint: () => null,
+  setKeepSignedIn: h.setKeepSignedIn,
 }));
 vi.mock('../../src/lib/data/store', () => ({
   loadFamilies: async () => structuredClone(Object.fromEntries(h.st.db)),
   saveFamily: h.saveFamily,
   loadMeta: async () => undefined,
   saveMeta: async () => {},
+  loadDetail: async (k: string) => structuredClone(h.st.db.get('detail:' + k)),
+  saveDetail: async (k: string, v: unknown) => void h.st.db.set('detail:' + k, structuredClone(v)),
   wipe: h.wipe,
 }));
 
@@ -312,5 +319,119 @@ describe('art', () => {
     expect(await next.art(next.families['tiles-pro']!.cards[0], 'tiles-pro')).toBeInstanceOf(Blob);
     expect(h.apiGet).not.toHaveBeenCalled();
     expect(h.publicGet).toHaveBeenCalledWith(h.img('a-tiles-pro-0'), expect.anything());
+  });
+});
+
+describe('detail', () => {
+  const details = () => h.apiGet.mock.calls.map(([p]) => p as string).filter((p) => !p.includes('?'));
+  const char = (lib: Awaited<ReturnType<typeof tab>>) => lib.families.characters!.cards[0];
+
+  it('asks once, saves, then 0 in this tab and a new tab; a changed fp or an age over 7 days re-asks once', async () => {
+    const lib = await tab();
+    await lib.connect('key');
+    h.apiGet.mockClear();
+    const card = char(lib);
+    const [a, b] = await Promise.all([lib.detail(card, 'characters'), lib.detail(card, 'characters')]);
+    expect(a).toEqual(b);
+    expect(a?.rotations.south).toBe(h.img('r'));
+    expect(details()).toEqual(['/characters/a-characters-0']);
+    expect(h.apiGet.mock.calls[0][1]).toMatchObject({ label: 'Characters · details' });
+    expect(h.st.db.get('detail:' + card.key)).toMatchObject({ fp: card.fp, at: T0 });
+
+    await lib.detail(card, 'characters');
+    const next = await tab();
+    await next.openCheck();
+    await next.detail(char(next), 'characters');
+    expect(details()).toHaveLength(1);
+
+    await next.detail({ ...char(next), fp: 'changed' }, 'characters');
+    expect(details()).toHaveLength(2);
+    await next.detail({ ...char(next), fp: 'changed' }, 'characters');
+    expect(details()).toHaveLength(2);
+
+    later(7 * 24 * HOUR + 1);
+    const third = await tab();
+    await third.openCheck();
+    const changed = { ...char(third), fp: 'changed' }; // the saved fp: only the age makes it re-ask
+    await third.detail(changed, 'characters');
+    await third.detail(changed, 'characters');
+    expect(details()).toHaveLength(3);
+  });
+
+  it('a failed detail is not kept: the next call asks again', async () => {
+    const lib = await tab();
+    await lib.connect('key');
+    h.apiGet.mockClear();
+    h.st.fail = new h.HttpError('http', 500);
+    await expect(lib.detail(char(lib), 'characters')).rejects.toMatchObject({ kind: 'http' });
+    h.st.fail = null;
+    expect(await lib.detail(char(lib), 'characters')).not.toBeNull();
+    expect(details()).toHaveLength(2);
+  });
+
+  it('a tileset has no detail: null, no request', async () => {
+    const lib = await tab();
+    await lib.connect('key');
+    h.apiGet.mockClear();
+    expect(await lib.detail(lib.families.tilesets!.cards[0], 'tilesets')).toBeNull();
+    expect(h.apiGet).not.toHaveBeenCalled();
+  });
+});
+
+describe('states, items, find', () => {
+  it('a grouped character shows once; states() returns both; find() reaches the hidden state', async () => {
+    h.st.lists.characters.rows[0].group_id = 'g';
+    h.st.lists.characters.rows[2].group_id = 'g';
+    const lib = await tab();
+    await lib.connect('key');
+    const items = lib.items('characters');
+    expect(items.map((i) => i.card.id)).toEqual(['a-characters-0', 'a-characters-1']);
+    expect(lib.states(items[0].card, 'characters').map((c) => c.id)).toEqual(['a-characters-0', 'a-characters-2']);
+    expect(lib.states(items[1].card, 'characters')).toEqual([items[1].card]);
+    const hidden = lib.families.characters!.cards[2];
+    expect(lib.find('characters', hidden.key)?.card.id).toBe('a-characters-2');
+    expect(lib.find('objects', hidden.key)).toBeNull();
+    expect(lib.items('tiles').map((i) => i.familyId)).toEqual([
+      ...Array(3).fill('tilesets'),
+      ...Array(3).fill('tilesets-side'),
+      ...Array(3).fill('isometric'),
+      ...Array(3).fill('tiles-pro'),
+    ]);
+  });
+});
+
+describe('forget and keep signed in', () => {
+  it('forget empties the saved copy and memory, drops the key, sends nothing', async () => {
+    const lib = await tab();
+    await lib.connect('key');
+    await lib.detail(lib.families.characters!.cards[0], 'characters');
+    await lib.picture(h.img('f'), 'characters');
+    vi.clearAllMocks();
+    await lib.forget();
+    expect(h.apiGet).not.toHaveBeenCalled();
+    expect(h.publicGet).not.toHaveBeenCalled();
+    expect(h.st.db.size).toBe(0);
+    expect(h.st.key).toBeNull();
+    expect(lib.hasKey).toBe(false);
+    expect(lib.families).toEqual({});
+    expect(lib.categories.every((c) => c.count === 0)).toBe(true);
+    await lib.picture(h.img('f'), 'characters'); // the memory copy went too
+    expect(h.publicGet).toHaveBeenCalledOnce();
+  });
+
+  it('setKeepSignedIn forwards to the network module', async () => {
+    const lib = await tab();
+    lib.setKeepSignedIn(true);
+    expect(h.setKeepSignedIn).toHaveBeenCalledWith(true);
+  });
+});
+
+describe('picture', () => {
+  it('fetches a frame once per session from the image host, labelled', async () => {
+    const lib = await tab();
+    await Promise.all([lib.picture(h.img('f'), 'objects'), lib.picture(h.img('f'), 'objects')]);
+    expect(h.publicGet).toHaveBeenCalledOnce();
+    expect(h.publicGet).toHaveBeenCalledWith(h.img('f'), expect.objectContaining({ label: 'Objects · frame' }));
+    expect(h.apiGet).not.toHaveBeenCalled();
   });
 });
