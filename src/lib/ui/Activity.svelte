@@ -31,7 +31,7 @@
 
   /** Browsers send PixelLab a hidden "may this site talk to you?" check the app cannot see; about one per kind of request per 10 minutes. */
   export function estimatePreflights(list: ActivityEntry[]): number {
-    return new Set(list.filter((e) => e.source === 'api').map((e) => `${e.label}|${Math.floor(e.time / 600_000)}`)).size;
+    return new Set(list.filter((e) => e.source === 'api' && (e.result === 'ok' || e.result === 'error')).map((e) => `${e.label}|${Math.floor(e.time / 600_000)}`)).size;
   }
 
   /** Plain text for a bug report: labels and numbers only, never keys, ids or links. */
@@ -45,6 +45,16 @@
       '',
     ];
     return [...head, ...list.map((e) => [clock(e.time), e.label, sourceName(e), resultName(e), size(e.bytes), `${e.ms} ms`].join(' | '))].join('\n');
+  }
+
+  /** Puts the plain-text log on the clipboard. */
+  export async function copyLog(): Promise<'done' | 'failed'> {
+    try {
+      await navigator.clipboard.writeText(formatLog(entries, getCounters()));
+      return 'done';
+    } catch {
+      return 'failed';
+    }
   }
 </script>
 
@@ -74,12 +84,7 @@
   });
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(formatLog(entries, getCounters()));
-      copied = 'done';
-    } catch {
-      copied = 'failed';
-    }
+    copied = await copyLog();
     setTimeout(() => (copied = ''), 2000);
   }
 </script>
@@ -114,8 +119,8 @@
 
     {#if entries.length}
       <ul class="log">
-        {#each entries as e, i (`${e.time}-${i}`)}
-          <li class:bad={e.result !== 'ok'}>
+        {#each entries as e (e)}
+          <li class:bad={e.result === 'error' || e.result === 'cap'}>
             <span class="what">{e.label}</span>
             <span class="res">{resultName(e)}</span>
             <span class="meta">{clock(e.time)} · {sourceName(e)} · {size(e.bytes)} · {e.ms} ms</span>

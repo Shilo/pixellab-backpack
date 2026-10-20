@@ -1,14 +1,24 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'svelte/server';
 
-vi.mock('../../src/lib/data/library.svelte', () => ({ library: { openCheck: vi.fn() } }));
+// No DOM library is installed, so behaviour is tested through the components' exported logic plus server renders.
+const h = vi.hoisted(() => ({
+  emit: (_e: unknown) => {},
+  openCheck: vi.fn(),
+  counters: { sessionApi: 7, todayApi: 9, dailyCap: 1000, imageHost: 3, status: 'ok' },
+}));
+vi.mock('../../src/lib/data/library.svelte', () => ({ library: { openCheck: h.openCheck } }));
+vi.mock('../../src/lib/api/http', () => ({
+  onActivity: (cb: (e: unknown) => void) => ((h.emit = cb), () => {}),
+  getCounters: () => h.counters,
+}));
 
-import Activity, { estimatePreflights, formatLog, resultName, size, statusName } from '../../src/lib/ui/Activity.svelte';
-import MoreMenu from '../../src/lib/ui/MoreMenu.svelte';
+import Activity, { copyLog, estimatePreflights, formatLog, resultName, size, statusName } from '../../src/lib/ui/Activity.svelte';
+import MoreMenu, { runRefresh } from '../../src/lib/ui/MoreMenu.svelte';
 
 const at = new Date(2026, 9, 20, 9, 5, 7).getTime();
 const entry = (o = {}) => ({ time: at, label: 'Characters · first page', source: 'api' as const, result: 'ok' as const, status: 200, bytes: 2048, ms: 120, ...o });
-const counters = { sessionApi: 7, todayApi: 9, dailyCap: 1000, imageHost: 3, status: 'ok' };
+const counters = h.counters;
 
 describe('Activity text', () => {
   it('names results, sizes and statuses', () => {
@@ -53,5 +63,56 @@ describe('panels', () => {
     expect(body.match(/role="menuitem"/g)).toHaveLength(2);
     expect(body).toContain('Refresh');
     expect(body).toContain('Activity');
+  });
+});
+
+describe('live list', () => {
+  it('an emitted entry becomes a row, newest first', () => {
+    h.emit(entry({ label: 'Objects · first page' }));
+    h.emit(entry({ label: 'Tileset picture', source: 'image', result: 'error', status: 429 }));
+    const body = (render(Activity as never, { props: { open: true, onClose() {} } as never }) as { body: string }).body;
+    expect(body).toContain('Objects · first page');
+    expect(body).toContain('Too many requests (429)');
+    expect(body.indexOf('Tileset picture')).toBeLessThan(body.indexOf('Objects · first page'));
+  });
+});
+
+describe('Copy log', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('writes the plain-text log to the clipboard', async () => {
+    const writeText = vi.fn(async () => {});
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    expect(await copyLog()).toBe('done');
+    expect(writeText).toHaveBeenCalledOnce();
+    expect(String((writeText.mock.calls[0] as unknown[])[0])).toContain('Image-host loads: 3');
+  });
+
+  it('reports a failed copy', async () => {
+    vi.stubGlobal('navigator', { clipboard: { writeText: async () => Promise.reject(new Error('denied')) } });
+    expect(await copyLog()).toBe('failed');
+  });
+});
+
+describe('Refresh', () => {
+  const menu = () => (render(MoreMenu as never, { props: { open: true, onClose() {}, onActivity() {} } as never }) as { body: string }).body;
+
+  it('forces the check once, stays focusable (aria-disabled, not disabled) for 60 s, then works again', () => {
+    vi.useFakeTimers();
+    try {
+      runRefresh();
+      expect(h.openCheck).toHaveBeenCalledWith({ force: true });
+      runRefresh();
+      expect(h.openCheck).toHaveBeenCalledTimes(1);
+      const body = menu();
+      expect(body).toContain('aria-disabled="true"');
+      expect(body).not.toMatch(/<button[^>]*\sdisabled/);
+      vi.advanceTimersByTime(60_000);
+      expect(menu()).toContain('aria-disabled="false"');
+      runRefresh();
+      expect(h.openCheck).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
