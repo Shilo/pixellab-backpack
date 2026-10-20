@@ -1,15 +1,15 @@
 # 00 — Decision Log: Vitrine
 
-Every decision behind the design docs, in one place. Status 2026-10-19 (simplicity redesign, S-1 to S-17, added). One line each; the linked doc holds the detail.
+Every decision behind the design docs, in one place. Status 2026-10-19 (simplicity redesign, S-1 to S-21, and MVP plan rulings, P-1 to P-12, added). One line each; the linked doc holds the detail.
 
 **Precedence (S-1, amending B-5; the canonical statement, other docs point here):**
-1. The redesign rulings S-1 to S-17, then the final rulings F-1 to F-16 and the builder answers B-1 to B-20 that are not marked superseded, override any conflicting text anywhere.
+1. For the MVP only, the MVP plan rulings P-1 to P-12 ([MVP plan](../plan/mvp-plan.md); §7 below). Then the redesign rulings S-1 to S-21, then the final rulings F-1 to F-16 and the builder answers B-1 to B-20 that are not marked superseded, override any conflicting text anywhere.
 2. Then 08 (layout, visual structure and controls), 02 (behaviour) and 07 (token values and visual accessibility invariants only). Where 08 differs from 02 or 07, 08 wins.
 3. Then 01, 03, 05 and 06.
 4. Then the simple-concept mockups (`mockups/simple/1-just-the-art/`, plus the parts of `mockups/simple/2-home-screen/` that 08 borrows). They illustrate 08 and never override it: a detail that exists only in a mockup goes into 08 or 02 before it is built.
 5. Finally the earlier explorations: 04, the option mockups A, B and C, `mockups/recommended/` and `mockups/simple/3-library-tiles/` (historical).
 
-**ID families:** S = simplicity-redesign rulings (2026-10-19; design 08) · D = R1 research cross-review · R = earlier orchestrator rulings · F = final orchestrator rulings · B = orchestrator answers to the R4 builder check · E = editor calls made while applying the F rulings · UX / AR = builder-relevant **(decision)** items in 02 / 05.
+**ID families:** P = MVP plan rulings (2026-10-19; `docs/plan/mvp-plan.md`) · S = simplicity-redesign rulings (2026-10-19; design 08) · D = R1 research cross-review · R = earlier orchestrator rulings · F = final orchestrator rulings · B = orchestrator answers to the R4 builder check · E = editor calls made while applying the F rulings · UX / AR = builder-relevant **(decision)** items in 02 / 05.
 
 **Cross-references (B-18):** design docs cite research documents as "research NN" (`docs/research/NN-…`) and spell out "design 07" or "research 07" wherever both could be meant. A bare "07 Qn" is never written; the Qn questions are research 07's.
 
@@ -208,3 +208,22 @@ The orchestrator's answers to `docs/reviews/R4-builder-check.md` (questions Q1�
 | AR-5 | `PixelCanvas` is the only element that draws art | One crispness path; trim needs pixels | 05 §7.1 | active |
 | AR-6 | CSP `img-src 'self' blob:` (no media host): art is fetched via `connect-src` and drawn on canvas | Strictly tighter than R1 S7 | 05 §10.2 | active |
 | AR-7 | Settings is a dialog route over the last background route; Android Back exits selection via a history entry | No grid of its own; platform Back | 05 §9 | active |
+
+## 7. MVP plan rulings (P)
+
+From the [MVP plan](../plan/mvp-plan.md) (2026-10-19), built on research 16, review R6 (its final API strategy wins over 16) and research 17. They rank first for the MVP only; the rest of this log still governs the full product.
+
+| ID | Decision | Rationale | Source | Status |
+|---|---|---|---|---|
+| P-1 | MVP scope: API-key screen (`g1-connect` and its states), library home tiles (Characters, Objects, Tilesets & tiles, UI; empty ones hidden) and category grids with navigation (open, scroll, go back). Search, Select, the "…" menu and Settings are visible but inert. Key mode is "this tab only" | Smallest useful slice of the chosen layout | Owner request; MVP plan concern 5 | active |
+| P-2 | API strategy: REST only (no MCP, no balance call); the key test is the Characters page-0 request; on open, one page-0 request per family at full page size is the change check, tile count, mosaic and first grid page; nothing again within 1 hour (shared across tabs); saved copy on the device; next pages load on scroll with a one-row overlap; rows beyond page 0 expire after 7 days; art only for cards on screen; tileset helpers, Tiles Pro detail and isometric download once per device after 0.3 s on screen; nothing for unfinished or failed rows. Amends D14's balance test and 05 §5's full re-list for the MVP | Open cost stays at 7 calls + 7 preflights at any library size, 0 within the hour | R6 §5.1; research 16 | active |
+| P-3 | Safety net, all in `http.ts`: 2 requests at a time, burst 8 then 2 per second, 1,000 API requests per 24 h per device then "Paused to go easy on PixelLab's servers. [Keep loading]", at most 2 retries (3 for user actions) counted toward the caps, first 429 → 1 at a time and a 60 s pause, second 429 within 5 min or 3 failures in a row → stop with "PixelLab isn't answering right now. [Try again]", pause while the tab is hidden. Replaces D25's 4 permits and 5 attempts for the MVP | No published read limits; never add load during an outage | R6 §5.4 | active |
+| P-4 | Images (Creator gallery) and Maps are out of the MVP; their tiles, and the favorites and folder tiles, are hidden, not disabled | `get_image` is gated by P0-9; maps need a server render; hiding needs no extra UI (UX-19) | R6 C5, C6, §4.2 | owner decides (recommended: hidden) |
+| P-5 | Keep the saved asset list on the device in "this tab only" key mode too; the key itself stays in the tab. Amends D15 for the MVP. Until Settings ships there is no Forget; a different account's key wipes the saved copy | Otherwise every new tab is a first open and scrolled pages are paid again | R6 C2, §6 Q1 | owner decides (recommended: yes) |
+| P-6 | Deferred: the single-asset viewer, favorites, folders, downloads, Select, Search, Settings, Images, Maps and manual Sync. The open check plus the 7-day expiry stand in for Sync in the MVP | YAGNI; each needs its own design pieces first | MVP plan concern 5 | active |
+| P-7 | Cross-device: nothing in the MVP; first after the MVP, the backup file (export/import); later, opt-in "Sync with Dropbox" only on demand; never store anything in PixelLab; no backend unless the product changes; never sync the API key | No backend, view-only, KISS | research 17 §12 | active |
+| P-8 | The name stays deferred: "Vitrine" is a placeholder in `lib/app.ts` (B-7). Decide before favorites, folders, backups or other users | In the MVP a rename only clears the saved list | MVP plan concern 1 | owner decides (deferred) |
+| P-9 | Characters show one cell per list row (state name appended, as for objects); grouping by `group_id` arrives with the viewer | Counts match the list; no grouping code before it is needed | R6 C11; 05 §3.1 | active |
+| P-10 | The Tilesets & tiles grid shows its four lists one after another (top-down, sidescroller, Tiles Pro, isometric), each newest first, de-duplicated by id; mixing by date waits for the Phase 0 sort-order check | Lazy paging stays simple; sort orders are unverified | R6 §3 | active |
+| P-11 | Send PixelLab the R6 §6 questions (image links in tileset, Tiles Pro, isometric and Creator list rows; `get_image` annotation; read limits and `Retry-After`; `updated_at` or a sort option; preflight cache; long-term browser support) | Each answer can only lower the load; starts the D31 contact | R6 §6 | owner decides (recommended: soon; the MVP doesn't wait) |
+| P-12 | The MVP plan narrows 06 Phase 1; where they conflict, the MVP plan wins for the MVP | One source for what to build now | MVP plan | active |

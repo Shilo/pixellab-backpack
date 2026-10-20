@@ -12,7 +12,7 @@
 |---|---|
 | Research and design | **Simplicity redesign** (2026-10-19): the owner rejected the earlier mockups as too busy. Three simplicity spikes (research 10–12) and three static concepts led to [design 08](docs/design/08-simplicity-redesign.md), "Just the Art". It now awaits owner review. In total: 13 research docs, reviews R1–R5, 9 design docs, 3 simple concepts and 4 earlier interactive mockups |
 | App code | **None yet.** It will be scaffolded at the project root, beside `docs/` and `mockups/`, with a local `git init`; CI (GitHub Actions) is added once a remote exists |
-| Next step | **Owner review of [design 08](docs/design/08-simplicity-redesign.md)**, then **Phase 0**: about half a day of owner-run checks with a real API key ([plan §2](docs/design/06-implementation-plan.md)). Phase 1 tasks that need no Phase 0 result can start in parallel on synthetic fixtures, with every gated value at its safe default ([plan §3.1](docs/design/06-implementation-plan.md)) |
+| Next step | **Owner review of the [MVP plan](docs/plan/mvp-plan.md)**: API-key screen, library home tiles and category grids, with the low-load API strategy from [R6](docs/reviews/R6-api-minimization-review.md) (7 calls per open at any library size, 0 within the hour). Answer its [open decisions](docs/plan/mvp-plan.md#decisions-you-still-need-to-make), run its 6 owner checks with a real key (about 1 hour), then build from its [to-do list](docs/plan/mvp-plan.md#to-do-list). The build can start on made-up fixtures before the checks finish |
 
 
 ### Full feature mockups (chosen design)
@@ -191,12 +191,18 @@ Defaults set during design that you may override:
 2. [Product brief](docs/design/01-product-brief.md): what, why, scope and success criteria.
 3. [Simplicity redesign](docs/design/08-simplicity-redesign.md) §6–7, then [Concept 1's images](mockups/simple/1-just-the-art/README.md).
 4. [Decision log](docs/design/00-decision-log.md): every ruling, in one place. **Precedence** when sources disagree: the S, F and B rulings in 00, then 08 (layout and controls), 02 (behaviour) and 07 (token values), then 01, 03, 05 and 06, then the simple-concept mockups, then the earlier explorations.
-5. **Builders:** [architecture](docs/design/05-architecture.md) §1, [implementation plan](docs/design/06-implementation-plan.md) §1–2, then the [UX spec](docs/design/02-ux-spec.md) as a reference.
+5. **Builders:** the [MVP plan](docs/plan/mvp-plan.md) first (it wins over plan 06 for the MVP), then [architecture](docs/design/05-architecture.md) §1, [implementation plan](docs/design/06-implementation-plan.md) §1–2, then the [UX spec](docs/design/02-ux-spec.md) as a reference.
 6. **Why it's built this way:** the [research report](docs/research/00-research-report.md).
 
 Length: **S** < 5k words · **M** 5–10k · **L** > 10k.
 
-**Research spikes 00–12**
+**Plan**
+
+| Doc | Purpose | Length |
+|---|---|---|
+| [docs/plan/mvp-plan.md](docs/plan/mvp-plan.md) | The MVP: owner concerns (name, API load, cross-device, KISS, scope), open decisions, module map, to-do list. Narrows plan 06 Phase 1 and wins over it for the MVP | M |
+
+**Research spikes 00–12, 16–17**
 
 | Doc | Purpose | Length |
 |---|---|---|
@@ -213,8 +219,10 @@ Length: **S** < 5k words · **M** 5–10k · **L** > 10k.
 | [docs/research/10-apple-simplicity-patterns.md](docs/research/10-apple-simplicity-patterns.md) | Apple HIG, iOS 26 Photos, iCloud.com and Quick Look: progressive disclosure, control budgets, where minimalism failed | M |
 | [docs/research/11-home-screen-and-android-simplicity.md](docs/research/11-home-screen-and-android-simplicity.md) | iOS and Android home screens, Google Photos and Drive, Material 3: the home-screen metaphor, gestures, selection modes | M |
 | [docs/research/12-simplicity-first-products.md](docs/research/12-simplicity-first-products.md) | Unsplash, Linear, Raycast, Midjourney and others: visible-control inventories, budgets for Vitrine's library and detail screens | S |
+| [docs/research/16-api-call-minimization.md](docs/research/16-api-call-minimization.md) | Fewest API calls: live endpoint table, four strategies compared at 1,914 and 10,000 assets, caching design (numbers corrected by R6) | M |
+| [docs/research/17-cross-device-sync.md](docs/research/17-cross-device-sync.md) | Folders and favorites across devices: backup file, cloud folders, PixelLab storage, own backend; recommended path | M |
 
-**Reviews R1–R5**
+**Reviews R1–R6**
 
 | Doc | Purpose | Length |
 |---|---|---|
@@ -224,6 +232,7 @@ Length: **S** < 5k words · **M** 5–10k · **L** > 10k.
 | [docs/reviews/R3b-mockup-visual-a11y-review.md](docs/reviews/R3b-mockup-visual-a11y-review.md) | Independent visual and accessibility review: crispness, contrast, 17 viewports, tokens | M |
 | [docs/reviews/R4-builder-check.md](docs/reviews/R4-builder-check.md) | Builder-readiness check of the final design set: 8 questions and 10 smaller gaps, answered as B-1–B-18 in 00 | S |
 | [docs/reviews/R5-final-qa.md](docs/reviews/R5-final-qa.md) | Final QA: mockup test matrix and flows, link, privacy, consistency and Markdown sweeps; the fixes made, B-19–B-20, known limits and the verdict | S |
+| [docs/reviews/R6-api-minimization-review.md](docs/reviews/R6-api-minimization-review.md) | Skeptical review of research 16: corrected call counts, the final MVP API strategy, the client-side safety net, questions for PixelLab | M |
 
 **Design 00–08**
 

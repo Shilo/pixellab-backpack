@@ -2,6 +2,8 @@
 
 Working name **Vitrine**. Status: plan baseline, 2026-10-18.
 
+> **MVP first (2026-10-19).** The [MVP plan](../plan/mvp-plan.md) narrows Phase 1 to the API-key screen, the library home tiles and the category grids, with the final API strategy from [R6](../reviews/R6-api-minimization-review.md). Where the two disagree, the MVP plan wins for the MVP (P-12 in the [decision log](00-decision-log.md#7-mvp-plan-rulings-p)). This plan still describes the full product.
+
 **Companion to:** `05-architecture.md` (how), `02-ux-spec.md` (behaviour), `01-product-brief.md` (scope and success criteria).
 
 **Gate items come from:** R1 G1–G10 and research 09's "Still unverified" checks 1–8, mapped once in §2.3's "Maps to" column. Every other doc cites the P0 numbers (B-3).
