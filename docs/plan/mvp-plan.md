@@ -1,4 +1,4 @@
-# MVP plan: Vitrine
+# MVP plan: PixelLab Backpack
 
 Status: 2026-10-19. Draft for the owner. "Vitrine" is a placeholder name (see concern 1).
 
@@ -32,7 +32,9 @@ Status: 2026-10-19. Draft for the owner. "Vitrine" is a placeholder name (see co
 
 ## Concern 1: Project name
 
-**Your concern.** The name isn't decided yet.
+**Decided (2026-10-20): PixelLab Backpack.** `APP_NAME = "PixelLab Backpack"`, short name / home-screen label "Backpack", `APP_ID = "pixellab-backpack"`, subtitle "An unofficial gallery for your PixelLab art", footer "Not made by, affiliated with, or endorsed by PixelLab." Research: [naming](../research/naming/18c-name-ideas-professional.md). Before any app-store release, get PixelLab's written OK (fallback: "Backpack for PixelLab").
+
+**Your concern (original).** The name isn't decided yet.
 
 **What we found.**
 - The name already lives in one place in the design: `APP_ID` and `APP_NAME` in `lib/app.ts` (B-7).
@@ -322,7 +324,7 @@ Each has a recommended default. If you don't decide, the default applies and not
 | 4 | Who uses the MVP? | **Only you, privately** | The MVP has no "Forget key" button (Settings is inert). Until Settings ships, clearing the browser's site data removes the saved list. Pasting another account's key replaces the saved list by itself (concern 2, step 2) |
 | 5 | Run the 6 owner checks in [Phase 0](#phase-0-checks-owner-run-real-key) with your real key? | **Yes**, about 1 hour, read-only, no spending | They confirm the data shapes and two unknowns the MVP relies on |
 | 6 | Daily cap of 1,000 API requests per device | **Keep 1,000** | A daily visit uses 7. Scrolling through every Tilesets & tiles item uses about 376, once per device |
-| 7 | Final name | **Deferred** (concern 1) | Free to change during the MVP |
+| 7 | Final name | **Decided: PixelLab Backpack** | Owner choice, 2026-10-20 |
 | 8 | Add the Activity panel to the MVP? | **Yes** | Lets you and PixelLab see the real load at any time (concern 6) |
 | 9 | Add "Refresh" to the MVP? | **Yes**, once a minute at most | Otherwise new assets wait up to an hour; costs the same 7 requests |
 

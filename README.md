@@ -1,4 +1,6 @@
-# Vitrine
+# PixelLab Backpack
+
+> **Name decided (2026-10-20): PixelLab Backpack** (short label "Backpack"; subtitle "An unofficial gallery for your PixelLab art"). Older documents and mockups still say "Vitrine", the earlier working name; read it as PixelLab Backpack. Name research: [docs/research/naming/](docs/research/naming/18c-name-ideas-professional.md).
 
 **An unofficial, view-only gallery for your PixelLab assets: every sprite, tileset and map in one calm, pixel-perfect library. It runs entirely in your browser with your own API key.**
 
