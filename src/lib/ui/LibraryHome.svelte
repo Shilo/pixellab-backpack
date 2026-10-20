@@ -6,11 +6,13 @@
   // and an "empty library" card once a finished check found nothing.
   const waiting = $derived(library.status !== 'ok');
   const none = $derived(library.categories.every((c) => c.count === 0));
+  // "Nothing here yet" only when every family answered; a failed family has no saved state and is not "empty".
+  const allLoaded = $derived(library.categories.every((c) => c.families.every((id) => library.families[id])));
   // A skeleton stands in for a category with no data yet; with nothing at all, every category waits.
   const pending = (c: (typeof library.categories)[number]) => waiting && c.count === 0 && (none || c.families.some((id) => !library.families[id]));
 </script>
 
-{#if none && !waiting}
+{#if none && allLoaded && !waiting}
   <main class="home-empty">
     <div class="glass-empty vt-scrim">
       <span class="glass-empty__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2" /><rect x="13" y="4" width="7" height="7" rx="2" /><rect x="4" y="13" width="7" height="7" rx="2" /><rect x="13" y="13" width="7" height="7" rx="2" /></svg></span>
