@@ -127,3 +127,189 @@ test('at the daily cap the "Paused" notice appears and Keep loading continues', 
   await settle(page, mock);
   expect(lists(mock.hits)).toHaveLength(7);
 });
+
+// ---- Viewer (Phase 2): the counts are exact. ----
+const details = (hits: Hit[]) => hits.filter((h) => h.detail);
+const detailIds = (hits: Hit[]) => details(hits).map((h) => new URL(h.url).pathname.split('/').pop());
+/** Image-host paths below /file/a/ (account a). */
+const picturesOf = (hits: Hit[]) => hits.filter((h) => h.host === 'image').map((h) => new URL(h.url).pathname.replace('/file/a/', ''));
+const dialog = (page: Page, name: string) => page.getByRole('dialog', { name, exact: true });
+const FRAMES = (id: string, anim: string, dir: string) => [0, 1, 2, 3].map((f) => `${id}/${anim}/${dir}/${f}.png`);
+
+async function openGrid(page: Page, category: RegExp): Promise<Mock> {
+  const mock = await mockPixelLab(page);
+  await page.goto('/');
+  await connect(page);
+  await page.getByRole('link', { name: category }).click();
+  await settle(page, mock, 600);
+  return mock;
+}
+
+async function openAsset(page: Page, mock: Mock, name: string, ms = 600) {
+  await page.getByRole('link', { name, exact: true }).click();
+  const v = dialog(page, name);
+  await expect(v).toBeVisible();
+  await settle(page, mock, ms);
+  return v;
+}
+
+/** The address bar holds only the card's opaque key: never a PixelLab id or a picture link. */
+const cleanAddress = (page: Page) => {
+  expect(ids(page.url())).toEqual([]);
+  expect(new URL(page.url()).hash).toMatch(/^#\/[\w/-]*$/); // route words and an opaque hex key only: no host, no link
+};
+
+/** Every request so far is a GET, carries no key in its URL, and none is for an unfinished row. */
+const cleanHits = (mock: Mock) => {
+  expect(mock.hits.filter((h) => h.method !== 'GET')).toEqual([]);
+  expect(mock.hits.filter((h) => h.url.includes(GOOD_KEY))).toEqual([]);
+  const unfinished = new Set(mock.unfinishedIds);
+  expect(mock.hits.filter((h) => ids(h.url).some((id) => unfinished.has(id)))).toEqual([]);
+};
+
+test('viewer: first open sends 1 detail request, reopen and reload within the hour send 0', async ({ page }) => {
+  const mock = await openGrid(page, /^Characters, /);
+  let at = mock.hits.length;
+
+  const v = await openAsset(page, mock, 'Character 1');
+  await expect(v.locator('.vt-chip')).toHaveText('Breathing idle · South');
+  cleanAddress(page);
+  let sent = mock.hits.slice(at);
+  expect(api(sent)).toHaveLength(1);
+  expect(api(sent)[0]).toMatchObject({ method: 'GET', detail: true });
+  expect(new URL(api(sent)[0].url).pathname).toBe('/v2/characters/a-characters-0');
+  expect(lists(sent)).toEqual([]);
+  expect(picturesOf(sent).sort()).toEqual(FRAMES('a-characters-0', 'breathing-idle', 'south').sort()); // only the shown animation x direction
+
+  // Close and reopen the same character.
+  await page.keyboard.press('Escape');
+  await expect(v).toHaveCount(0);
+  at = mock.hits.length;
+  await openAsset(page, mock, 'Character 1');
+  expect(api(mock.hits.slice(at))).toEqual([]);
+
+  // Reload on the viewer route: the saved detail answers. The grid underneath rebuilds and asks for its own on-screen
+  // pictures like any grid reload (image host only), plus the shown frames; nothing else.
+  at = mock.hits.length;
+  await page.reload();
+  await expect(dialog(page, 'Character 1').locator('.vt-chip')).toHaveText('Breathing idle · South');
+  await settle(page, mock, 600);
+  sent = mock.hits.slice(at);
+  expect(api(sent)).toEqual([]);
+  const allowed = /^a-characters-\d+\.png$|^a-characters-0\/breathing-idle\/south\/[0-3]\.png$/;
+  expect(picturesOf(sent).filter((p) => !allowed.test(p))).toEqual([]);
+  cleanAddress(page);
+  cleanHits(mock);
+});
+
+test('viewer: prev/next sends 1 detail request for the asset landed on, never for neighbours or unfinished rows', async ({ page }) => {
+  const mock = await openGrid(page, /^Characters, /);
+  await openAsset(page, mock, 'Character 12'); // index 11
+  let at = mock.hits.length;
+
+  await page.keyboard.press('ArrowRight');
+  await expect(dialog(page, 'Character 13')).toBeVisible(); // index 12
+  await settle(page, mock, 600);
+  expect(api(mock.hits.slice(at))).toHaveLength(1);
+  expect(detailIds(mock.hits.slice(at))).toEqual(['a-characters-12']);
+
+  // Three presses inside 0.3 s: only the asset landed on (index 16; index 13 is unfinished and skipped).
+  at = mock.hits.length;
+  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
+  await expect(dialog(page, 'Character 17')).toBeVisible();
+  await settle(page, mock, 600);
+  expect(api(mock.hits.slice(at))).toHaveLength(1);
+  expect(detailIds(mock.hits.slice(at))).toEqual(['a-characters-16']);
+  cleanAddress(page);
+  cleanHits(mock);
+});
+
+test("viewer: a direction change sends 0 API requests and only that direction's frames", async ({ page }) => {
+  const mock = await openGrid(page, /^Characters, /);
+  const v = await openAsset(page, mock, 'Character 1');
+  await expect(v.locator('.vt-chip')).toHaveText('Breathing idle · South');
+  const at = mock.hits.length;
+  await v.locator('.vt-chip').click();
+  await dialog(page, 'Animation, state and direction').getByRole('radio', { name: 'East', exact: true }).click();
+  await expect(v.locator('.vt-chip')).toHaveText('Breathing idle · East');
+  await settle(page, mock, 600);
+  const sent = mock.hits.slice(at);
+  expect(api(sent)).toEqual([]);
+  expect(picturesOf(sent).sort()).toEqual(FRAMES('a-characters-0', 'breathing-idle', 'east').sort());
+  cleanAddress(page);
+});
+
+test("viewer: a grouped character's state switch sends 1 detail request the first time and 0 switching back", async ({ page }) => {
+  const mock = await openGrid(page, /^Characters, /);
+  const v = await openAsset(page, mock, 'Character 7');
+  await expect(v.locator('.vt-chip')).toContainText('Breathing idle');
+  const group = dialog(page, 'Animation, state and direction').getByRole('group', { name: 'State' });
+
+  let at = mock.hits.length;
+  await v.locator('.vt-chip').click();
+  await group.getByRole('button', { name: 'Armored', exact: true }).click();
+  await expect(v.locator('.vt-chip')).toContainText('Armored');
+  await settle(page, mock, 600);
+  expect(api(mock.hits.slice(at))).toHaveLength(1);
+  expect(detailIds(mock.hits.slice(at))).toEqual(['a-characters-7']);
+  cleanAddress(page);
+
+  at = mock.hits.length;
+  if (!(await group.isVisible())) await v.locator('.vt-chip').click();
+  await group.locator('button[aria-pressed="false"]').click();
+  await expect(v.locator('.vt-chip')).not.toContainText('Armored');
+  await settle(page, mock, 600);
+  expect(api(mock.hits.slice(at))).toEqual([]);
+  cleanAddress(page);
+  cleanHits(mock);
+});
+
+test('viewer: opening a tileset, side tileset, Tiles Pro, isometric tile and UI asset after their grid sends 0 API requests', async ({ page }) => {
+  const mock = await openGrid(page, /^Tilesets & tiles, /);
+  const check = async (name: string) => {
+    const at = mock.hits.length;
+    const v = await openAsset(page, mock, name, 800);
+    await expect(v.locator('canvas')).toBeVisible();
+    expect(api(mock.hits.slice(at))).toEqual([]);
+    cleanAddress(page);
+    await page.keyboard.press('Escape');
+    await expect(v).toHaveCount(0);
+  };
+  for (const name of ['Tileset 1', 'Side tileset 1', 'Pro tile 1', 'Iso tile 1']) await check(name);
+  await page.getByRole('button', { name: 'Library' }).click();
+  await page.getByRole('link', { name: /^UI, / }).click();
+  await settle(page, mock, 600);
+  await check('UI piece 1');
+  cleanHits(mock);
+});
+
+test('viewer: Activity lists each detail as "Characters · details" / "Objects · details", and its entries equal the requests sent', async ({ page }) => {
+  const mock = await openGrid(page, /^Characters, /);
+  const v = await openAsset(page, mock, 'Character 1');
+  await expect(v.locator('.vt-chip')).toHaveText('Breathing idle · South');
+  await page.keyboard.press('Escape');
+  await expect(v).toHaveCount(0);
+  await page.getByRole('button', { name: 'Library' }).click();
+  await page.getByRole('link', { name: /^Objects, / }).click();
+  await settle(page, mock, 600);
+  const o = await openAsset(page, mock, 'Object 1');
+  await expect(o.locator('.vt-chip')).toHaveText('Gently bobbing');
+  await page.keyboard.press('Escape');
+  await expect(o).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Library' }).click();
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitem', { name: /Activity/ }).click();
+  const panel = dialog(page, 'Activity');
+  await expect(panel).toBeVisible();
+  const sent = mock.hits.filter((h) => !h.redirected);
+  expect(details(sent)).toHaveLength(2);
+  await expect(panel.getByText(`${sent.length} requests, newest first`)).toBeVisible();
+  await expect(panel.locator('.log li')).toHaveCount(sent.length);
+  await expect(panel.locator('.log li .what', { hasText: /^Characters · details$/ })).toHaveCount(1);
+  await expect(panel.locator('.log li .what', { hasText: /^Objects · details$/ })).toHaveCount(1);
+  await expect(panel.locator('.counters')).toContainText(`API requests this session${api(sent).length}`);
+  await expect(panel).not.toContainText(GOOD_KEY);
+  for (const id of new Set(mock.hits.flatMap((h) => ids(h.url)))) await expect(panel).not.toContainText(id);
+  cleanHits(mock);
+});
