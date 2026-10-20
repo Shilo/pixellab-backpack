@@ -14,6 +14,13 @@
 | App code | **None yet.** It will be scaffolded at the project root, beside `docs/` and `mockups/`, with a local `git init`; CI (GitHub Actions) is added once a remote exists |
 | Next step | **Owner review of [design 08](docs/design/08-simplicity-redesign.md)**, then **Phase 0**: about half a day of owner-run checks with a real API key ([plan §2](docs/design/06-implementation-plan.md)). Phase 1 tasks that need no Phase 0 result can start in parallel on synthetic fixtures, with every gated value at its safe default ([plan §3.1](docs/design/06-implementation-plan.md)) |
 
+
+### Full feature mockups (chosen design)
+
+[mockups/full/](mockups/full/base/README.md) shows every feature of the chosen design (Concept 4 layout, GlassKit theme) at desktop 1440×900 and phone 390×844: 87 screens across connect and settings, browsing, the viewer for each asset type, and folders, favorites and downloads. Open `mockups/full/gallery.html` to flip through them, or `mockups/full/base/index.html#<screen-id>` for a live screen.
+
+**Images are not committed.** Rendered screenshots (`*.png` under `mockups/`) and the owner's PixelLab sample art (`mockups/shared/assets/`) are git-ignored, so image links in these docs only work on a machine that has them. To regenerate screenshots: `node mockups/full/tools/render.js mockups/full/base <port>`, then `python mockups/full/tools/gallery.py mockups/full`. The mockups need sample art in `mockups/shared/assets/` (see [mockups/shared/README.md](mockups/shared/README.md)).
+
 ## What it is
 
 - **One library for everything PixelLab lets you list.** Characters, Objects (including map objects), Images (Creator gallery), Tilesets, Tiles, Maps and UI share one search, one sort and one scope menu. PixelLab's own site spreads them over 7+ separate libraries.

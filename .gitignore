@@ -1,0 +1,14 @@
+# Rendered mockup screenshots: regenerate locally, never commit
+mockups/**/*.png
+
+# Owner's own PixelLab art used as mockup sample data: private, never publish
+mockups/shared/assets/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local scratch and tooling
+.local/
+node_modules/

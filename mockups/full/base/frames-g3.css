@@ -1,0 +1,146 @@
+/* G3 Viewer per asset type and playback. Desktop first; phone rules at the end (README "Phone layout"). */
+
+/* Stage: the art box sits between the title and the dock; the Courier frames keep the base's full-height canvas. */
+.stage > .g3-art { position: absolute; inset: 104px 72px 116px; display: flex; align-items: center; justify-content: center; }
+.g3-art > i { position: absolute; inset: 0; }
+.stage.g3-full > .g3-art { inset: 0; }
+.info .stage > .g3-art { right: 492px; }
+.info .stage.g3-full > .g3-art { right: 420px; }
+.g3-checker ~ .vtitle { text-shadow: 0 1px 2px rgba(0, 0, 0, .9), 0 0 12px rgba(0, 0, 0, .6); }
+.stage.g3-checker { background: repeating-conic-gradient(#b9bac0 0 25%, #8f9097 0 50%) 0 0 / 32px 32px; }
+.g3-pix { position: relative; flex: none; }
+.g3-pix > img, .g3-tiles img, .g3-pan img { display: block; image-rendering: pixelated; }
+.g3-pix > img { width: 100%; height: 100%; }
+
+/* Tileset grid overlay: tile lines + wang labels (labels only because tiles draw at >= 48 CSS px) */
+.g3-grid { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(4, var(--t)); grid-auto-rows: var(--t); outline: 1px solid rgba(255, 255, 255, .55); }
+.g3-grid span { position: relative; box-shadow: inset -1px -1px 0 rgba(255, 255, 255, .55); }
+.g3-grid em { position: absolute; left: 6px; top: 6px; padding: 3px 6px; border-radius: 6px; background: rgba(12, 14, 20, .74); color: #fff; font: 600 11px/1.1 ui-monospace, "SF Mono", Consolas, monospace; font-style: normal; }
+.g3-grid span.on { box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 4px rgba(0, 0, 0, .45); z-index: 1; }
+.g3-grid span.on em { background: #fff; color: #111319; }
+
+/* Tiles Pro: variations in √n columns, each tile on its own well */
+.g3-tiles { display: grid; gap: 10px; }
+.g3-tiles span.on::after { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 4px rgba(0, 0, 0, .45); }
+.g3-tiles span { position: relative; overflow: hidden; background: rgba(255, 255, 255, .06); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06); }
+.g3-tiles img { position: absolute; max-width: none; }
+
+/* Zoomed past Fit: the art fills the window and pans */
+.g3-fill .stage > .g3-art { inset: 0; }
+.g3-fill .vtitle { display: none; }   /* the name has faded (S-9); it sat on bright art */
+.g3-pan { position: absolute; inset: 0; overflow: hidden; }
+.g3-pan img { position: absolute; max-width: none; }
+
+/* Room for a status card above the dock */
+.g3-room .stage > .g3-art { bottom: 196px; }
+
+/* Immersive: chrome hidden after a stage tap */
+.g3-immersive :is(.fab, .glass-tab-bar-dock) { display: none; }
+.g3-immersive .stage > .g3-art { inset: 24px; }
+
+/* Floating status cards (tile info, zoom readout, loading, errors): GlassKit popover glass, centred over the stage */
+.glass-popover.g3-card { position: fixed; z-index: 5; display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 20px; min-width: 0; font-size: 14px; }
+.g3-card svg { width: 20px; height: 20px; flex: none; }
+.g3-card .glass-btn { padding: 0 14px; margin-left: 4px; }
+.glass-popover.g3-tip { flex-direction: column; align-items: flex-start; text-align: left; gap: 3px; padding: 12px 16px; width: max-content; max-width: 300px; }
+.g3-tip b { font-size: 15px; }
+.g3-hud, .g3-msg { left: 0; right: var(--g3-r, 0); margin-inline: auto; width: max-content; }
+.g3-hud { top: 96px; padding: 8px 16px; border-radius: 999px; gap: 8px; }
+.g3-low { top: auto; bottom: 112px; }
+.g3-msg { max-width: 460px; padding: 12px 12px 12px 16px; }
+.g3-msg span { flex: 1; line-height: 1.4; }
+.g3-ring circle { stroke: rgba(255, 255, 255, .22); stroke-width: 2.4; }
+.g3-ring circle + circle { stroke: #fff; transform: rotate(-90deg); transform-origin: center; }
+.g3-mono, .g3-panel code { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: .94em; }
+.g3-dim { color: var(--gl-color-text-muted); }
+
+/* Popovers: picker and viewer "…" (vt-menu gives the glass, the phone turns them into bottom sheets) */
+.glass-popover.vt-menu.g3-pick { width: 320px; padding: 8px 0 14px; }
+.glass-popover.vt-menu.g3-more { width: 340px; }
+.g3-ph { padding: 6px 20px 4px; }
+.g3-ph .glass-list__section-header { padding: 0; }
+.g3-pad { padding: 4px 20px 0; }
+.g3-pick .glass-list__subtitle { font-size: 12.5px; }
+.g3-pick .glass-segmented__item { padding: 6px 10px; font-size: 13.5px; }
+.g3-rose { display: grid; grid-template-columns: repeat(3, 48px); grid-auto-rows: 48px; gap: 8px; justify-content: center; align-items: center; padding: 4px 0 2px; }
+.g3-dir { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; color: var(--gl-color-text);
+  background: var(--gl-surface-2); border: 1px solid var(--gl-border-subtle); box-shadow: var(--gl-inset-subtle); }
+.g3-dir svg { rotate: var(--r); width: 19px; height: 19px; stroke-width: 2; }
+.g3-dir.on { background: rgba(255, 255, 255, .92); color: #111319; border-color: transparent; }
+.g3-dir:disabled { opacity: .3; cursor: default; background: transparent; border-style: dashed; box-shadow: none; }
+.g3-dirname { text-align: center; font-size: 13px; font-weight: 600; line-height: 1.2; }
+
+.vt-menu .g3-ctl { cursor: default; }
+.g3-ctl .glass-list__trailing { gap: 6px; }
+.glass-btn.g3-sq { width: 32px; height: 32px; padding: 0; border-radius: 50%; }
+.vt-menu .glass-list__trailing .g3-sq svg { width: 16px; height: 16px; stroke-width: 2.2; }
+.g3-ctl .glass-btn--tertiary { padding: 0 10px; height: 32px; font-size: 13px; }
+.g3-read { min-width: 54px; text-align: center; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--gl-color-text); }
+.g3-readbtn { min-width: 76px; height: 32px; border: 0; border-radius: 16px; background: none; cursor: pointer; padding: 0 6px; }
+.g3-bd .glass-list__content { gap: 10px; }
+.g3-sw { display: flex; justify-content: space-between; padding: 2px 0 4px; }
+.g3-swatch { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 56px; padding: 0; border: 0; background: none; cursor: pointer; font-size: 12px; color: var(--gl-color-text-muted); }
+.g3-swatch i { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35); }
+.g3-swatch.on { color: var(--gl-color-text); }
+.g3-swatch.on i { outline: 2px solid #fff; outline-offset: 2px; }
+.g3-swatch i svg { width: 16px; height: 16px; stroke: #fff; stroke-width: 2.6; }
+.g3-fav svg { fill: currentColor; }
+.vt-menu .glass-list__value { color: var(--gl-color-text-muted); font-size: 13px; }
+
+/* Info panel extras */
+/* Content scrolls inside .g3-body so the sheet's grip (padding area) stays put */
+.g3-panel { overflow: hidden; }
+.vt-panel > .g3-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; scrollbar-width: none; }
+.g3-body > * { flex: none; }
+.g3-foot { margin-top: auto; display: grid; gap: 8px; text-align: center; }
+.g3-foot p { color: var(--gl-color-text-muted); font-size: 12.5px; }
+.g3-panel .glass-accordion__trigger { padding: 13px 16px; font-size: 14px; }
+.g3-panel .glass-accordion__body { padding: 0 16px 16px; }
+.g3-panel .glass-accordion__item.is-open .glass-accordion__trigger-icon svg { stroke: var(--gl-color-text); }
+.g3-kv { list-style: none; padding: 0; display: grid; gap: 9px; margin-bottom: 14px; }
+.g3-kv li { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--gl-color-text-muted); }
+.g3-kv b { font-weight: 400; color: var(--gl-color-text); }
+.g3-idrow .glass-btn { padding: 0 14px; gap: 7px; }
+.g3-idrow svg { width: 16px; height: 16px; }
+.g3-warn, .g3-note { display: flex; gap: 9px; align-items: flex-start; margin-top: 12px; font-size: 13px; line-height: 1.45; color: var(--gl-color-text-muted); }
+.g3-warn svg, .g3-note svg { width: 17px; height: 17px; flex: none; margin-top: 1px; }
+.g3-note { margin: 0; padding: 12px 14px; border-radius: var(--gl-radius-btn); background: var(--gl-surface-1); border: 1px solid var(--gl-border-subtle); color: var(--gl-color-text); }
+.g3-placed { --gl-list-item-min-height: 56px; }
+.g3-placed .glass-list__leading i { width: 36px; height: 36px; border-radius: 10px; background: rgba(0, 0, 0, .25); }
+.g3-placed .glass-list__subtitle { font-size: 12.5px; }
+.vt-panel .vt-gh .glass-list__value { color: var(--gl-color-text-muted); padding-right: 6px; }
+
+.info { --g3-r: 420px; }
+
+/* Phone portrait */
+@media (max-width: 600px) {
+  .info { --g3-r: 0px; }
+  .stage > .g3-art { inset: 128px var(--vt-m) 100px; }
+  .stage.g3-full > .g3-art { inset: 116px 0 104px; }
+  .info .stage > .g3-art, .info .stage.g3-full > .g3-art { top: 76px; bottom: 58%; right: var(--vt-m); }
+  .g3-tall .vt-panel { height: 82%; }
+  .g3-tall .stage > .g3-art { bottom: 82%; top: 70px; }
+  .g3-room .stage > .g3-art { bottom: 160px; }
+  .g3-immersive .stage > .g3-art { inset: 0; }
+  .glass-tab-bar.vt-dock.g3-stack { flex-wrap: wrap; border-radius: 30px; row-gap: 2px; }
+  .g3-stack .vt-chip { flex: 1 0 100%; justify-content: center; }
+  body:has(.g3-stack) .stage > .g3-art { bottom: 150px; }
+  body:has(.g3-pick, .g3-more) .vdock { visibility: hidden; }   /* the sheet replaces the dock */
+  .vt-panel > .g3-body { gap: 16px; }
+
+  .glass-popover.g3-tip { left: var(--vt-m); right: var(--vt-m); top: auto; bottom: calc(var(--vt-bot) + 76px); width: auto; max-width: none; }
+  .g3-hud { top: calc(var(--vt-top) + 108px); }
+  .g3-low { top: auto; bottom: calc(var(--vt-bot) + 80px); }
+  .g3-msg { max-width: none; left: var(--vt-m); right: var(--vt-m); width: auto; }
+
+  .glass-popover.vt-menu.g3-pick, .glass-popover.vt-menu.g3-more { width: auto; }
+  .g3-pick .glass-segmented__item { padding: 10px; font-size: 15px; }
+  .g3-rose { grid-template-columns: repeat(3, 52px); grid-auto-rows: 52px; gap: 10px; }
+  .g3-dir { width: 52px; height: 52px; }
+  .g3-ph, .g3-pad { padding-inline: 20px; }
+  .glass-btn.g3-sq { width: 40px; height: 40px; }
+  .g3-ctl .glass-btn--tertiary { height: 40px; }
+  .g3-readbtn { height: 40px; }
+  .g3-swatch { width: 60px; font-size: 12.5px; }
+  .g3-swatch i { width: 34px; height: 34px; }
+}
