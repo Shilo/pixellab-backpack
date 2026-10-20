@@ -14,8 +14,8 @@
 </script>
 
 <script lang="ts">
-  // The dock's "…" menu: exactly two items, as a glass popover (desktop) or bottom sheet (phone).
-  let { open, onClose, onActivity }: { open: boolean; onClose: () => void; onActivity: () => void } = $props();
+  // The dock's "…" menu: Refresh, Activity and Settings, as a glass popover (desktop) or bottom sheet (phone).
+  let { open, onClose, onActivity, onSettings }: { open: boolean; onClose: () => void; onActivity: () => void; onSettings: () => void } = $props();
   let first = $state<HTMLButtonElement>();
 
   function refresh() {
@@ -49,6 +49,11 @@
     <button type="button" role="menuitem" class="glass-list__item glass-list__item--interactive" onclick={() => { onClose(); onActivity(); }}>
       <span class="glass-list__content"><span class="glass-list__title">Activity</span><span class="glass-list__subtitle">What this app asks PixelLab</span></span>
       <span class="glass-list__trailing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-7 4 14 3-7h4" /></svg></span>
+    </button>
+    <hr class="glass-divider" />
+    <button type="button" role="menuitem" class="glass-list__item glass-list__item--interactive" onclick={() => { onClose(); onSettings(); }}>
+      <span class="glass-list__content"><span class="glass-list__title">Settings</span><span class="glass-list__subtitle">Key, privacy and about</span></span>
+      <span class="glass-list__trailing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9" /><circle cx="15" cy="7" r="2" /><circle cx="9" cy="17" r="2" /></svg></span>
     </button>
   </div>
 {/if}

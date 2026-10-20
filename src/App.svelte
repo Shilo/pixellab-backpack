@@ -12,6 +12,7 @@
   import LibraryHome from './lib/ui/LibraryHome.svelte';
   import MoreMenu from './lib/ui/MoreMenu.svelte';
   import Notice from './lib/ui/Notice.svelte';
+  import Settings from './lib/ui/Settings.svelte';
 
   // Saved copy first (the key screen's "Welcome back" reads it); with a key this is also the one open check.
   onMount(() => void library.openCheck());
@@ -21,6 +22,7 @@
 
   let menu = $state(false);
   let activity = $state(false);
+  let settings = $state(false);
   const closeAct = () => {
     activity = false;
     closeActivity();
@@ -132,7 +134,9 @@
   {:else}
     <Dock mode="home" onMore={() => (menu = true)} />
   {/if}
-  <MoreMenu open={menu} onClose={() => (menu = false)} onActivity={() => (activity = true)} />
+  <MoreMenu open={menu} onClose={() => (menu = false)} onActivity={() => (activity = true)} onSettings={() => (settings = true)} />
 {/if}
 
+<!-- Outside the key check: Forget key signs out while its confirm is still on screen. -->
+<Settings open={settings} onClose={() => (settings = false)} />
 <Activity open={activity || router.activity} onClose={closeAct} />

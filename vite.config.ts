@@ -11,8 +11,11 @@ const headers = Object.fromEntries(
     .map((l) => l.trim().split(/:\s+(.*)/s).slice(0, 2)),
 );
 
+const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
+
 export default defineConfig({
   plugins: [svelte()],
+  define: { __APP_VERSION__: JSON.stringify(version) },
   build: { assetsInlineLimit: 0 },
   preview: { headers },
   test: { include: ['tests/unit/**/*.test.ts'] },

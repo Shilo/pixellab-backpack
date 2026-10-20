@@ -58,11 +58,10 @@ describe('panels', () => {
     for (const s of ['API requests this session', 'API requests today', 'Image-host loads', 'Status', 'Copy log', 'hidden permission check']) expect(body).toContain(s);
   });
 
-  it('the menu has exactly two items: Refresh and Activity', () => {
-    const body = html(MoreMenu, { open: true, onClose() {}, onActivity() {} });
-    expect(body.match(/role="menuitem"/g)).toHaveLength(2);
-    expect(body).toContain('Refresh');
-    expect(body).toContain('Activity');
+  it('the menu has exactly three items: Refresh, Activity and Settings', () => {
+    const body = html(MoreMenu, { open: true, onClose() {}, onActivity() {}, onSettings() {} });
+    expect(body.match(/role="menuitem"/g)).toHaveLength(3);
+    for (const s of ['Refresh', 'Activity', 'Settings']) expect(body).toContain(s);
   });
 });
 
