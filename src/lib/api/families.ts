@@ -18,12 +18,7 @@ export interface Family {
   artCostsApi: boolean;
 }
 
-export const CATEGORIES: { id: 'characters' | 'objects' | 'tiles' | 'ui'; label: string; families: FamilyId[] }[] = [
-  { id: 'characters', label: 'Characters', families: ['characters'] },
-  { id: 'objects', label: 'Objects', families: ['objects'] },
-  { id: 'tiles', label: 'Tilesets & tiles', families: ['tilesets', 'tilesets-side', 'isometric', 'tiles-pro'] },
-  { id: 'ui', label: 'UI', families: ['ui'] },
-];
+export { CATEGORIES } from '../categories';
 
 const API = 'https://api.pixellab.ai';
 type Row = Record<string, unknown>;

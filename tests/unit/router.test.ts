@@ -1,10 +1,10 @@
 import { expect, test } from 'vitest';
+import { CATEGORIES } from '../../src/lib/categories';
 import { parseRoute } from '../../src/lib/router.svelte';
 
 test('home and the four categories parse', () => {
   expect(parseRoute('#/')).toEqual({ name: 'home' });
-  for (const id of ['characters', 'objects', 'tiles', 'ui'])
-    expect(parseRoute(`#/c/${id}`)).toEqual({ name: 'category', id });
+  for (const { id } of CATEGORIES) expect(parseRoute(`#/c/${id}`)).toEqual({ name: 'category', id });
   expect(parseRoute('#/c/ui/')).toEqual({ name: 'category', id: 'ui' });
 });
 
