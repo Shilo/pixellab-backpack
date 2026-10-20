@@ -175,14 +175,14 @@ Characters, objects and UI pictures are not in this table: they come from PixelL
 
 **What the hour means.** The app writes down when it last checked. If you open it again within an hour in the same browser, it shows the saved copy and sends nothing. It does not check every hour in the background; it only checks when you open the app and the last check is over an hour old. Opening and closing the app every few seconds costs 0 after the first open (a new tab in "this tab only" mode costs 1, for testing the pasted key).
 
-**Is there a manual check?** Yes, recommended for the MVP (see below): "Check for new assets" reruns the 7-request check right away, so a new asset doesn't wait up to an hour. It can be used at most once a minute.
+**Is there a manual check?** Yes, recommended for the MVP (see below): "Refresh" reruns the 7-request check right away, so a new asset doesn't wait up to an hour. It can be used at most once a minute.
 
 ### Should Sync fetch everything or only what's on screen?
 
 **Only what's on screen. Never everything.**
 - On open: one small check per family (7 + 7), or nothing within the hour.
 - While browsing: only the pages and pictures you scroll to, each once per device.
-- **Check for new assets (in the MVP, proposed):** reruns the 7-request first-page check on demand, at most once a minute. A full Sync that re-reads every saved page (never pictures) stays deferred.
+- **Refresh (in the MVP, proposed):** reruns the 7-request first-page check on demand, at most once a minute. A full Sync that re-reads every saved page (never pictures) stays deferred.
 
 ### Questions for PixelLab (draft, R6 §6)
 
@@ -261,7 +261,7 @@ One short email. Every "yes" lowers the load further. The MVP does not wait for 
 
 Copy comes word for word from [02](../design/02-ux-spec.md) §12 and the mockups. Desktop and phone layouts both follow the mockups.
 
-**Visible but inert** (they do nothing yet, and say so to screen readers): Search, Select and Settings. The "…" menu works but shows only two items: **Check for new assets** and **Activity**.
+**Visible but inert** (they do nothing yet, and say so to screen readers): Search, Select and Settings. The "…" menu works but shows only two items: **Refresh** and **Activity**.
 
 **Small MVP rules**
 - **Key mode:** "this tab only" (the safe default). "Keep me signed in" waits for Settings.
@@ -279,7 +279,7 @@ Copy comes word for word from [02](../design/02-ux-spec.md) §12 and the mockups
 | Images (Creator gallery) | Its read tool isn't marked read-only (Phase 0 check P0-9), and it's the biggest API cost: 836 requests for one full scroll today |
 | Maps | Each picture is a server-side render |
 | Search, Settings, Select | Visible but inert in the MVP |
-| Full Sync (re-read every saved page) | "Check for new assets" plus the check on open cover the MVP (concern 2) |
+| Full refresh (re-read every saved page) | "Refresh" plus the check on open cover the MVP (concern 2) |
 | Cross-device sync | Concern 3 |
 
 **Images, Maps and the folder tiles: hidden, not disabled.** Hiding is simpler: no disabled style, no "coming soon" text, no tap that does nothing, and zero API requests. It also follows the existing rule that controls that don't apply are hidden (UX-19). They come back when their feature ships.
@@ -303,7 +303,7 @@ Copy comes word for word from [02](../design/02-ux-spec.md) §12 and the mockups
 - **A live list underneath, newest first:** time, what it was ("Characters · first page", "Tileset picture"), where it came from (PixelLab API, image host, saved copy, browser cache), result (OK, wrong key, too many requests, blocked by the daily cap), size and duration.
 - **Export:** "Copy log" puts a plain-text version on the clipboard so it can be shared in a bug report.
 - **Safe by design:** it never shows the key, asset IDs or picture links (IDs work like download keys). Entries say what was asked for, not the address.
-- **Honest limit:** the browser's tiny "may I?" checks (preflights) can't be seen by the page itself. The panel estimates them; the browser's own developer tools show the exact list.
+- **One gap:** for every request that carries your key, the browser first sends PixelLab a tiny automatic "is this website allowed to talk to you?" message. The browser does this on its own and hides it from the app, so the panel can only estimate how many there were (about one per kind of request every 10 minutes). Nothing in it is private and it does no real work, but it does reach PixelLab's server, which is why we count it.
 - **Cost:** it reads numbers the network module already keeps, so it adds no requests. The log lives only in memory and clears when the tab closes.
 
 **Status: PROPOSED** (decision 8).
@@ -324,7 +324,7 @@ Each has a recommended default. If you don't decide, the default applies and not
 | 6 | Daily cap of 1,000 API requests per device | **Keep 1,000** | A daily visit uses 7. Scrolling through every Tilesets & tiles item uses about 376, once per device |
 | 7 | Final name | **Deferred** (concern 1) | Free to change during the MVP |
 | 8 | Add the Activity panel to the MVP? | **Yes** | Lets you and PixelLab see the real load at any time (concern 6) |
-| 9 | Add "Check for new assets" to the MVP? | **Yes**, once a minute at most | Otherwise new assets wait up to an hour; costs the same 7 requests |
+| 9 | Add "Refresh" to the MVP? | **Yes**, once a minute at most | Otherwise new assets wait up to an hour; costs the same 7 requests |
 
 ---
 
@@ -440,7 +440,7 @@ About 1 hour in desktop Chrome, using the console helper in [plan 06 §2.2](../d
 - [ ] **B12 Real fixtures**: swap in the Phase 0 fixtures, apply Q5 and Q6, rerun every test. Done when: all tests pass on real shapes. *(needs Phase 0, B11)*
 
 - [ ] **B13 Activity panel** (`ui/Activity.svelte`, counters from `http.ts`): counters, live list, Copy log, `#activity` route, no key/IDs/links shown. Done when: every request in test T6 shows up as one entry with the right source and result. *(needs B2, B6)*
-- [ ] **B14 "…" menu with Check for new assets and Activity**: reruns the open check right away, at most once a minute. Done when: tapping it twice within a minute sends 7 requests, not 14. *(needs B6, B7)*
+- [ ] **B14 "…" menu with Refresh and Activity**: reruns the open check right away, at most once a minute. Done when: tapping it twice within a minute sends 7 requests, not 14. *(needs B6, B7)*
 
 ### MVP tests
 
@@ -456,7 +456,7 @@ About 1 hour in desktop Chrome, using the console helper in [plan 06 §2.2](../d
 
 - [ ] Settings: Forget key, "Keep me signed in", About (needed before anyone but you uses the app)
 - [ ] Viewer for one asset: player for characters and objects, still views for the rest, Info; groups character states into one card
-- [ ] Full Sync in "…": re-read every saved page, never pictures; 60-second cooldown
+- [ ] Full refresh in "…": re-read every saved page, never pictures; 60-second cooldown
 - [ ] Search over the saved list, and "All assets" through the search panel
 - [ ] Favorites and folders, with a local card snapshot so a folder opens with 0 requests (R6 §4.3); needs the final name first
 - [ ] Select mode and downloads (single asset first, then multi-asset ZIP)
