@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 import { CATEGORIES } from '../../src/lib/categories';
 import { parseRoute, pathOf } from '../../src/lib/router.svelte';
 
@@ -28,4 +28,50 @@ test('invalid keys give the category without a key', () => {
   for (const k of ['toString', '0123456789a', '0123456789abc', '0123456789AB', '123e4567-e89b-12d3-a456-426614174000'])
     expect(parseRoute(`#/c/characters/a/${k}`)).toEqual({ name: 'category', id: 'characters' });
   expect(parseRoute('#/c/maps/a/0123456789ab')).toEqual({ name: 'home' });
+});
+
+// A fake address bar: history stack + location.hash, firing hashchange like a browser (only when the hash differs).
+test('Activity over the viewer: closing Activity then the viewer lands on the grid', async () => {
+  const key = '0123456789ab';
+  const stack = [`#/c/characters`];
+  let at = 0;
+  let onHash = () => {};
+  const fire = (from: string) => stack[at] !== from && onHash();
+  const loc = {
+    get hash() {
+      return stack[at];
+    },
+    set hash(h: string) {
+      const from = stack[at];
+      stack.splice(at + 1, Infinity, h);
+      at++;
+      fire(from);
+    },
+  };
+  vi.stubGlobal('location', loc);
+  vi.stubGlobal('history', {
+    state: null,
+    replaceState: (_s: unknown, _t: string, url: string) => void (stack[at] = url),
+    back: () => {
+      const from = stack[at];
+      at--;
+      fire(from);
+    },
+  });
+  vi.stubGlobal('addEventListener', (_: string, f: () => void) => void (onHash = f));
+  vi.resetModules();
+  const m = await import('../../src/lib/router.svelte');
+
+  m.go(`#/c/characters/a/${key}`);
+  expect(m.router.route).toEqual({ name: 'category', id: 'characters', key });
+  m.go('#activity');
+  expect(m.router.activity).toBe(true);
+  m.closeActivity();
+  expect(m.router.activity).toBe(false);
+  expect(stack.slice(0, at + 1)).toEqual(['#/c/characters', `#/c/characters/a/${key}`]);
+  expect(m.router.route).toEqual({ name: 'category', id: 'characters', key });
+  m.closeViewer();
+  expect(m.router.route).toEqual({ name: 'category', id: 'characters' });
+  expect(stack[at]).toBe('#/c/characters');
+  vi.unstubAllGlobals();
 });

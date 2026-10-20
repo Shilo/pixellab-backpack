@@ -39,24 +39,26 @@ export function trimBox(data: Uint8ClampedArray, w: number, h: number): { x: num
 export const ZOOM_STEPS = [1, 2, 3, 4, 6, 8, 12, 16] as const;
 
 // Fixed zoom m (CSS px per art px): whole device pixels k per art pixel, never smooth.
+const zoomK = (m: number, dpr: number): number => Math.max(1, Math.round(m * (dpr > 0 ? dpr : 1)));
 export function zoomScale(artW: number, artH: number, m: number, dpr: number): Fit {
   if (!(artW > 0 && artH > 0)) return { cssW: 0, cssH: 0, smooth: false };
   const d = dpr > 0 ? dpr : 1;
-  const k = Math.max(1, Math.round(m * d));
+  const k = zoomK(m, d);
   return { cssW: (artW * k) / d, cssH: (artH * k) / d, smooth: false };
 }
 
-// null is Fit. Zooming in from Fit takes the first step above fitM; zooming out stops at Fit
-// once the next step down would be at or below it. At the ends the zoom stays put.
-export function zoomStep(zoom: number | null, fitM: number, dir: 1 | -1): number | null {
-  if (dir === 1) return ZOOM_STEPS.find((s) => s > Math.max(zoom ?? 0, fitM)) ?? zoom;
+// `zoom` is a ZOOM_STEPS value (null = Fit); `fitK` is the Fit scale in device px per art px.
+// Zooming in from Fit takes the first step that lands above Fit; zooming out returns null once the
+// next step down would be at or below Fit. At the top the zoom stays put.
+export function zoomStep(zoom: number | null, fitK: number, dir: 1 | -1, dpr: number): number | null {
+  if (dir === 1) return ZOOM_STEPS.find((s) => (zoom === null || s > zoom) && zoomK(s, dpr) > fitK) ?? zoom;
   if (zoom === null) return null;
   const down = [...ZOOM_STEPS].reverse().find((s) => s < zoom);
-  return down === undefined || down <= fitM ? null : down;
+  return down === undefined || zoomK(down, dpr) <= fitK ? null : down;
 }
 
-// "Fit · 3×" (crisp fit, multiplier in CSS px per art px), "Fit" (smooth downscale), "4×".
+// "Fit · 3×" (crisp fit, CSS px per art px to one decimal), "Fit" (smooth downscale), "4×".
 export function zoomLabel(zoom: number | null, fitK: number, smooth: boolean, dpr: number): string {
   if (zoom !== null) return `${zoom}×`;
-  return smooth ? 'Fit' : `Fit · ${+(fitK / (dpr > 0 ? dpr : 1)).toFixed(2)}×`;
+  return smooth ? 'Fit' : `Fit · ${Math.round((fitK / (dpr > 0 ? dpr : 1)) * 10) / 10}×`;
 }

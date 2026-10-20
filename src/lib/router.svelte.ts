@@ -26,9 +26,13 @@ export const go = (path: string): void => {
   location.hash = path;
 };
 
-/** Closes a panel opened by `#activity`: the address bar goes back to the screen, without a new history entry. */
+// True when this tab pushed `#activity` onto history (false for a direct load on it).
+let activityPushed = false;
+
+/** Closes a panel opened by `#activity`: Back when this tab opened it, else the address bar is replaced with the screen. */
 export function closeActivity(): void {
   if (!router.activity) return;
+  if (activityPushed) return history.back();
   router.activity = false;
   history.replaceState(history.state, '', pathOf(router.route));
 }
@@ -54,6 +58,7 @@ export function replaceViewer(key: string): void {
 
 globalThis.addEventListener?.('hashchange', () => {
   router.activity = location.hash === ACTIVITY;
+  activityPushed = router.activity;
   if (router.activity) return;
   const next = parseRoute(location.hash);
   const prev = router.route;

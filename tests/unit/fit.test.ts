@@ -110,35 +110,42 @@ describe('zoomScale', () => {
 });
 
 describe('zoomStep', () => {
+  // fitK = device px per art px of Fit
   test('in from Fit takes the first step above Fit', () => {
-    expect(zoomStep(null, 3, 1)).toBe(4);
-    expect(zoomStep(null, 3.4, 1)).toBe(4);
-    expect(zoomStep(null, 0.5, 1)).toBe(1);
-    expect(zoomStep(null, 5, 1)).toBe(6);
+    expect(zoomStep(null, 3, 1, 1)).toBe(4);
+    expect(zoomStep(null, 0.5, 1, 1)).toBe(1);
+    expect(zoomStep(null, 5, 1, 1)).toBe(6);
+    expect(zoomStep(null, 3, 1, 1.5)).toBe(3); // 3 x 1.5 = 4.5 -> k 5 > 3
+    expect(zoomStep(null, 8, 1, 2)).toBe(6); // 4 -> k 8 is not above; 6 -> k 12 is
   });
   test('out steps down and lands on Fit at or below it', () => {
-    expect(zoomStep(8, 3, -1)).toBe(6);
-    expect(zoomStep(4, 3, -1)).toBeNull();
-    expect(zoomStep(4, 3.5, -1)).toBeNull();
-    expect(zoomStep(1, 0.5, -1)).toBeNull();
-    expect(zoomStep(null, 3, -1)).toBeNull();
+    expect(zoomStep(8, 3, -1, 1)).toBe(6);
+    expect(zoomStep(4, 3, -1, 1)).toBeNull();
+    expect(zoomStep(1, 0.5, -1, 1)).toBe(null);
+    expect(zoomStep(null, 3, -1, 1)).toBeNull();
+    expect(zoomStep(6, 8, -1, 2)).toBeNull(); // 4 -> k 8 <= fit
   });
   test('the ends stay put', () => {
-    expect(zoomStep(16, 3, 1)).toBe(16);
-    expect(zoomStep(null, 16, 1)).toBeNull();
+    expect(zoomStep(16, 3, 1, 1)).toBe(16);
+    expect(zoomStep(null, 16, 1, 1)).toBeNull();
     expect(ZOOM_STEPS.at(-1)).toBe(16);
   });
   test('in from a set zoom', () => {
-    expect(zoomStep(4, 3, 1)).toBe(6);
-    expect(zoomStep(2, 5, 1)).toBe(6); // a stale step below Fit still moves above it
+    expect(zoomStep(4, 3, 1, 1)).toBe(6);
+    expect(zoomStep(2, 5, 1, 1)).toBe(6); // a stale step below Fit still moves above it
   });
 });
 
 describe('zoomLabel', () => {
-  test('Fit, smooth Fit and fixed zoom', () => {
+  test('Fit shows CSS px per art px to one decimal, no trailing .0', () => {
     expect(zoomLabel(null, 3, false, 1)).toBe('Fit · 3×');
+    expect(zoomLabel(null, 5, false, 1.5)).toBe('Fit · 3.3×');
+    expect(zoomLabel(null, 6, false, 1.5)).toBe('Fit · 4×');
+    expect(zoomLabel(null, 8, false, 2.625)).toBe('Fit · 3×'); // 3.05
+    expect(zoomLabel(null, 9, false, 2.625)).toBe('Fit · 3.4×'); // 3.43
     expect(zoomLabel(null, 6, false, 2)).toBe('Fit · 3×');
-    expect(zoomLabel(null, 8, false, 2.625)).toBe('Fit · 3.05×');
+  });
+  test('smooth Fit and fixed zoom', () => {
     expect(zoomLabel(null, 0.4, true, 1)).toBe('Fit');
     expect(zoomLabel(4, 3, false, 1)).toBe('4×');
     expect(zoomLabel(4, 3, true, 2)).toBe('4×');
