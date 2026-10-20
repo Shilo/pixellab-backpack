@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Anim, Dir } from '../types';
-  import { COMPASS, dirLabel } from '../viewer';
+  import { animLabel, COMPASS, dirLabel } from '../viewer';
 
   // The viewer's "Walk · East ▾" chip and its popover (desktop) or bottom sheet (phone): Animation, State, Direction.
   let { label, loading, anims, anim, dirs, allDirs, dir, states, stateKey, onAnim, onDir, onState }: {
@@ -13,9 +13,6 @@
   let open = $state(false);
   let chip = $state<HTMLButtonElement>();
   let panel = $state<HTMLDivElement>();
-
-  // "8f" from the first direction's frame list; a direction-less set shows nothing.
-  const frameCount = (a: Anim) => Object.values(a.frames)[0]?.length ?? 0;
 
   function close() {
     open = false;
@@ -53,7 +50,7 @@
         <li>
           <button type="button" class="glass-list__item glass-list__item--interactive" aria-current={anim === i} onclick={() => onAnim(i)}>
             <span class="glass-list__content">
-              <span class="glass-list__title">{i < 0 ? 'Rotations' : `${anims[i].name} · ${frameCount(anims[i])}f`}</span>
+              <span class="glass-list__title">{i < 0 ? 'Rotations' : animLabel(anims[i])}</span>
               {#if i < 0}<span class="glass-list__subtitle">Still pose for each direction</span>{/if}
             </span>
             <span class="glass-list__trailing">{#if anim === i}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>{/if}</span>

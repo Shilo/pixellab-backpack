@@ -32,6 +32,12 @@ export function chipLabel(detail: Detail, anim: number, dir: Dir, stateLabel: st
   return dirsFor(detail, anim).length > 1 ? `${name} · ${dirLabel(dir)}` : name;
 }
 
+/** "Walk · 8f" from the first direction's frame list; a set without frames shows just the name. */
+export function animLabel(a: Anim): string {
+  const n = Object.values(a.frames)[0]?.length ?? 0;
+  return n ? `${a.name} · ${n}f` : a.name;
+}
+
 /** The chip shows only when there is something to choose: another animation, a direction or a state. */
 export function chipVisible(detail: Detail | null, states: number): boolean {
   if (!detail) return false;

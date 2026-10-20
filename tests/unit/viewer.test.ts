@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import type { Anim, Detail, Dir } from '../../src/lib/types';
-import { chipLabel, chipVisible, defaultAnim, dirsFor, pickDir } from '../../src/lib/viewer';
+import { animLabel, chipLabel, chipVisible, defaultAnim, dirsFor, pickDir } from '../../src/lib/viewer';
 
 const ALL: Dir[] = ['south', 'south-east', 'east', 'north-east', 'north', 'north-west', 'west', 'south-west'];
 const frames = (ds: Dir[]) => Object.fromEntries(ds.map((d) => [d, ['a', 'b']]));
@@ -38,6 +38,12 @@ test('chipLabel forms', () => {
   expect(chipLabel(d, -1, 'south', null, 1)).toBe('Rotations · South');
   expect(chipLabel(d, -1, 'south', 'Detailed robe', 2)).toBe('Detailed robe · South');
   expect(chipLabel(detail(['unknown'], [anim('Snap shut', null, ['unknown'])]), 0, 'unknown', null, 1)).toBe('Snap shut');
+});
+
+test('animLabel: name and frame count, bare name without frames', () => {
+  expect(animLabel({ name: 'Walk', type: 'walk', description: null, frames: Object.fromEntries(ALL.map((d) => [d, Array(8).fill('f')])) })).toBe('Walk · 8f');
+  expect(animLabel(anim('Walk', 'walk', []))).toBe('Walk');
+  expect(animLabel({ name: 'Walk', type: 'walk', description: null, frames: { south: [] } })).toBe('Walk');
 });
 
 test('chipVisible needs a real choice', () => {

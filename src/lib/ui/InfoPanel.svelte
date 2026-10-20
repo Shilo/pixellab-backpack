@@ -83,7 +83,7 @@
     {#if block}
       <div class="blockhead">
         <h3>{block.label}</h3>
-        <button type="button" class="glass-btn glass-btn--secondary glass-btn--sm glass-btn--auto" onclick={() => copy('text')}>
+        <button type="button" class="glass-btn glass-btn--tertiary glass-btn--sm glass-btn--auto" onclick={() => copy('text')}>
           {@render copyIcon(copied === 'text')}<span>Copy</span><span class="vt-sr"> {block.label.toLowerCase()}</span>
         </button>
       </div>
@@ -97,7 +97,7 @@
         <div class="fact"><dt>Asset ID</dt><dd class="mono">{maskId(card.id)}</dd></div>
         {#each tech as r}<div class="fact"><dt>{r.label}</dt><dd>{r.value}</dd></div>{/each}
       </dl>
-      <button type="button" class="glass-btn glass-btn--secondary glass-btn--sm glass-btn--auto" onclick={() => copy('id')}>
+      <button type="button" class="glass-btn glass-btn--tertiary glass-btn--sm glass-btn--auto" onclick={() => copy('id')}>
         {@render copyIcon(copied === 'id')}<span>Copy asset ID</span>
       </button>
       <p class="warn vt-text-2">Anyone with this ID can download this asset without signing in. Only share it with tools you trust.</p>
@@ -106,7 +106,7 @@
 
   <footer>
     {#if needsTierHint(familyId)}<p class="vt-text-2">Opening in PixelLab may need a paid plan.</p>{/if}
-    <a class="glass-btn glass-btn--secondary" href={pixellabLink(familyId, card)} target="_blank" rel="noopener noreferrer">
+    <a class="glass-btn glass-btn--tertiary" href={pixellabLink(familyId, card)} target="_blank" rel="noopener noreferrer">
       Open in PixelLab ↗<span class="vt-sr"> (opens PixelLab in a new tab)</span>
     </a>
   </footer>
