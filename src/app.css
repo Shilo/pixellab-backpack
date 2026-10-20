@@ -1,1 +1,107 @@
+/* The app's own sheet, after GlassKit v1.27.0 (vendored, unmodified). Ported from mockups/full/base/app.css:
+   1. theme tokens  2. glass readability over art  3. layout  4. dock and notice  5. focus ring  6. phone (<= 600px). */
 @import './vendor/glasskit/glasskit.css';
+
+/* 1. Theme tokens: GlassKit's re-brand path, declared on :root after the library. */
+:root, [data-theme="dark"] {
+  --gl-color-primary: #0a6cdc;            /* white label 5.01:1 at the lightest gradient stop */
+  --gl-color-primary-dark: #0050b4;
+  --gl-color-bg-light: #181b28; --gl-color-bg-mid: #12141d; --gl-color-bg-dark: #0c0e14;   /* neutral, not GlassKit teal */
+  --gl-bg-aurora-1: rgba(98, 96, 196, .16); --gl-bg-aurora-2: rgba(34, 118, 132, .10); --gl-bg-aurora-3: rgba(98, 96, 196, .10);
+  --gl-bg-light-streak-1: transparent; --gl-bg-light-streak-2: transparent; --gl-bg-warm-glow: transparent;
+  --gl-placeholder: rgba(255, 255, 255, .70);
+  --gl-tab-bar-floating-bottom: 26px;
+  --gl-tab-bar-floating-padding: 7px;
+  --gl-tab-bar-active-bg: rgba(255, 255, 255, .14);
+  --gl-tab-bar-active-color: var(--gl-color-text);
+  --gl-tab-bar-spotlight-opacity: 0;
+  --gl-tab-bar-active-glow: none;
+  --vt-text-2: rgba(232, 236, 246, .66); --vt-text-3: rgba(232, 236, 246, .56);
+}
+
+/* 2. Readability: a dark base under GlassKit's glass so white labels hold contrast over bright pixel art. */
+.vt-scrim { --vt-scrim: rgba(20, 22, 30, .62); --gl-icon-muted: rgba(255, 255, 255, .78); --gl-color-text-muted: rgba(255, 255, 255, .72); }
+.glass-tab-bar--floating.vt-scrim { background-color: var(--vt-scrim); }
+
+/* 3. Layout */
+html, body { height: 100%; overflow: hidden; margin: 0; }
+body { font-size: 14px; line-height: 1.35; }
+* { margin: 0; }
+button { font: inherit; color: inherit; }
+svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+svg.dots { fill: currentColor; stroke: none; }
+.vt-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.vt-text-2 { color: var(--vt-text-2); }
+
+/* Screens scroll inside themselves; the page never does. */
+.library, .grid { position: fixed; inset: 0; overflow-y: auto; overscroll-behavior: contain; }
+.library { padding: 28px 40px 160px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; align-content: start; }
+.tile { display: block; color: inherit; text-decoration: none; }
+.mosaic { position: relative; aspect-ratio: 4 / 2.9; border-radius: 28px; padding: 9px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 7px;
+  background: rgba(16, 18, 26, .55); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08), 0 12px 30px rgba(0, 0, 0, .25); }
+.mosaic > i { background: rgba(255, 255, 255, .055); border-radius: 18px; }
+.tlabel { display: flex; justify-content: space-between; align-items: baseline; padding: 11px 8px 0; }
+.tlabel b { font-weight: 600; font-size: 16px; }
+.tlabel span { color: var(--vt-text-2); font-variant-numeric: tabular-nums; }
+
+.grid { padding: 28px 32px 160px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; align-content: start; }
+.cell { position: relative; }
+.cell .sq { position: relative; aspect-ratio: 1; border-radius: 24px; background: rgba(255, 255, 255, .055); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .04); }
+.cell .sq > i { position: absolute; inset: 0; }
+.cell .nm { display: block; text-align: center; padding-top: 9px; font-size: 14px; color: var(--vt-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cell .nm small { color: var(--vt-text-3); font-size: 13px; }
+
+/* 4. Dock: GlassKit's floating tab bar, items in a row at 48px */
+.vt-dock { --gl-control-height: 48px; --gl-btn-height: 48px; --gl-radius-btn: 24px; --gl-font-size-btn: 15px; white-space: nowrap; }
+.vt-dock .glass-tab-bar__item { flex-direction: row; gap: 8px; height: 48px; padding: 0 18px; color: var(--gl-color-text); }
+.vt-dock .glass-tab-bar__item[aria-disabled="true"] { cursor: default; }
+.vt-dock .glass-tab-bar__label { font-size: 15px; letter-spacing: 0; color: var(--gl-color-text); }
+.vt-dock .glass-tab-bar__icon, .vt-dock .glass-tab-bar__icon svg { width: 20px; height: 20px; }
+.glass-tab-bar__item.vt-icon { width: 48px; padding: 0; justify-content: center; }
+.vt-dock .vt-back { padding: 0 16px 0 10px; gap: 2px; }
+.vt-dock .vt-back .glass-tab-bar__icon, .vt-dock .vt-back .glass-tab-bar__icon svg { width: 22px; height: 22px; }
+.crumb { display: inline-flex; align-items: baseline; gap: 8px; padding: 0 14px 0 6px; font-size: 15px; font-weight: 600; }
+.crumb span { color: var(--vt-text-2); font-weight: 400; font-variant-numeric: tabular-nums; }
+.vr { width: 1px; height: 24px; background: var(--gl-border-subtle); }
+/* Inert search pill: a button that looks like GlassKit's search field. */
+.vt-search { display: flex; align-items: center; gap: 10px; width: 300px; height: 48px; padding: 0 16px; border: 1px solid var(--gl-border-subtle); border-radius: 24px;
+  background: var(--gl-surface-1); color: var(--gl-placeholder); font-size: 15px; text-align: start; cursor: default; }
+
+/* Notice: a floating glass pill above the dock */
+.vt-notice { position: fixed; z-index: 900; left: 50%; bottom: 104px; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; gap: 12px;
+  width: max-content; max-width: calc(100vw - 24px); box-sizing: border-box; padding: 10px 16px; border-radius: 18px; font-size: 14px; font-weight: 500;
+  background: linear-gradient(var(--gl-surface-3), var(--gl-surface-3)), var(--vt-scrim); border: 1px solid var(--gl-border-subtle);
+  backdrop-filter: blur(var(--gl-blur)); -webkit-backdrop-filter: blur(var(--gl-blur)); box-shadow: 0 10px 30px rgba(0, 0, 0, .35); }
+.vt-notice.warn { border-color: color-mix(in srgb, var(--gl-color-warning) 40%, transparent); }
+.vt-notice .glass-btn { height: 32px; padding: 0 14px; font-size: 13.5px; border-radius: 12px; flex: none; }
+
+/* 5. A visible keyboard focus ring: GlassKit removes the outline on these and draws none back. */
+:is(.glass-btn, .glass-pill, .glass-tab-bar__item, .vt-search, .tile):focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* 6. Phone portrait (<= 600px): 12px margins, full-width icon dock, safe areas, every target >= 44px. */
+@media (max-width: 600px) {
+  :root { --vt-m: 12px; --vt-top: max(16px, env(safe-area-inset-top)); --vt-bot: max(12px, env(safe-area-inset-bottom)); }
+  .library { padding: var(--vt-top) var(--vt-m) 120px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; }
+  .mosaic { aspect-ratio: 1; border-radius: 24px; padding: 7px; gap: 6px; }
+  .mosaic > i { border-radius: 16px; }
+  .tlabel { padding: 8px 6px 0; }
+  .tlabel b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tlabel span { font-size: 14px; padding-left: 8px; }
+
+  .grid { padding: var(--vt-top) var(--vt-m) 120px; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 10px; }
+  .cell .sq { border-radius: 18px; }
+  .cell .nm { font-size: 12.5px; padding-top: 6px; }
+  .cell .nm small { font-size: 12px; }
+
+  /* Dock: full width, icon-only items. Hidden labels stay readable to screen readers. */
+  .glass-tab-bar-dock { left: var(--vt-m); right: var(--vt-m); bottom: var(--vt-bot); transform: none; max-width: none; }
+  .glass-tab-bar.glass-tab-bar--floating.vt-dock { width: 100%; padding: 6px; gap: 2px; }
+  .vt-dock .glass-tab-bar__icon + .glass-tab-bar__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .vr { display: none; }
+  .vt-dock .glass-tab-bar__item:has(.glass-tab-bar__icon + .glass-tab-bar__label), .vt-dock .vt-back { width: 48px; padding: 0; justify-content: center; flex: none; }
+  .vt-dock .glass-tab-bar__item { padding: 0 14px; }
+  .vt-search { width: auto; flex: 1; min-width: 0; }
+  .crumb { flex: 1; padding: 0 4px; }
+
+  .vt-notice { bottom: calc(var(--vt-bot) + 80px); }
+}
