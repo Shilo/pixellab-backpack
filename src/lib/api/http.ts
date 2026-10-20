@@ -171,7 +171,11 @@ function wake(ms: number): void {
   const at = Date.now() + ms;
   if (wakeAt > Date.now() && wakeAt <= at) return;
   wakeAt = at;
-  setTimeout(pump, ms);
+  // Cleared when it fires: a timer may run just before Date.now() reaches `at`, and the pump it runs must be free to set the next one.
+  setTimeout(() => {
+    wakeAt = 0;
+    pump();
+  }, ms);
 }
 
 function fail(job: Job, err: HttpError, t0 = Date.now(), status?: number): void {

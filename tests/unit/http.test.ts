@@ -119,6 +119,19 @@ test('a burst of 8, then 2 per second', async () => {
   expect((await Promise.all(ps)).every((r) => !r.err)).toBe(true);
 });
 
+test('a wake-up timer that fires a moment early still sends the waiting request', async () => {
+  // Browsers may run a timer up to 1 ms before Date.now() reaches its due time (fractional delays are truncated).
+  const fakeTimeout = globalThis.setTimeout;
+  vi.stubGlobal('setTimeout', (fn: () => void, ms = 0) => fakeTimeout(fn, ms > 1 ? ms - 1 : ms));
+  autoReply();
+  const ps = Array.from({ length: 9 }, (_, i) => outcome(http.apiGet(`/p${i}`)));
+  await tick();
+  expect(calls).toHaveLength(8);
+  await tick(2000);
+  expect(calls).toHaveLength(9);
+  expect((await Promise.all(ps)).every((r) => !r.err)).toBe(true);
+});
+
 test('daily cap pauses, rejects waiting requests, and Keep loading allows 1,000 more', async () => {
   autoReply();
   local.set('pixellab-backpack:api-count', JSON.stringify({ t: Array(998).fill(Date.now() - 1000), taps: [] }));
