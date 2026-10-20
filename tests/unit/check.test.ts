@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { applyCheck, CHECK_TTL_MS, DEEP_TTL_MS, dropExpiredDeep, isFresh, joinNextPage } from '../../src/lib/data/check';
 import type { Card, FamilyState } from '../../src/lib/types';
 
-const card = (n: number, fp = 'a'): Card => ({ key: 'k' + n, id: 'id' + n, name: 'n' + n, done: true, thumb: null, fp: n + fp });
+const card = (n: number, fp = 'a'): Card => ({ key: 'k' + n, id: 'id' + n, name: 'n' + n, done: true, thumb: null, fp: n + fp, meta: {} });
 const cards = (from: number, count: number) => Array.from({ length: count }, (_, i) => card(from + i));
 const state = (total: number, cs: Card[], deep: number | null = null): FamilyState => ({ total, cards: cs, checkedAt: 1, deepLoadedAt: deep });
 const N = 5; // page size in these tests
@@ -87,6 +87,13 @@ describe('applyCheck', () => {
     expect(r.cards.map((c) => c.thumb)).toEqual(['imgk1', null, 'imgk3', 'imgk4', 'imgk5']);
     expect(r.deepLoadedAt).toBeNull();
   });
+
+  it('R11: an unchanged row takes the fresh meta but keeps its resolved picture', () => {
+    const saved = state(12, [{ ...card(0), thumb: 'img', meta: { tags: ['old'] } }, ...cards(1, 7)], 5);
+    const fresh = { ...card(0), meta: { tags: ['new'] } };
+    const r = applyCheck(saved, { total: 12, cards: [fresh, ...cards(1, 4)] }, 9);
+    expect(r.cards[0]).toEqual({ ...fresh, thumb: 'img' });
+  });
 });
 
 describe('joinNextPage', () => {
@@ -115,10 +122,11 @@ describe('joinNextPage', () => {
     expect(r.cards[N - 1]).toBe(fresh);
   });
 
-  it('unchanged overlap row keeps the saved card (and its resolved picture)', () => {
-    const withThumb = state(12, [...cards(0, N - 1), { ...card(N - 1), thumb: 'img' }], 3);
-    const r = joinNextPage(withThumb, N, cards(N - 1, N), 9) as FamilyState;
-    expect(r.cards[N - 1]).toBe(withThumb.cards[N - 1]);
+  it('unchanged overlap row takes the fresh data and keeps its resolved picture', () => {
+    const withThumb = state(12, [...cards(0, N - 1), { ...card(N - 1), thumb: 'img', meta: { tags: ['old'] } }], 3);
+    const fresh = { ...card(N - 1), meta: { tags: ['new'] } };
+    const r = joinNextPage(withThumb, N, [fresh, ...cards(N, 4)], 9) as FamilyState;
+    expect(r.cards[N - 1]).toEqual({ ...fresh, thumb: 'img' });
   });
 
   it('empty page or bad offset: reload', () => {

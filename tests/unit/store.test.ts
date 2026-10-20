@@ -4,38 +4,67 @@ const db = new Map<string, unknown>();
 vi.mock('idb-keyval', () => ({
   createStore: vi.fn(() => 'fake-store'),
   get: async (k: string) => db.get(k),
+  getMany: async (ks: string[]) => ks.map((k) => db.get(k)),
   set: async (k: string, v: unknown) => void db.set(k, v),
-  entries: async () => [...db.entries()],
   clear: async () => db.clear(),
 }));
 
 import { createStore } from 'idb-keyval';
-import { loadFamilies, loadMeta, saveFamily, saveMeta, wipe } from '../../src/lib/data/store';
-import type { FamilyState } from '../../src/lib/types';
+import { loadDetail, loadFamilies, loadMeta, SCHEMA, saveDetail, saveFamily, saveMeta, wipe } from '../../src/lib/data/store';
+import type { FamilyState, SavedDetail } from '../../src/lib/types';
 
-const fam: FamilyState = { total: 1, cards: [{ key: 'k', id: 'i', name: 'n', done: true, thumb: null, fp: 'f' }], checkedAt: 5, deepLoadedAt: null };
+const fam: FamilyState = { total: 1, cards: [{ key: 'k', id: 'i', name: 'n', done: true, thumb: null, fp: 'f', meta: {} }], checkedAt: 5, deepLoadedAt: null };
+const detail: SavedDetail = { fp: 'f', at: 1, detail: { rotations: {}, animations: [], extra: {} } };
 
 describe('store', () => {
-  beforeEach(() => db.clear());
+  beforeEach(() => {
+    db.clear();
+    db.set('meta:schema', SCHEMA);
+  });
 
-  it('round-trips families and meta, and wipe clears both', async () => {
+  it('round-trips families, details and meta, and wipe clears them all', async () => {
     await saveFamily('characters', fam);
     await saveFamily('ui', { ...fam, total: 2 });
+    await saveDetail('k', detail);
     await saveMeta('lastCheck', 123);
-    expect(await loadFamilies()).toEqual({ characters: fam, ui: { ...fam, total: 2 } });
+    expect(await loadFamilies(['characters', 'objects', 'ui'])).toEqual({ characters: fam, ui: { ...fam, total: 2 } });
+    expect(await loadDetail('k')).toEqual(detail);
     expect(await loadMeta<number>('lastCheck')).toBe(123);
     expect(await loadMeta('missing')).toBeUndefined();
     await wipe();
-    expect(await loadFamilies()).toEqual({});
+    expect(await loadFamilies(['characters', 'ui'])).toEqual({});
+    expect(await loadDetail('k')).toBeUndefined();
     expect(await loadMeta('lastCheck')).toBeUndefined();
   });
 
-  it('meta never shows up as a family', async () => {
+  it('loadFamilies reads only the asked family keys, never meta or saved details', async () => {
     await saveMeta('x', 1);
-    expect(await loadFamilies()).toEqual({});
+    await saveDetail('characters', detail); // a detail key that looks like a family id
+    expect(await loadFamilies(['characters'])).toEqual({});
+    expect([...db.keys()].sort()).toEqual(['detail:characters', 'meta:schema', 'meta:x']);
   });
 
-  it('uses a database named from APP_ID', () => {
+  it('a saved copy from another schema version is wiped once', async () => {
+    for (const old of [undefined, 1]) {
+      db.clear();
+      if (old) db.set('meta:schema', old);
+      await saveFamily('characters', fam);
+      await saveDetail('k', detail);
+      expect(await loadFamilies(['characters'])).toEqual({});
+      expect([...db.entries()]).toEqual([['meta:schema', SCHEMA]]);
+      await saveFamily('characters', fam);
+      expect(await loadFamilies(['characters'])).toEqual({ characters: fam }); // not wiped again
+    }
+  });
+
+  it('a wipe leaves the schema stamped, so families saved after it survive the next load', async () => {
+    await wipe();
+    await saveFamily('ui', fam);
+    expect(await loadFamilies(['ui'])).toEqual({ ui: fam });
+  });
+
+  it('uses a database named from APP_ID', async () => {
+    await loadMeta('any'); // the store is created lazily on first use, so this test does not depend on order
     expect(createStore).toHaveBeenCalledWith('pixellab-backpack', 'kv');
   });
 });

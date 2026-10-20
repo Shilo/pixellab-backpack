@@ -1,4 +1,4 @@
-// A synthetic PixelLab for e2e tests: list routes, picture helpers, the image host. No real key, no real data.
+// A synthetic PixelLab for e2e tests: list routes, character/object details, picture helpers, the image host. No real key, no real data.
 // Routed on the browser context, so every tab is covered and every request is logged once.
 import type { BrowserContext, Page } from '@playwright/test';
 import { crc32, deflateSync } from 'node:zlib';
@@ -24,6 +24,13 @@ export const DEFAULT_COUNTS: Record<Fam, number> = { characters: 250, objects: 1
 const unfinished = (i: number) => i % 10 === 3;
 const id = (acct: string, fam: Fam, i: number) => `${acct}-${fam}-${i}`;
 const IMG = 'https://backblaze.pixellab.ai/file';
+const D8 = ['south', 'south-east', 'east', 'north-east', 'north', 'north-west', 'west', 'south-west'];
+const D4 = ['south', 'east', 'north', 'west'];
+/** Characters: even rows have 8 directions, odd rows 4; rows divisible by 3 have a walk and a breathing-idle animation. */
+const charDirs = (i: number) => (i % 2 ? D4 : D8);
+const charAnims = (i: number) => (i % 3 ? [] : ['walk', 'breathing-idle']);
+/** Character rows 6 and 7 are two states of one character. */
+const GROUPED = [6, 7];
 
 /** A tiny RGBA PNG: a 16x16 two-colour checker with a 1px border, colours from the seed (crispness is easy to see). */
 function png(seed: number): Buffer {
@@ -59,6 +66,8 @@ export interface Hit {
   redirected: boolean;
   /** A first-page or next-page list request. */
   list: boolean;
+  /** A character or object detail request. */
+  detail: boolean;
 }
 
 export interface Mock {
@@ -91,7 +100,8 @@ export async function mockPixelLab(target: Page | BrowserContext, counts: Partia
     const u = new URL(req.url());
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS });
     const listFam = (Object.keys(FAMS) as Fam[]).find((f) => u.pathname === `/v2${FAMS[f].path}`);
-    mock.hits.push({ method: req.method(), url: req.url(), host: 'api', redirected: false, list: !!listFam });
+    const det = /^\/v2\/(characters|objects)\/([^/]+)$/.exec(u.pathname);
+    mock.hits.push({ method: req.method(), url: req.url(), host: 'api', redirected: false, list: !!listFam, detail: !!det });
     if (mock.mode === 'blocked') return route.abort('connectionrefused');
     if (mock.mode === 'down') return route.fulfill({ status: 503, headers: CORS });
     if (mock.fail.some((f) => (u.pathname + u.search).startsWith(f))) return route.fulfill({ status: 404, headers: CORS });
@@ -107,25 +117,65 @@ export async function mockPixelLab(target: Page | BrowserContext, counts: Partia
     const pro = /^\/v2\/tiles-pro\/([^/]+)$/.exec(u.pathname);
     if (pro) return json({ storage_urls: { tile_0: `${IMG}/pro/${pro[1]}.png` }, kind: 'tiles' });
 
+    if (det) {
+      const fam = det[1] as 'characters' | 'objects';
+      const rid = decodeURIComponent(det[2]);
+      const i = Array.from({ length: mock.counts[acct][fam] }, (_, n) => n).find((n) => id(acct, fam, n) === rid);
+      if (i === undefined || unfinished(i)) return json({ detail: 'Not found' }, 404);
+      const base = `${IMG}/${acct}/${rid}`;
+      const frames = (anim: string, dir: string, n: number) => Array.from({ length: n }, (_, f) => `${base}/${anim}/${dir}/${f}.png`);
+      if (fam === 'characters') {
+        const dirs = charDirs(i);
+        return json({
+          ...row(acct, fam, i),
+          rotation_urls: Object.fromEntries(D8.map((d) => [d, dirs.includes(d) ? `${base}/rotations/${d}.png` : null])),
+          style_settings: { outline: 'single color black outline', shading: 'basic shading', detail: 'medium detail' },
+          guidance: 7.5,
+          ai_freedom: null,
+          skeletons: null,
+          animations: charAnims(i).map((t) => ({ animation_type: t, display_name: null, directions: dirs.map((d) => ({ direction: d, frame_count: 4, frames: frames(t, d, 4) })) })),
+        });
+      }
+      const nulls = Object.fromEntries(D8.map((d) => [d, null]));
+      if (i === 0)
+        return json({
+          ...row(acct, fam, i),
+          rotation_urls: nulls,
+          storage_urls: { unknown: `${base}/rotations/unknown.png` },
+          style_settings: null,
+          animations: [{ animation_group_id: 'g0', display_name: null, description: 'Gently bobbing', frame_count: 3, directions: [{ direction: 'unknown', storage_urls: { frames: frames('bob', 'unknown', 3) }, created_at: '2026-01-02T00:00:00Z' }] }],
+        });
+      return json({ ...row(acct, fam, i), rotation_urls: { ...nulls, ...Object.fromEntries(D4.map((d) => [d, `${base}/rotations/${d}.png`])) }, storage_urls: {}, style_settings: null, animations: [] });
+    }
+
     if (!listFam) return json({ detail: 'Not found' }, 404);
     const f = FAMS[listFam];
     const total = mock.counts[acct][listFam];
     const limit = Number(u.searchParams.get('limit'));
     const offset = Number(u.searchParams.get('offset'));
     const rows = [];
-    for (let i = offset; i < Math.min(total, offset + limit); i++) {
-      const rid = id(acct, listFam, i);
-      const row: Record<string, unknown> = { id: rid, name: `${f.label} ${i + 1}`, status: unfinished(i) ? 'processing' : 'completed', created_at: '2026-01-01T00:00:00Z' };
-      if (f.pic) row[f.pic] = `${IMG}/${acct}/${rid}.png`; // even unfinished rows carry a link: the app must not use it
-      rows.push(row);
-    }
+    for (let i = offset; i < Math.min(total, offset + limit); i++) rows.push(row(acct, listFam, i));
     return json({ [f.rows]: rows, total });
   });
+
+  /** One list row; detail answers spread it too. */
+  function row(acct: string, fam: Fam, i: number): Record<string, unknown> {
+    const rid = id(acct, fam, i);
+    const r: Record<string, unknown> = { id: rid, name: `${FAMS[fam].label} ${i + 1}`, status: unfinished(i) ? 'processing' : 'completed', created_at: '2026-01-01T00:00:00Z' };
+    const pic = FAMS[fam].pic;
+    if (pic) r[pic] = `${IMG}/${acct}/${rid}.png`; // even unfinished rows carry a link: the app must not use it
+    if (fam === 'characters') {
+      Object.assign(r, { directions: charDirs(i).length, animation_count: charAnims(i).length, state_name: null, group_id: null });
+      if (GROUPED.includes(i)) Object.assign(r, { name: `${FAMS[fam].label} ${GROUPED[0] + 1}`, group_id: `${acct}-group-1`, state_name: i === GROUPED[0] ? null : 'Armored' });
+    }
+    if (fam === 'objects') r.directions = i === 0 ? 1 : 4;
+    return r;
+  }
 
   const seed = (url: string) => [...url].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 9973, 7);
   await ctx.route('https://backblaze.pixellab.ai/**', (route) => {
     const req = route.request();
-    mock.hits.push({ method: req.method(), url: req.url(), host: 'image', redirected: false, list: false });
+    mock.hits.push({ method: req.method(), url: req.url(), host: 'image', redirected: false, list: false, detail: false });
     if (mock.mode === 'blocked') return route.abort('connectionrefused');
     return route.fulfill({ status: 200, headers: CORS, contentType: 'image/png', body: png(seed(req.url())) });
   });
@@ -135,7 +185,7 @@ export async function mockPixelLab(target: Page | BrowserContext, counts: Partia
   const catchRedirects = async (page: Page) => {
     const cdp = await ctx.newCDPSession(page);
     cdp.on('Fetch.requestPaused', (e: { requestId: string; request: { url: string; method: string } }) => {
-      mock.hits.push({ method: e.request.method, url: e.request.url, host: 'image', redirected: true, list: false });
+      mock.hits.push({ method: e.request.method, url: e.request.url, host: 'image', redirected: true, list: false, detail: false });
       const headers = Object.entries({ ...CORS, 'content-type': 'image/png' }).map(([name, value]) => ({ name, value }));
       cdp.send('Fetch.fulfillRequest', { requestId: e.requestId, responseCode: 200, responseHeaders: headers, body: png(seed(e.request.url)).toString('base64') }).catch(() => {}); // the page may have closed
     });

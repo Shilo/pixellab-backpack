@@ -1,0 +1,151 @@
+{
+  "id": "c0000000-0000-4000-8000-000000000001",
+  "name": "Test Knight",
+  "state_name": null,
+  "prompt": "a knight",
+  "size": {
+    "width": 48,
+    "height": 48
+  },
+  "directions": 8,
+  "created_at": "2026-01-01T00:00:00Z",
+  "updated_at": "2026-01-05T00:00:00Z",
+  "animation_count": 2,
+  "template_id": "mannequin",
+  "view": "low top-down",
+  "status": "completed",
+  "rotation_urls": {
+    "south": "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/rotations/south.png?t=1",
+    "south-east": "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/rotations/south-east.png?t=1",
+    "east": "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/rotations/east.png?t=1",
+    "north-east": "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/rotations/north-east.png?t=1",
+    "north": "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/rotations/north.png?t=1",
+    "north-west": "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/rotations/north-west.png?t=1",
+    "west": "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/rotations/west.png?t=1",
+    "south-west": "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/rotations/south-west.png?t=1"
+  },
+  "style_settings": {
+    "outline": "single color black outline",
+    "shading": "basic shading",
+    "detail": "medium detail"
+  },
+  "guidance": 7.5,
+  "ai_freedom": null,
+  "tags": [
+    "hero"
+  ],
+  "group_id": null,
+  "skeletons": {
+    "south": []
+  },
+  "animations": [
+    {
+      "animation_type": "breathing-idle",
+      "display_name": null,
+      "animation_group_id": "g1",
+      "directions": [
+        {
+          "direction": "south",
+          "frame_count": 4,
+          "frames": [
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/south/frame_0.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/south/frame_1.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/south/frame_2.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/south/frame_3.png?t=1"
+          ]
+        },
+        {
+          "direction": "south-east",
+          "frame_count": 4,
+          "frames": [
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/south-east/frame_0.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/south-east/frame_1.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/south-east/frame_2.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/south-east/frame_3.png?t=1"
+          ]
+        },
+        {
+          "direction": "east",
+          "frame_count": 4,
+          "frames": [
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/east/frame_0.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/east/frame_1.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/east/frame_2.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/east/frame_3.png?t=1"
+          ]
+        },
+        {
+          "direction": "north-east",
+          "frame_count": 4,
+          "frames": [
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/north-east/frame_0.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/north-east/frame_1.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/north-east/frame_2.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/north-east/frame_3.png?t=1"
+          ]
+        },
+        {
+          "direction": "north",
+          "frame_count": 4,
+          "frames": [
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/north/frame_0.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/north/frame_1.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/north/frame_2.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/north/frame_3.png?t=1"
+          ]
+        },
+        {
+          "direction": "north-west",
+          "frame_count": 4,
+          "frames": [
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/north-west/frame_0.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/north-west/frame_1.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/north-west/frame_2.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/north-west/frame_3.png?t=1"
+          ]
+        },
+        {
+          "direction": "west",
+          "frame_count": 4,
+          "frames": [
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/west/frame_0.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/west/frame_1.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/west/frame_2.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/west/frame_3.png?t=1"
+          ]
+        },
+        {
+          "direction": "south-west",
+          "frame_count": 4,
+          "frames": [
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/south-west/frame_0.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/south-west/frame_1.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/south-west/frame_2.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/breathing-idle/south-west/frame_3.png?t=1"
+          ]
+        }
+      ]
+    },
+    {
+      "animation_type": "cross-punch",
+      "display_name": "Big Swing",
+      "animation_group_id": "g2",
+      "directions": [
+        {
+          "direction": "south",
+          "frame_count": 3,
+          "frames": [
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/cross-punch/south/frame_0.png?t=1",
+            "https://backblaze.pixellab.ai/file/pixellab-characters/u0/c1/animations/cross-punch/south/frame_1.png?t=1",
+            null
+          ]
+        },
+        {
+          "direction": "east",
+          "frame_count": 0,
+          "frames": []
+        }
+      ]
+    }
+  ]
+}

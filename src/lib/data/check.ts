@@ -1,14 +1,17 @@
 // Pure rules for the first-page check (docs/plan/mvp-plan.md "How the first-page check decides"). No I/O, no clock.
 import type { Card, FamilyState, Page } from '../types';
 
+/** R11: fresh list data always wins; only the resolved picture link survives when the fingerprint matches. */
+const merge = (fresh: Card, old: Card | undefined): Card => (old?.fp === fresh.fp ? { ...fresh, thumb: old.thumb } : fresh);
+
 export const CHECK_TTL_MS = 3_600_000;
 export const DEEP_TTL_MS = 7 * 86_400_000;
 
 /** Fold a fresh page 0 into the saved copy. */
 export function applyCheck(saved: FamilyState | undefined, page0: Page, now: number): FamilyState {
-  // Same asset + same fingerprint keeps the saved card (and its resolved picture), in every branch.
+  // Same asset + same fingerprint keeps the resolved picture, in every branch.
   const old = new Map(saved?.cards.map((c) => [c.key, c]));
-  const cards = page0.cards.map((c) => (old.get(c.key)?.fp === c.fp ? old.get(c.key)! : c));
+  const cards = page0.cards.map((c) => merge(c, old.get(c.key)));
   const replaced: FamilyState = { total: page0.total, cards, checkedAt: now, deepLoadedAt: null };
   if (!saved) return replaced;
   const n = page0.cards.length;
@@ -21,12 +24,11 @@ export function applyCheck(saved: FamilyState | undefined, page0: Page, now: num
 }
 
 /** Append the page that was requested starting one row back; 'reload' when the list shifted (a different asset in the overlap row).
- * A changed overlap row (same asset, new fingerprint) is updated in place; an unchanged one keeps the saved card and its picture. */
+ * The overlap row takes the fresh data; it keeps its resolved picture when the fingerprint is unchanged. */
 export function joinNextPage(saved: FamilyState, offset: number, page: Card[], now: number): FamilyState | 'reload' {
   const prev = saved.cards[offset - 1];
   if (offset < 1 || !prev || !page.length || page[0].key !== prev.key) return 'reload';
-  const head = page[0].fp === prev.fp ? prev : page[0];
-  return { ...saved, cards: [...saved.cards.slice(0, offset - 1), head, ...page.slice(1)], deepLoadedAt: saved.deepLoadedAt ?? now };
+  return { ...saved, cards: [...saved.cards.slice(0, offset - 1), merge(page[0], prev), ...page.slice(1)], deepLoadedAt: saved.deepLoadedAt ?? now };
 }
 
 export const isFresh = (state: FamilyState | undefined, now: number) => !!state && now - state.checkedAt < CHECK_TTL_MS;
