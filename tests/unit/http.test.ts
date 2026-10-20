@@ -121,7 +121,7 @@ test('a burst of 8, then 2 per second', async () => {
 
 test('daily cap pauses, rejects waiting requests, and Keep loading allows 1,000 more', async () => {
   autoReply();
-  local.set('pixellab-backpack:api-count', JSON.stringify({ t: Array(998).fill(Date.now() - 1000), extra: 0 }));
+  local.set('pixellab-backpack:api-count', JSON.stringify({ t: Array(998).fill(Date.now() - 1000), taps: [] }));
   http = await loadModule();
   http.setKey(KEY);
   const seen: string[] = [];
@@ -142,7 +142,7 @@ test('daily cap pauses, rejects waiting requests, and Keep loading allows 1,000 
 
 test('the daily cap is a rolling 24 hours', async () => {
   autoReply();
-  local.set('pixellab-backpack:api-count', JSON.stringify({ t: Array(1000).fill(Date.now()), extra: 0 }));
+  local.set('pixellab-backpack:api-count', JSON.stringify({ t: Array(1000).fill(Date.now()), taps: [] }));
   http = await loadModule();
   http.setKey(KEY);
   expect((await outcome(http.apiGet('/x'))).err?.kind).toBe('cap');
@@ -351,20 +351,58 @@ test('an aborted request leaves the queue', async () => {
   expect(calls).toHaveLength(2);
 });
 
-test('offline and blocked are reported, not retried', async () => {
+test('a failure while online is retried and counted; "blocked" only after the last retry', async () => {
   const seen: string[] = [];
   http.onStatus((s) => seen.push(s));
   const p = outcome(http.apiGet('/characters'));
   await tick();
   pending[0].fail(new TypeError('Failed to fetch'));
-  expect((await p).err?.kind).toBe('blocked');
-  expect(http.getCounters().status).toBe('blocked');
+  await tick(2000);
+  expect(pending).toHaveLength(2); // retried
+  expect(http.getCounters().status).toBe('ok');
+  pending[1].fail(new TypeError('Failed to fetch'));
+  await tick(4000);
+  expect(pending).toHaveLength(3);
+  pending[2].fail(new TypeError('Failed to fetch'));
+  const { err } = await p;
+  expect(err?.kind).toBe('blocked');
+  expect(http.getCounters()).toMatchObject({ status: 'blocked', sessionApi: 3, todayApi: 3 });
+  // 3 failures in a row halt the queue like any other outage
+  expect((await outcome(http.apiGet('/objects'))).err?.kind).toBe('stopped');
+  expect(calls).toHaveLength(3);
+  expect(seen).toEqual(['blocked']);
+  http.retry();
+  const again = outcome(http.apiGet('/ui'));
+  await tick();
+  pending[3].reply();
+  expect((await again).err).toBeUndefined();
+});
 
+test('a network failure followed by success is retried and resolves', async () => {
+  const p = outcome(http.apiGet('/characters'));
+  await tick();
+  pending[0].fail(new TypeError('Failed to fetch'));
+  await tick(2000);
+  pending[1].reply(200, { total: 2 });
+  expect((await p).value).toEqual({ total: 2 });
+  expect(http.getCounters()).toMatchObject({ status: 'ok', todayApi: 2 });
+});
+
+test('offline is reported at once, nothing is sent, and it recovers', async () => {
+  const seen: string[] = [];
+  http.onStatus((s) => seen.push(s));
   vi.stubGlobal('navigator', { onLine: false });
-  const n = calls.length;
   expect((await outcome(http.apiGet('/objects'))).err?.kind).toBe('offline');
-  expect(calls).toHaveLength(n); // nothing sent while offline
-  expect(seen).toEqual(['blocked', 'offline']);
+  expect(calls).toHaveLength(0);
+  // a fetch that fails because the connection dropped mid-flight is offline too, without retry
+  vi.stubGlobal('navigator', { onLine: true });
+  const p = outcome(http.apiGet('/characters'));
+  await tick();
+  vi.stubGlobal('navigator', { onLine: false });
+  pending[0].fail(new TypeError('Failed to fetch'));
+  expect((await p).err?.kind).toBe('offline');
+  expect(calls).toHaveLength(1);
+  expect(seen).toEqual(['offline']);
 
   vi.stubGlobal('navigator', { onLine: true });
   const back = outcome(http.apiGet('/ui'));
@@ -372,5 +410,40 @@ test('offline and blocked are reported, not retried', async () => {
   pending.at(-1)!.reply();
   expect((await back).err).toBeUndefined();
   expect(http.getCounters().status).toBe('ok');
-  expect(calls).toHaveLength(n + 1);
+});
+
+test('the cap is checked before every send: 999 used never becomes 1,001', async () => {
+  autoReply();
+  local.set('pixellab-backpack:api-count', JSON.stringify({ t: Array(999).fill(Date.now() - 1000), taps: [] }));
+  http = await loadModule();
+  http.setKey(KEY);
+  const rs = await Promise.all([outcome(http.apiGet('/a')), outcome(http.apiGet('/b'))]);
+  expect(rs.map((r) => r.err?.kind)).toEqual([undefined, 'cap']);
+  expect(calls).toHaveLength(1);
+  expect(http.getCounters().todayApi).toBe(1000);
+});
+
+test('each Keep loading tap adds 1,000 for 24 hours only', async () => {
+  autoReply();
+  http.keepLoading();
+  await tick(12 * 3600_000);
+  http.keepLoading();
+  expect(http.getCounters().dailyCap).toBe(3000);
+  await tick(12 * 3600_000 + 1000); // the first tap is now over 24 h old
+  expect(http.getCounters().dailyCap).toBe(2000);
+  await tick(12 * 3600_000);
+  expect(http.getCounters().dailyCap).toBe(1000);
+});
+
+test('publicGet accepts the helper URLs on the API host and picture links on the image host', async () => {
+  autoReply();
+  const ok = [
+    `${API}/mcp/tilesets/id1/image`,
+    `${API}/mcp/sidescroller-tilesets/id2/image`,
+    `${API}/mcp/isometric-tile/id3/download`,
+    `${IMG}/file/bucket/users/u/characters/c/rotations/south.png`,
+  ];
+  const rs = await Promise.all(ok.map((u) => outcome(http.publicGet(u, { api: u.startsWith(API) }))));
+  expect(rs.map((r) => r.err)).toEqual([undefined, undefined, undefined, undefined]);
+  expect(http.getCounters()).toMatchObject({ sessionApi: 3, imageHost: 1 });
 });

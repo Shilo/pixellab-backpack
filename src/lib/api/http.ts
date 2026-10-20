@@ -94,23 +94,23 @@ function record(source: 'api' | 'image', label: string, result: ActivityEntry['r
   activityListeners.forEach((cb) => cb(entry));
 }
 
-// ---- daily cap: request times in a rolling 24 h, plus extra allowance from "Keep loading" ----
+// ---- daily cap: request times in a rolling 24 h, plus the times of "Keep loading" taps (+1,000 each, also for 24 h) ----
 interface Count {
   t: number[];
-  extra: number;
+  taps: number[];
 }
-let mem: Count = { t: [], extra: 0 };
+let mem: Count = { t: [], taps: [] };
 
 function readCount(): Count {
   let c = mem;
   try {
     const s = JSON.parse(localStorage.getItem(COUNT_NAME) ?? 'null');
-    if (s && Array.isArray(s.t) && typeof s.extra === 'number') c = s;
+    if (s && Array.isArray(s.t)) c = { t: s.t, taps: Array.isArray(s.taps) ? s.taps : [] };
   } catch {
     /* use memory */
   }
-  const t = c.t.filter((x) => typeof x === 'number' && x > Date.now() - DAY);
-  return { t, extra: t.length ? c.extra : 0 };
+  const recent = (a: unknown[]) => a.filter((x): x is number => typeof x === 'number' && x > Date.now() - DAY);
+  return { t: recent(c.t), taps: recent(c.taps) };
 }
 
 function writeCount(c: Count): void {
@@ -123,11 +123,11 @@ function writeCount(c: Count): void {
 }
 
 const used = () => readCount().t.length;
-const limit = () => DAILY_CAP + readCount().extra;
+const limit = () => DAILY_CAP * (1 + readCount().taps.length);
 
 export function keepLoading(): void {
   const c = readCount();
-  writeCount({ ...c, extra: c.extra + DAILY_CAP });
+  writeCount({ ...c, taps: [...c.taps, Date.now()] });
   if (status === 'paused') setStatus('ok');
   pump();
 }
@@ -159,6 +159,7 @@ let refilled = Date.now();
 let pausedUntil = 0;
 let last429 = -Infinity;
 let fails = 0;
+let halted = false; // "stopped": nothing is sent until retry()
 let wakeAt = 0;
 
 const hidden = () => typeof document !== 'undefined' && document.visibilityState === 'hidden';
@@ -184,7 +185,7 @@ function rejectQueue(kind: HttpErrorKind): void {
 
 function pump(): void {
   if (status === 'slowed' && Date.now() >= pausedUntil) setStatus('ok');
-  if (status === 'stopped') return rejectQueue('stopped');
+  if (halted) return rejectQueue('stopped');
   if (hidden()) return rejectQueue('cancelled');
   if (offline()) {
     setStatus('offline');
@@ -196,6 +197,10 @@ function pump(): void {
   }
   if (status === 'paused') setStatus('ok');
   while (queue.length && running < concurrency()) {
+    if (used() >= limit()) {
+      setStatus('paused');
+      return rejectQueue('cap');
+    }
     const now = Date.now();
     if (now < pausedUntil) return wake(pausedUntil - now);
     tokens = Math.min(BURST, tokens + ((now - refilled) / 1000) * PER_SECOND);
@@ -206,12 +211,13 @@ function pump(): void {
   }
 }
 
-function stop(): void {
-  setStatus('stopped');
+function stop(why: 'stopped' | 'blocked' = 'stopped'): void {
+  halted = true;
+  setStatus(why);
   rejectQueue('stopped');
 }
 
-/** A thrown fetch: aborted, offline, or (browser online) blocked by CORS, an extension or a firewall. */
+/** A thrown fetch: aborted, offline, or (browser online) blocked by CORS, an extension, a firewall or an outage. */
 function netError(e: unknown): HttpError {
   if ((e as Error)?.name === 'AbortError') return new HttpError('cancelled');
   const kind = offline() ? 'offline' : 'blocked';
@@ -229,15 +235,17 @@ async function attempt(job: Job): Promise<void> {
   try {
     const init: RequestInit = { method: 'GET', signal: job.signal };
     if (job.auth) init.headers = { Authorization: `Bearer ${key}` };
-    let res: Response;
+    let res: Response | undefined;
     try {
       res = await fetch(job.url, init);
     } catch (e) {
-      return fail(job, netError(e), t0); // no retry: offline and blocked will not fix themselves
+      // Offline and aborts end here. A failure while online may be an outage answering without CORS
+      // headers, so it is treated like a 5xx below: retried, counted, and 'blocked' only at the end.
+      if ((e as Error)?.name === 'AbortError' || offline()) return fail(job, netError(e), t0);
     }
-    if (status === 'offline' || status === 'blocked') setStatus('ok');
-    const s = res.status;
-    if (res.ok) {
+    if (res && (status === 'offline' || status === 'blocked')) setStatus('ok');
+    const s = res ? res.status : 0;
+    if (res?.ok) {
       fails = 0;
       let out: Awaited<ReturnType<Job['parse']>>;
       try {
@@ -254,13 +262,13 @@ async function attempt(job: Job): Promise<void> {
       rejectQueue('key-lost');
       return fail(job, new HttpError('key-lost', s), t0, s);
     }
-    if (s !== 429 && s < 500) {
+    if (res && s !== 429 && s < 500) {
       fails = 0; // the server answered (404, 423 ...): no retry
       if (job.strict) return fail(job, new HttpError('http', s), t0, s);
       record('api', job.label, 'error', t0, s);
       return job.ok(res);
     }
-    // 429 or 5xx: back off, retry at most twice, stop on repeated trouble
+    // 429, 5xx or a network failure (s = 0): back off, retry at most twice, stop on repeated trouble
     fails++;
     if (s === 429) {
       if (Date.now() - last429 < WINDOW) stop();
@@ -271,10 +279,14 @@ async function attempt(job: Job): Promise<void> {
         wake(PAUSE);
       }
     }
-    if (fails >= MAX_FAILS) stop();
-    if (status === 'stopped') return fail(job, new HttpError('stopped', s), t0, s);
-    if (job.retries >= MAX_RETRIES) return fail(job, new HttpError('http', s), t0, s);
-    record('api', job.label, 'error', t0, s);
+    const why = s ? 'stopped' : 'blocked';
+    if (fails >= MAX_FAILS) stop(why);
+    if (halted) return fail(job, new HttpError(why, s || undefined), t0, s || undefined);
+    if (job.retries >= MAX_RETRIES) {
+      if (!s) setStatus('blocked');
+      return fail(job, new HttpError(s ? 'http' : 'blocked', s || undefined), t0, s || undefined);
+    }
+    record('api', job.label, 'error', t0, s || undefined);
     job.retries++;
     const delay = s === 429 ? 0 : 1000 * 2 ** job.retries * (0.5 + Math.random());
     setTimeout(() => {
@@ -291,6 +303,7 @@ async function attempt(job: Job): Promise<void> {
 /** "Try again" after a stop. */
 export function retry(): void {
   fails = 0;
+  halted = false;
   last429 = -Infinity;
   pausedUntil = 0;
   setStatus('ok');
@@ -403,4 +416,4 @@ async function direct(url: string, o: Opts): Promise<Response> {
 // ---- browser events ----
 if (typeof document !== 'undefined') document.addEventListener('visibilitychange', pump);
 globalThis.addEventListener?.('online', () => status === 'offline' && setStatus('ok'));
-globalThis.addEventListener?.('offline', () => status !== 'stopped' && setStatus('offline'));
+globalThis.addEventListener?.('offline', () => !halted && setStatus('offline'));
