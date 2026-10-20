@@ -412,4 +412,6 @@ Note from research 14: the glass baseline's white-on-blue Download label is 3.65
 | Floating detail controls over full-screen art | One high-contrast primary action (Download), at least 4.5:1, plus visible focus rings of at least 3:1 |
 | Blur only on the few floating surfaces (dock, open menu, panel), never per tile | Spring motion and shape change on press and on dock role switches |
 
+Rendered: [g-glass-material](../../mockups/simple/themes/g-glass-material/README.md).
+
 Implementation: write Vitrine's own small glass layer (about 150 lines of CSS custom properties, using GlassKit's tokens as a reference) instead of vendoring GlassKit. It keeps the look, stays light, and avoids GlassKit's accessibility gaps. If the owner still prefers vendoring, the fallback is the f-glasskit setup: v1.27.0 pinned and unmodified, its LICENSE next to it, plus a Vitrine override file, never loaded from a CDN.
