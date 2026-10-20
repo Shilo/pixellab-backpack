@@ -99,6 +99,7 @@
       </ol>
 
       <form class="glass-input-group g1-field" onsubmit={(e) => { e.preventDefault(); test(); }}>
+        <input type="text" name="username" value="PixelLab API key" autocomplete="username" hidden />
         <label class="glass-label" for="g1-key">PixelLab API key</label>
         <div class="glass-input-wrap">
           <input
@@ -110,7 +111,7 @@
             class:glass-input--error={phase === 'invalid'}
             type={show ? 'text' : 'password'}
             placeholder="Paste your API key"
-            autocomplete="off"
+            autocomplete="current-password"
             autocapitalize="off"
             spellcheck="false"
             readonly={testing}
