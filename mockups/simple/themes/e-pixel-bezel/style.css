@@ -1,0 +1,181 @@
+/* Theme E "Pixel Bezel" on Concept 4's layout. Static mockup styles: render-only, 1440x900 dark.
+   Solid chamfered surfaces, 2px borders, hard key shadows, pixel numerals (app.js draws them as SVG). */
+:root {
+  --bg: #17161c; --tile: #201f27; --cell: #26252e;
+  --float: #2b2a34; --float-hi: #2b2a34; --float-border: #46445a;
+  --text: #f2f0e9; --text-2: #b3b0bf; --text-3: #9693a3;
+  --accent: #8be3b4; --accent-on: #0d2a1c;
+  --marquee: #f2f0e9; --ink: #0a0a0d;
+  --scrim: rgb(10 10 13 / .6);
+  --shadow-float: 0 4px 0 var(--ink);
+  --well: inset 0 2px 0 var(--ink);
+  --edge: inset 0 0 0 2px var(--float-border);   /* 2px border drawn as a shadow, so no box grows */
+  --mono: "Cascadia Mono", ui-monospace, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font: 14px/1.35 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  color: var(--text); -webkit-font-smoothing: antialiased;
+  background: radial-gradient(circle at 1px 1px, rgb(242 240 233 / .05) 1px, transparent 1.5px) 0 0 / 16px 16px, var(--bg); /* faint pixel-canvas dot grid */
+}
+button { font: inherit; color: inherit; background: none; border: 0; }
+svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: square; stroke-linejoin: miter; flex: none; }
+svg.pix { fill: currentColor; stroke: none; shape-rendering: crispEdges; } /* pixel glyphs and icons (app.js) */
+.pxn { vertical-align: baseline; }
+
+/* Chamfers: CSS corner-shape (Chromium 139+); other browsers fall back to the same radii, rounded. */
+.glass, .mosaic, .mosaic > i, .mini > i, .cell .sq, .seg, .round, .field, kbd, .chk, .caps button,
+.menu, .spanel, .goto a, .goto i, .recent span, .gh button, .prompt, .fclose, .fpanel, .segc, .segc b { corner-shape: bevel; }
+.glass { background: var(--float); box-shadow: var(--edge), var(--shadow-float); }
+
+/* Pixel art cell (art.js fills it) */
+[data-art] { position: relative; display: block; overflow: hidden; }
+.px { position: absolute; overflow: hidden; }
+.px img { display: block; position: absolute; max-width: none; image-rendering: pixelated; }
+.px.smooth img { image-rendering: auto; }
+
+main { position: fixed; inset: 0; overflow: hidden; }
+
+/* Library home */
+.library { padding: 28px 40px 160px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 28px; align-content: start; overflow: hidden; }
+.sec { grid-column: 1 / -1; font: 600 12px/18px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--text-2); padding: 0 8px; margin-bottom: -14px; }
+.sec.mine { padding-top: 6px; }
+.tile { display: block; color: inherit; text-decoration: none; }
+.mosaic {
+  position: relative; aspect-ratio: 4 / 2.9; border-radius: 14px; padding: 9px;
+  display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 7px;
+  background: var(--tile); box-shadow: inset 0 0 0 2px #2a2933;
+}
+.mosaic > i, .mini > i { background: var(--cell); border-radius: 10px; }
+.mini { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px; }
+.mini > i { border-radius: 6px; }
+/* Folders (yours) are raised keys with a border; types (automatic) are flat, so the two read differently. */
+.folder .mosaic { background: var(--float); box-shadow: var(--edge), var(--shadow-float); }
+.folder .mosaic > i, .folder .mini > i { background: var(--tile); box-shadow: var(--well); }
+.tlabel { display: flex; justify-content: space-between; align-items: baseline; padding: 11px 8px 0; }
+.tlabel b { font-weight: 600; font-size: 16px; letter-spacing: -.01em; }
+.tlabel span { color: var(--text-2); }
+
+/* Category grid */
+.grid { padding: 28px 32px 160px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px 20px; align-content: start; }
+.cell { position: relative; }
+.cell .sq { position: relative; aspect-ratio: 1; border-radius: 12px; background: var(--cell); }
+.cell .sq > i { position: absolute; inset: 0; }
+.cell .nm { display: block; text-align: center; padding-top: 9px; font-size: 14px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cell .nm small { color: var(--text-3); font-size: 13px; }
+/* Selection: marching-ants marquee (static dashes here; a live build animates the dash offset, static under reduced motion). */
+.cell.sel .sq { background: #2f2e39; }
+.cell.sel .sq::before { content: ""; position: absolute; inset: 0; border: 2px dashed var(--marquee); border-radius: 12px; corner-shape: bevel; pointer-events: none; }
+.cell .chk { position: absolute; right: 10px; bottom: 10px; width: 26px; height: 26px; border-radius: 5px; display: grid; place-items: center; background: var(--marquee); color: var(--bg); box-shadow: 0 2px 0 var(--ink); }
+.selecting .cell:not(.sel) .sq::after { content: ""; position: absolute; right: 11px; bottom: 11px; width: 24px; height: 24px; border-radius: 5px; corner-shape: bevel; box-shadow: inset 0 0 0 2px rgb(179 176 191 / .75); background: rgb(10 10 13 / .35); }
+
+/* Dock: the only persistent chrome */
+.dock { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 7px; border-radius: 14px; z-index: 5; white-space: nowrap; }
+.seg { height: 48px; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px; padding: 0 18px; font-size: 15px; font-weight: 500; }
+.seg.on { background: var(--bg); box-shadow: var(--well); padding-left: 9px; }  /* selected = recessed well with a lit "LED" */
+.seg.on::before { content: ""; width: 4px; height: 4px; background: var(--text); margin-right: -3px; } /* LED sits in the padding: icon and width unchanged */
+.seg svg { width: 19px; height: 19px; }
+.round { width: 48px; height: 48px; border-radius: 8px; display: grid; place-items: center; }
+.field { width: 300px; height: 48px; border-radius: 8px; display: flex; align-items: center; gap: 10px; padding: 0 12px 0 16px; background: var(--bg); box-shadow: var(--well); color: var(--text-2); font-size: 15px; }
+kbd { margin-left: auto; min-width: 24px; text-align: center; font: 600 12px/1 var(--mono); color: var(--text-2); background: var(--float); border-radius: 4px; padding: 5px 6px 4px; box-shadow: inset 0 0 0 1px var(--float-border), 0 2px 0 var(--ink); }
+.field.focus { width: 520px; color: var(--text); box-shadow: var(--well), inset 0 0 0 2px var(--accent); }
+.field.focus .caret { width: 9px; height: 18px; background: var(--text); margin-left: -4px; } /* block cursor */
+.field.focus .ph { color: var(--text-3); margin-left: -6px; }
+.back { padding: 0 16px 0 10px; gap: 2px; }
+.back svg { width: 22px; height: 22px; }
+.crumb { display: inline-flex; align-items: baseline; gap: 10px; padding: 0 14px 0 6px; font-size: 15px; font-weight: 600; }
+.crumb span { color: var(--text-2); }
+.vr { width: 2px; height: 24px; background: var(--float-border); }
+/* The accent "key": raised on a hard edge, chamfered, a 2px divider before the chevron. */
+.primary { background: var(--accent); color: var(--accent-on); font-weight: 600; box-shadow: 0 3px 0 #2e6b4c; }
+.primary .split { width: 2px; height: 22px; background: var(--accent-on); opacity: .55; margin: 0 2px 0 4px; }
+.primary svg { width: 17px; height: 17px; stroke-width: 2.4; }
+.chev { width: 15px !important; height: 15px !important; opacity: .7; stroke-width: 2.4 !important; }
+.count { padding-left: 18px; font-weight: 600; gap: 10px; }
+
+/* Overlays: a flat scrim, no blur */
+.scrim { position: fixed; inset: 0; z-index: 10; background: var(--scrim); }
+.dim { position: fixed; inset: 0; z-index: 4; background: rgb(10 10 13 / .45); }
+.menu { position: fixed; z-index: 12; width: 270px; border-radius: 10px; overflow: hidden; background: var(--float-hi); padding: 6px; }
+.menu .it { width: 100%; min-height: 36px; display: flex; align-items: center; gap: 12px; padding: 0 12px; font-size: 15px; text-align: left; border-radius: 4px; }
+.menu .it > svg { width: 19px; height: 19px; opacity: .85; margin-left: auto; }
+.menu .it.hl { background: var(--cell); }
+.menu .gap { height: 0; margin: 6px 4px; border-top: 1px dashed var(--float-border); }
+.menu .sub { color: var(--text-2); font-size: 13px; margin-left: auto; }
+.menu .sub + svg { margin-left: 0; }
+.menu .two { display: grid; gap: 1px; padding: 7px 0; }
+.menu .two small { color: var(--text-2); font-size: 12.5px; }
+.menu .tick { width: 18px; color: var(--text); opacity: 1 !important; margin-left: auto; }
+.lifted { position: fixed; z-index: 11; }
+.lifted .sq { background: var(--float); box-shadow: var(--edge), 0 6px 0 var(--ink); }
+.lifted .nm { color: var(--text); }
+.segc { margin-left: auto; display: flex; background: var(--bg); box-shadow: var(--well); border-radius: 6px; padding: 2px; }
+.segc b { font-weight: 500; font-size: 13px; padding: 3px 10px; border-radius: 4px; color: var(--text-2); }
+.segc b.on { background: var(--cell); color: var(--text); box-shadow: 0 2px 0 var(--ink); }
+.tog { margin-left: auto; width: 42px; height: 24px; border-radius: 4px; background: var(--text); position: relative; }
+.tog::after { content: ""; position: absolute; right: 3px; top: 3px; width: 18px; height: 18px; border-radius: 2px; background: var(--bg); }
+
+/* Search panel */
+.spanel { position: fixed; z-index: 6; left: 50%; transform: translateX(-50%); bottom: 100px; width: 660px; border-radius: 14px; padding: 18px 18px 8px; background: var(--float-hi); }
+.sh { font: 600 12px/18px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--text-2); padding: 0 6px 8px; display: flex; justify-content: space-between; }
+.sh button { color: var(--text-2); font: inherit; }
+.recent { display: flex; gap: 8px; padding: 0 0 18px; }
+.recent span { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px 0 11px; border-radius: 6px; background: var(--bg); box-shadow: var(--well); font-size: 14px; }
+.recent svg { width: 15px; height: 15px; opacity: .55; }
+.goto { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding-bottom: 18px; }
+.goto a { display: flex; align-items: center; gap: 10px; padding: 7px; border-radius: 8px; background: var(--cell); }
+.goto i { width: 42px; height: 42px; border-radius: 6px; background: var(--bg); flex: none; }
+.goto b { display: block; font-weight: 600; font-size: 14px; }
+.goto span { color: var(--text-2); font-size: 12.5px; }
+.added { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; padding-bottom: 14px; }
+.added .sq { border-radius: 8px; background: var(--cell); }
+.added .nm { font-size: 12px; padding-top: 6px; }
+.all { display: flex; align-items: center; justify-content: space-between; padding: 12px 6px 10px; border-top: 1px dashed var(--float-border); font-size: 14.5px; font-weight: 500; }
+.all svg { width: 16px; height: 16px; opacity: .55; }
+
+/* Folder overlay */
+.fopen { position: fixed; inset: 0; z-index: 11; display: grid; place-content: center; justify-items: center; gap: 20px; }
+.ftitle { display: flex; align-items: center; gap: 12px; font: 600 30px/1.1 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; letter-spacing: -.015em; }
+.ftitle .round { width: 38px; height: 38px; background: var(--float); box-shadow: var(--edge), 0 2px 0 var(--ink); }
+.ftitle .round svg { width: 18px; height: 18px; }
+.fpanel { width: 1160px; padding: 32px 36px 28px; border-radius: 16px; background: var(--float); box-shadow: var(--edge), var(--shadow-float); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px 26px; }
+.fpanel .sq { background: var(--tile); box-shadow: var(--well); }
+.fpanel .nm { color: var(--text); }
+.fmeta { color: var(--text-2); font-size: 13px; }
+.fclose { position: fixed; z-index: 12; top: 24px; right: 24px; width: 46px; height: 46px; border-radius: 8px; display: grid; place-items: center; background: var(--float); box-shadow: var(--edge), var(--shadow-float); }
+
+/* Viewer */
+.viewer { background: var(--bg); }
+.stage { position: fixed; inset: 0; background: radial-gradient(760px 560px at var(--cx, 50%) 48%, #24232b, #19181e 62%, #141318); } /* never pure black under art */
+.stage > i { position: absolute; inset: 0; }
+.info .stage > i { right: 420px; }
+.info { --cx: calc((100% - 420px) / 2); }
+.fab { position: fixed; z-index: 3; }
+.close { top: 24px; left: 24px; width: 48px; height: 48px; border-radius: 10px; display: grid; place-items: center; }
+.vtitle { top: 28px; left: var(--cx, 50%); transform: translateX(-50%); text-align: center; line-height: 1.3; }
+.info .vtitle { display: none; }
+.vtitle b { display: block; font-size: 15px; font-weight: 600; }
+.vtitle span { color: var(--text-2); font-size: 13px; }
+.caps { top: 24px; right: 24px; display: flex; gap: 2px; padding: 0 4px; height: 48px; border-radius: 10px; align-items: center; }
+.info .caps { right: 444px; }
+.caps button { width: 42px; height: 40px; border-radius: 6px; display: grid; place-items: center; }
+.caps button.on { background: var(--bg); box-shadow: var(--well); padding-top: 2px; } /* on = key held down */
+.vdock { left: var(--cx, 50%); }
+.vdock .seg:not(.primary) { background: var(--bg); box-shadow: var(--well); } /* Walk · East chip is a well */
+.panel { position: fixed; z-index: 4; top: 16px; right: 16px; bottom: 16px; width: 404px; border-radius: 14px; padding: 30px 24px 22px; display: flex; flex-direction: column; gap: 20px; background: var(--float-hi); }
+.panel h2 { font: 600 24px/1.15 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; letter-spacing: -.015em; }
+.panel h2 + p { color: var(--text-2); font-size: 14px; margin-top: 4px; }
+/* Spec sheet: labels left, mono values right, dashed rules */
+.group { border-top: 1px dashed var(--float-border); border-bottom: 1px dashed var(--float-border); }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 16px; min-height: 40px; padding: 0 4px; font-size: 14px; }
+.row + .row { border-top: 1px dashed var(--float-border); }
+.row > span:first-child { color: var(--text-2); }
+.row > span + span { font: 13px var(--mono); }
+.row svg { width: 14px; height: 14px; opacity: .6; stroke-width: 2.4; }
+.gh { display: flex; justify-content: space-between; align-items: center; padding: 0 4px 8px; font: 600 12px/18px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--text-2); }
+.gh button { color: var(--text); font: 600 13px/1 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; letter-spacing: 0; text-transform: none; padding: 5px 10px; border-radius: 4px; background: var(--cell); box-shadow: inset 0 0 0 1px var(--float-border), 0 2px 0 var(--ink); }
+.group.prompt { border: 0; border-radius: 6px; background: var(--bg); box-shadow: var(--well); }
+.prompt { padding: 12px 14px; font-size: 14px; line-height: 1.45; }
+.ext { margin-top: auto; text-align: center; color: var(--text-2); font-size: 13.5px; text-decoration: none; }

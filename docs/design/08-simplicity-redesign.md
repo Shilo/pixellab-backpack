@@ -117,6 +117,8 @@ Concept 1 is the strongest base. Concept 2 solves its two named weaknesses (look
 
 ## 6. The recommendation
 
+> **Update (owner choice, S-18):** the owner chose **Concept 4 "Glass Library"** (§12) as the layout. The rules in §6.1 and the function map in §7 still apply; where §6 describes Concept 1's switcher-and-grid first screen, §12 wins. The visual theme is being explored separately.
+
 **Base: Concept 1 "Just the Art"**, the Photos / Unsplash model. **Borrowed from Concept 2:** a quiet one-line name under each tile, the right-click / long-press context menu, and folders that open as an iOS-style overlay. **Kept from Concept 3 only as a possible future** empty-search or overview screen, not v1 (S-17).
 
 ### 6.1 Hard rules
@@ -374,3 +376,18 @@ The owner asked for a mix of Concept 2 and Concept 3: Concept 2's glass theming 
 | iOS App Library | Concepts 3, 4 | [Apple: find and use your apps in App Library](https://support.apple.com/guide/iphone/find-your-apps-in-app-library-iph87abad19a/ios) |
 | iCloud.com tile homepage | Concepts 3, 4 | [Apple: customize and use the homepage tiles on iCloud.com](https://support.apple.com/guide/icloud/customize-and-use-the-homepage-tiles-mm048a5aa9cc/icloud) · [9to5Mac: redesigned iCloud web interface](https://9to5mac.com/2022/11/16/icloud-web-interface-redesign-beta/) |
 | Unsplash photo page | Concept 1 download button | [unsplash.com](https://unsplash.com/) |
+
+## 14. Theme options for Concept 4
+
+The owner chose Concept 4's layout (S-18) and asked for themes beyond iOS glass. Research: [14-floating-ui-themes.md](../research/14-floating-ui-themes.md). Each theme keeps the layout, sizes, content and control counts identical; only the visual theme changes. Every theme uses solid floating surfaces (no blur), so text contrast no longer depends on the art underneath. Fonts in the renders fall back to system fonts (Segoe UI Variable, Cascadia Mono); each README names the intended font.
+
+| Theme | Inspiration | Look | Folder |
+|---|---|---|---|
+| Glass (baseline) | Apple Liquid Glass | Dark translucent glass dock and panels | [4-glass-library](../../mockups/simple/4-glass-library/README.md) |
+| A · Tonal Dock | Material 3 Expressive | Opaque tonal greys, pill dock, pastel Download button, vibrant blue selection bar | [a-tonal-dock](../../mockups/simple/themes/a-tonal-dock/README.md) |
+| B · Mica Command | Fluent 2 / Windows 11 | Tight 8 px cards, command-bar dock, split Download button, Settings-style info cards | [b-mica-command](../../mockups/simple/themes/b-mica-command/README.md) |
+| C · Quiet Graphite | Linear / Raycast | Flat warm greys, hairlines, no colour; light inverted Download; shortcut hints | [c-quiet-graphite](../../mockups/simple/themes/c-quiet-graphite/README.md) |
+| D · Nothing Mono | Nothing OS | Black, white outlines, dot-matrix numerals, single red Download | [d-nothing-mono](../../mockups/simple/themes/d-nothing-mono/README.md) |
+| E · Pixel Bezel | Retro-modern hardware keys | Chamfered keys, hard shadows, pixel numerals, mint Download, marching-ants selection | [e-pixel-bezel](../../mockups/simple/themes/e-pixel-bezel/README.md) |
+
+Note from research 14: the glass baseline's white-on-blue Download label is 3.65:1, below the 4.5:1 text minimum; any final theme must fix it.

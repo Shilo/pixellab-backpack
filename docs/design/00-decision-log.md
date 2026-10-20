@@ -35,7 +35,8 @@ The owner rejected every earlier mockup as too busy (2026-10-19). These rulings 
 | S-14 | Phone: same budgets. Title switcher left; expanding search icon (visible Cancel), Select and "…" right; menus as bottom sheets; viewer ✕ top left, ♡ ⓘ "…" top right, the chip above a full-width Download at the bottom; swipe = previous/next only; long press = context menu | Same functions, thumb-zone placement | research 12 R8 | active (08 §8) |
 | S-15 | One accent, only on the screen's primary action (viewer Download, selection-bar Download); the library has none. Chrome is quiet and monochrome, with a scrim over bright art. 07 §5 tokens, light and dark following the system, and 07 §7 invariants stand until a retuned token spec | Art carries the colour | research 12 R6 | active; retune open (08 §10 #6) |
 | S-16 | 02 §9.3's keymap stands (`L`, ←/→, `[` `]`, `,` `.`, `+` `-`, `Z`, `F`, `I`, `D`, `x`); the concept READMEs' different keys are not adopted | Behaviour is 02's; browser keys are never taken | 02 §9.3 | active |
-| S-17 | Concept 3's library tiles are only a possible future empty-search or overview screen, not v1 | An extra click before any art; small libraries look padded | Concept 3 README | deferred |
+| S-17 | Concept 3's library tiles are only a possible future empty-search or overview screen, not v1 | An extra click before any art; small libraries look padded | Concept 3 README | superseded by S-18 |
+| S-18 | **Owner choice (2026-10-19): Concept 4 "Glass Library" is the chosen layout** — full-screen App Library-style category tiles and large edge-to-edge asset cells, all navigation/search/options in a floating bottom dock that overlaps the content; detail screen 5 + 1 floating controls. Visual theme still open (glass is one candidate) | Owner preferred its minimalism, intuitiveness, and use of screen space | owner feedback; 08 §12 | active |
 
 ## 1. Final rulings (F)
 
