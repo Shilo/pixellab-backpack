@@ -65,15 +65,15 @@ const SPECS: Spec[] = [
   { id: 'ui', label: 'UI', pageSize: 100, path: '/ui-assets', rows: 'ui_assets', thumbField: 'image_url', nameFallback: 'prompt' },
   {
     id: 'tilesets', label: 'Top-down tilesets', pageSize: 100, path: '/tilesets', rows: 'tilesets', nameFallback: 'lower_description',
-    costly: helper((id) => `/mcp/tilesets/${id}/image`, 'Top-down tilesets'),
+    costly: helper((id) => `/mcp/tilesets/${encodeURIComponent(id)}/image`, 'Top-down tilesets'),
   },
   {
     id: 'tilesets-side', label: 'Sidescroller tilesets', pageSize: 50, path: '/tilesets-sidescroller', rows: 'tilesets', nameFallback: 'lower_description',
-    costly: helper((id) => `/mcp/sidescroller-tilesets/${id}/image`, 'Sidescroller tilesets'),
+    costly: helper((id) => `/mcp/sidescroller-tilesets/${encodeURIComponent(id)}/image`, 'Sidescroller tilesets'),
   },
   {
     id: 'isometric', label: 'Isometric tiles', pageSize: 100, path: '/isometric-tiles', rows: 'tiles', nameFallback: 'description',
-    costly: helper((id) => `/mcp/isometric-tile/${id}/download`, 'Isometric tiles'),
+    costly: helper((id) => `/mcp/isometric-tile/${encodeURIComponent(id)}/download`, 'Isometric tiles'),
   },
   {
     id: 'tiles-pro', label: 'Tiles Pro', pageSize: 50, path: '/tiles-pro', rows: 'tiles', nameFallback: 'description',

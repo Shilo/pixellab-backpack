@@ -130,3 +130,47 @@ test('failed lists show a notice with Try again, which asks again once', async (
   await expect(more).toHaveCount(0);
   await expect.poll(() => mock.hits.filter((h) => h.url.includes('offset=99')).length).toBe(2);
 });
+
+test('a stop shows Try again, survives going offline and back, and Try again recovers without a reload', async ({ page, context }) => {
+  test.setTimeout(60_000);
+  const mock = await mockPixelLab(page);
+  await page.goto('/');
+  await connect(page);
+  await page.getByRole('link', { name: 'Characters, 250' }).click();
+  await settle(page, mock);
+  mock.mode = 'down';
+  await toBottom(page);
+  const stopped = page.getByRole('status').filter({ hasText: "PixelLab isn't answering right now." });
+  await expect(stopped).toBeVisible({ timeout: 20_000 });
+  // Offline, open Objects (pictures not seen yet fail), then come back online. Mocked routes still answer while
+  // offline, so the picture failures are made explicit.
+  const noNet = (route: import('@playwright/test').Route) => route.abort('internetdisconnected');
+  await page.route('https://backblaze.pixellab.ai/**', noNet);
+  await context.setOffline(true);
+  await page.getByRole('button', { name: 'Library' }).click();
+  await page.getByRole('link', { name: 'Objects, 12' }).click();
+  await page.waitForTimeout(800);
+  await page.unroute('https://backblaze.pixellab.ai/**', noNet);
+  await context.setOffline(false);
+  await page.waitForTimeout(300);
+  await expect(stopped).toBeVisible(); // still stopped: the way out stays on screen
+  mock.mode = 'ok';
+  const asked = mock.hits.length;
+  await stopped.getByRole('button', { name: 'Try again' }).click();
+  await expect(stopped).toHaveCount(0);
+  await expect.poll(() => mock.hits.slice(asked).some((h) => h.url.includes('/v2/characters?limit=100&offset=99'))).toBe(true);
+  await expect(page.getByRole('status').filter({ hasText: 'Try again' })).toHaveCount(0);
+});
+
+test('one failed picture leaves the library on screen', async ({ page }) => {
+  const mock = await mockPixelLab(page);
+  await page.route('https://backblaze.pixellab.ai/file/a/a-characters-0.png', (route) => route.abort('connectionreset'));
+  await page.goto('/');
+  await connect(page);
+  await settle(page, mock);
+  await expect(page.getByRole('link', { name: 'Characters, 250' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: "Can't reach PixelLab right now." })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Characters, 250' }).click();
+  await expect(page.getByTitle('Character 2', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: "Can't reach PixelLab right now." })).toHaveCount(0);
+});

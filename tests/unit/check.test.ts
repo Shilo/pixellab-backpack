@@ -104,9 +104,21 @@ describe('joinNextPage', () => {
     expect(r.deepLoadedAt).toBe(9);
   });
 
-  it('overlap mismatch (key or fingerprint): reload', () => {
+  it('overlap row is a different asset: reload', () => {
     expect(joinNextPage(saved, N, cards(N, N), 9)).toBe('reload');
-    expect(joinNextPage(saved, N, [card(N - 1, 'z'), ...cards(N, 4)], 9)).toBe('reload');
+  });
+
+  it('overlap row is the same asset with a new fingerprint: joined, the fresh row replaces the old one', () => {
+    const fresh = card(N - 1, 'z');
+    const r = joinNextPage(saved, N, [fresh, ...cards(N, 4)], 9) as FamilyState;
+    expect(r.cards.map((c) => c.key)).toEqual(['k0', 'k1', 'k2', 'k3', 'k4', 'k5', 'k6', 'k7', 'k8']);
+    expect(r.cards[N - 1]).toBe(fresh);
+  });
+
+  it('unchanged overlap row keeps the saved card (and its resolved picture)', () => {
+    const withThumb = state(12, [...cards(0, N - 1), { ...card(N - 1), thumb: 'img' }], 3);
+    const r = joinNextPage(withThumb, N, cards(N - 1, N), 9) as FamilyState;
+    expect(r.cards[N - 1]).toBe(withThumb.cards[N - 1]);
   });
 
   it('empty page or bad offset: reload', () => {

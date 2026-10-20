@@ -4,8 +4,6 @@ import type { Card, FamilyState, Page } from '../types';
 export const CHECK_TTL_MS = 3_600_000;
 export const DEEP_TTL_MS = 7 * 86_400_000;
 
-const same = (a: Card, b: Card) => a.key === b.key && a.fp === b.fp;
-
 /** Fold a fresh page 0 into the saved copy. */
 export function applyCheck(saved: FamilyState | undefined, page0: Page, now: number): FamilyState {
   // Same asset + same fingerprint keeps the saved card (and its resolved picture), in every branch.
@@ -22,10 +20,13 @@ export function applyCheck(saved: FamilyState | undefined, page0: Page, now: num
   return { ...saved, total: page0.total, cards: [...cards, ...saved.cards.slice(n - added)], checkedAt: now };
 }
 
-/** Append the page that was requested starting one row back; 'reload' when the list shifted. */
+/** Append the page that was requested starting one row back; 'reload' when the list shifted (a different asset in the overlap row).
+ * A changed overlap row (same asset, new fingerprint) is updated in place; an unchanged one keeps the saved card and its picture. */
 export function joinNextPage(saved: FamilyState, offset: number, page: Card[], now: number): FamilyState | 'reload' {
-  if (offset < 1 || saved.cards.length < offset || !page.length || !same(page[0], saved.cards[offset - 1])) return 'reload';
-  return { ...saved, cards: [...saved.cards.slice(0, offset), ...page.slice(1)], deepLoadedAt: saved.deepLoadedAt ?? now };
+  const prev = saved.cards[offset - 1];
+  if (offset < 1 || !prev || !page.length || page[0].key !== prev.key) return 'reload';
+  const head = page[0].fp === prev.fp ? prev : page[0];
+  return { ...saved, cards: [...saved.cards.slice(0, offset - 1), head, ...page.slice(1)], deepLoadedAt: saved.deepLoadedAt ?? now };
 }
 
 export const isFresh = (state: FamilyState | undefined, now: number) => !!state && now - state.checkedAt < CHECK_TTL_MS;

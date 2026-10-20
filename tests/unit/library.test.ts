@@ -184,6 +184,35 @@ describe('open check', () => {
     expect(lib.hasKey).toBe(false);
   });
 
+  it.each([
+    ['blocked', 'blocked'],
+    ['offline', 'offline'],
+    ['cap', 'paused'],
+    ['stopped', 'server'],
+    ['http', 'server'],
+  ])("connect: a '%s' failure → '%s', key not kept", async (kind, result) => {
+    h.st.fail = new h.HttpError(kind, kind === 'http' ? 500 : undefined);
+    const lib = await tab();
+    expect(await lib.connect('key')).toBe(result);
+    expect(h.st.key).toBeNull();
+    expect(lib.hasKey).toBe(false);
+  });
+
+  it("connect: an unexpected list answer → 'server'", async () => {
+    h.apiGet.mockRejectedValueOnce(new Error('Characters: unexpected list answer'));
+    expect(await (await tab()).connect('key')).toBe('server');
+  });
+
+  it('a top-down tileset that is also in the sidescroller list is shown once, in the grid and the mosaic', async () => {
+    h.st.lists['tilesets-side'].rows[0].id = 'a-tilesets-0';
+    const lib = await tab();
+    await lib.connect('key');
+    expect(lib.shown('tilesets').map((c) => c.id)).toEqual(['a-tilesets-1', 'a-tilesets-2']);
+    expect(lib.shown('tilesets-side').map((c) => c.id)).toEqual(['a-tilesets-0', 'a-tilesets-side-1', 'a-tilesets-side-2']);
+    const mosaic = lib.categories.find((c) => c.id === 'tiles')!.mosaic;
+    expect(mosaic.map((m) => m.card.id)).toEqual(['a-tilesets-1', 'a-tilesets-2', 'a-tilesets-0', 'a-tilesets-side-1']);
+  });
+
   it('a lost key during a check keeps the saved list', async () => {
     await (await tab()).connect('key');
     later(HOUR + 1);

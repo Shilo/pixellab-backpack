@@ -73,8 +73,9 @@ const activityListeners = new Set<(e: ActivityEntry) => void>();
 let sessionApi = 0;
 let imageHost = 0;
 
+/** While halted the status stays 'stopped'/'blocked' until retry(), so the UI always offers Try again. */
 function setStatus(s: Status): void {
-  if (s === status) return;
+  if (halted || s === status) return;
   status = s;
   statusListeners.forEach((cb) => cb(s));
 }
@@ -212,17 +213,14 @@ function pump(): void {
 }
 
 function stop(why: 'stopped' | 'blocked' = 'stopped'): void {
+  setStatus(why); // before the flag, which freezes the status
   halted = true;
-  setStatus(why);
   rejectQueue('stopped');
 }
 
-/** A thrown fetch: aborted, offline, or (browser online) blocked by CORS, an extension, a firewall or an outage. */
-function netError(e: unknown): HttpError {
-  if ((e as Error)?.name === 'AbortError') return new HttpError('cancelled');
-  const kind = offline() ? 'offline' : 'blocked';
-  setStatus(kind);
-  return new HttpError(kind);
+/** A thrown fetch: aborted, offline, or (browser online) unreachable: CORS, an extension, a firewall or an outage. */
+function netKind(e: unknown): 'cancelled' | 'offline' | 'blocked' {
+  return (e as Error)?.name === 'AbortError' ? 'cancelled' : offline() ? 'offline' : 'blocked';
 }
 
 async function attempt(job: Job): Promise<void> {
@@ -241,9 +239,11 @@ async function attempt(job: Job): Promise<void> {
     } catch (e) {
       // Offline and aborts end here. A failure while online may be an outage answering without CORS
       // headers, so it is treated like a 5xx below: retried, counted, and 'blocked' only at the end.
-      if ((e as Error)?.name === 'AbortError' || offline()) return fail(job, netError(e), t0);
+      const kind = netKind(e);
+      if (kind === 'offline') setStatus(kind);
+      if (kind !== 'blocked') return fail(job, new HttpError(kind), t0);
     }
-    if (res && !halted && (status === 'offline' || status === 'blocked')) setStatus('ok');
+    if (res && (status === 'offline' || status === 'blocked')) setStatus('ok');
     const s = res ? res.status : 0;
     if (res?.ok) {
       fails = 0;
@@ -407,13 +407,14 @@ async function direct(url: string, o: Opts): Promise<Response> {
     record('image', label, res.ok ? 'ok' : 'error', t0, res.status, Number(res.headers.get('content-length')) || undefined);
     return res;
   } catch (e) {
-    const err = netError(e);
-    record('image', label, err.kind === 'cancelled' ? 'cancelled' : 'error', t0);
-    throw err;
+    // One failed picture never changes the app's status (the API side needs 3 failures; 'offline' comes from the browser).
+    const kind = netKind(e);
+    record('image', label, kind === 'cancelled' ? 'cancelled' : 'error', t0);
+    throw new HttpError(kind);
   }
 }
 
 // ---- browser events ----
 if (typeof document !== 'undefined') document.addEventListener('visibilitychange', pump);
 globalThis.addEventListener?.('online', () => status === 'offline' && setStatus('ok'));
-globalThis.addEventListener?.('offline', () => !halted && setStatus('offline'));
+globalThis.addEventListener?.('offline', () => setStatus('offline'));

@@ -4,13 +4,15 @@
   import { APP_NAME, APP_SHORT } from '../app';
   import { library } from '../data/library.svelte';
 
-  type Phase = 'idle' | 'testing' | 'empty' | 'invalid' | 'offline' | 'blocked';
+  type Phase = 'idle' | 'testing' | 'empty' | 'invalid' | 'offline' | 'blocked' | 'server' | 'paused';
 
   let key = $state(''); // only ever in this component, the field and library.connect; never logged
   let show = $state(false);
   let phase = $state<Phase>('idle');
   let input: HTMLInputElement | undefined = $state();
 
+  // Shown in place of the form after a mid-session 401 (read once: testing a new key clears the status).
+  const reconnect = library.status === 'key-lost';
   // A saved list without a key means a new tab (the key lives in one tab only): no storage read needed.
   const welcomeBack = $derived(Object.keys(library.families).length > 0);
   const testing = $derived(phase === 'testing');
@@ -40,6 +42,27 @@
     if (matchMedia('(pointer: fine)').matches) input?.focus(); // coarse pointers: no autofocus, the keyboard would cover the form
   });
 
+  const again = () => {
+    library.retry();
+    test();
+  };
+  // Full-width states: the test could not finish, so there is nothing to say about the key.
+  const full = $derived(
+    {
+      blocked: { title: "Can't reach PixelLab right now.", text: 'Check your connection and try again.', action: 'Try again', on: again },
+      server: { title: "PixelLab isn't answering right now.", text: 'Try again in a moment.', action: 'Try again', on: again },
+      paused: {
+        title: "Paused to go easy on PixelLab's servers.",
+        text: 'This device has sent a lot of requests to PixelLab today.',
+        action: 'Keep loading',
+        on: () => {
+          library.keepLoading();
+          test();
+        },
+      },
+    }[phase as 'blocked' | 'server' | 'paused'] ?? null,
+  );
+
   const hint = $derived(
     {
       empty: 'Paste your API key first.',
@@ -49,17 +72,17 @@
   );
 </script>
 
-{#if phase === 'blocked'}
+{#if full}
   <main class="g1-state">
     <div class="glass-empty g1-empty vt-scrim">
       <span class="glass-empty__icon">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M6 6l12 12" /></svg>
       </span>
-      <h2 class="glass-empty__title">PixelLab is blocking this browser</h2>
-      <p class="glass-empty__text">PixelLab may have changed how its API works with websites. Nothing is wrong with your account.</p>
+      <h2 class="glass-empty__title">{full.title}</h2>
+      <p class="glass-empty__text">{full.text}</p>
       <div class="glass-empty__action">
-        <button type="button" class="glass-btn glass-btn--primary glass-btn--auto" onclick={() => { library.retry(); test(); }}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.5-5.8M20 4v4.5h-4.5" /></svg>Try again
+        <button type="button" class="glass-btn glass-btn--primary glass-btn--auto" onclick={full.on}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.5-5.8M20 4v4.5h-4.5" /></svg>{full.action}
         </button>
       </div>
     </div>
@@ -76,7 +99,12 @@
     </section>
 
     <section class="glass-card glass-card--glow g1-form">
-      {#if welcomeBack}
+      {#if reconnect}
+        <div class="g1-note g1-welcome">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 11v5M12 7.9v.1" /></svg>
+          <p><b>Reconnect to PixelLab.</b> Your API key stopped working. It may have been replaced in your PixelLab account. Paste a new one to continue.</p>
+        </div>
+      {:else if welcomeBack}
         <div class="g1-note g1-welcome">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 11v5M12 7.9v.1" /></svg>
           <p>Welcome back! Your API key was kept for one tab only, so paste it again here.</p>
@@ -210,7 +238,7 @@
   .g1-welcome p { color: var(--gl-color-text); font-size: 14px; }
   :is(.g1-link, .g1-reveal, .g1-test):focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
-  /* Blocked: a full-width state, no form */
+  /* Full-width states (can't reach, not answering, paused): no form */
   .g1-state { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; }
   .glass-empty.g1-empty { max-width: 460px; box-sizing: border-box; padding: 40px 40px 34px; gap: 10px; border-radius: 28px; border: 1px solid var(--gl-border-subtle);
     background: linear-gradient(var(--gl-surface-2), var(--gl-surface-2)), var(--vt-scrim); backdrop-filter: blur(var(--gl-blur)); -webkit-backdrop-filter: blur(var(--gl-blur)); box-shadow: var(--gl-shadow-modal); }

@@ -167,6 +167,15 @@ describe('list details', () => {
     await expect(family('ui', { ui: { ui_assets: [] } }).fam.list(0)).rejects.toThrow();
   });
 
+  test('helper URLs encode the id', async () => {
+    const row = { id: 'a/b?c#d', name: 'x', status: 'completed' };
+    for (const id of ['tilesets', 'tilesets-side', 'isometric'] as FamilyId[]) {
+      const { fam, log } = family(id, { [id]: { [id === 'isometric' ? 'tiles' : 'tilesets']: [row], total: 1 } });
+      await fam.art((await fam.list(0)).cards[0]);
+      expect(log.api.at(-1)).toContain('/a%2Fb%3Fc%23d/');
+    }
+  });
+
   test('keys differ across families for the same id', async () => {
     const row = { id: 'same-id', name: 'x', status: 'completed' };
     const a = await family('tilesets', { tilesets: { tilesets: [row], total: 1 } }).fam.list(0);

@@ -65,8 +65,8 @@ export interface Mock {
   hits: Hit[];
   /** ids of rows that are still generating: none may ever appear in a request. */
   unfinishedIds: string[];
-  /** 'ok' | 'blocked' (connection refused, like a CORS failure). */
-  mode: 'ok' | 'blocked';
+  /** 'ok' | 'blocked' (connection refused, like a CORS failure) | 'down' (the API answers 503; pictures still load). */
+  mode: 'ok' | 'blocked' | 'down';
   /** API requests whose path + query start with one of these answer 404 (a failure that is not retried). */
   fail: string[];
   counts: Record<string, Record<Fam, number>>;
@@ -93,6 +93,7 @@ export async function mockPixelLab(target: Page | BrowserContext, counts: Partia
     const listFam = (Object.keys(FAMS) as Fam[]).find((f) => u.pathname === `/v2${FAMS[f].path}`);
     mock.hits.push({ method: req.method(), url: req.url(), host: 'api', redirected: false, list: !!listFam });
     if (mock.mode === 'blocked') return route.abort('connectionrefused');
+    if (mock.mode === 'down') return route.fulfill({ status: 503, headers: CORS });
     if (mock.fail.some((f) => (u.pathname + u.search).startsWith(f))) return route.fulfill({ status: 404, headers: CORS });
     const json = (body: unknown, status = 200) => route.fulfill({ status, headers: CORS, contentType: 'application/json', body: JSON.stringify(body) });
 

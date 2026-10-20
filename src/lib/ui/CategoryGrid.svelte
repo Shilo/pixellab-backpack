@@ -43,11 +43,11 @@
   let m = $state<Metrics | null>(null);
   let scrollTop = $state(0);
 
-  // Done cards of the category, family after family (unfinished or failed assets are hidden).
+  // Shown cards of the category, family after family (unfinished, failed and duplicate assets are hidden).
   const segs = $derived.by(() => {
     let end = 0;
     return CATEGORIES.find((c) => c.id === categoryId)!.families.map((id) => {
-      const cards = (library.families[id]?.cards ?? []).filter((c) => c.done);
+      const cards = library.shown(id);
       end += cards.length;
       return { id, cards, end };
     });

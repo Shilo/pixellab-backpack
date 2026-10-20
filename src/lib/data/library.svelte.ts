@@ -2,7 +2,7 @@
 // PixelLab (first-page check on open, the 1-hour rule, paging on scroll, art once) and holds the state screens read.
 import { APP_ID } from '../app';
 import { CATEGORIES } from '../categories';
-import { createFamilies, type Family } from '../api/families';
+import { createFamilies, dedupeTilesets, type Family } from '../api/families';
 import { apiGet, getKey, HttpError, keepLoading, onStatus, publicGet, retry, setKey, type Status } from '../api/http';
 import type { Card, FamilyId, FamilyState, Page } from '../types';
 import { applyCheck, dropExpiredDeep, isFresh, joinNextPage } from './check';
@@ -32,23 +32,25 @@ class Library {
   /** First-page requests the saved copy made unnecessary (fresh families, Refresh within a minute). Shown in Activity. */
   avoided = $state(0);
 
-  /** CATEGORIES with a count and up to 4 mosaic cards (page 0, done cards only). */
+  /** CATEGORIES with a count and the first 4 shown cards as the mosaic. */
   categories = $derived(
     CATEGORIES.map((c) => ({
       ...c,
       count: c.families.reduce((n, id) => n + (this.families[id]?.total ?? 0), 0),
-      mosaic: c.families
-        .flatMap((familyId) =>
-          (this.families[familyId]?.cards.slice(0, byId[familyId].pageSize) ?? []).filter((card) => card.done).map((card) => ({ card, familyId })),
-        )
-        .slice(0, 4),
+      mosaic: c.families.flatMap((familyId) => this.shown(familyId).map((card) => ({ card, familyId }))).slice(0, 4),
     })),
   );
 
+  /** The cards screens show: done only, and a top-down tileset that is also in the sidescroller list is shown once (there). */
+  shown = (id: FamilyId): Card[] => {
+    const done = (this.families[id]?.cards ?? []).filter((c) => c.done);
+    return id === 'tilesets' ? dedupeTilesets(done, this.families['tilesets-side']?.cards ?? []) : done;
+  };
+
   family = (id: FamilyId): Family => byId[id];
 
-  /** The key test IS the Characters first-page request. */
-  connect = async (key: string): Promise<'ok' | 'wrong-key' | 'offline' | 'blocked'> => {
+  /** The key test IS the Characters first-page request. 'server': PixelLab answered badly or the safety net stopped; 'paused': daily cap. */
+  connect = async (key: string): Promise<'ok' | 'wrong-key' | 'offline' | 'blocked' | 'server' | 'paused'> => {
     setKey(key);
     await adopt();
     let page: Page;
@@ -57,8 +59,8 @@ class Library {
     } catch (e) {
       setKey(null); // ponytail: an unverified key is never kept; the key screen keeps the typed text
       this.hasKey = false;
-      if (e instanceof HttpError && e.kind === 'key-lost') return 'wrong-key';
-      return e instanceof HttpError && e.kind === 'offline' ? 'offline' : 'blocked';
+      const kind = e instanceof HttpError ? e.kind : null;
+      return kind === 'key-lost' ? 'wrong-key' : kind === 'offline' || kind === 'blocked' ? kind : kind === 'cap' ? 'paused' : 'server';
     }
     const saved = this.families.characters;
     // ponytail: an account with 0 saved Characters cannot be told apart, so it keeps the copy (fresh families up to 1 h)

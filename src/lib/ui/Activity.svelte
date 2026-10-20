@@ -5,7 +5,7 @@
 
   const KEEP = 200; // ponytail: newest 200 only, memory-only log; raise or page it if a longer history is ever needed
   const STATUS: Record<string, string> = {
-    ok: 'OK', slowed: 'Slowed down', paused: 'Paused (daily cap)', stopped: 'Stopped', offline: 'Offline', blocked: 'Blocked', 'key-lost': 'Key lost',
+    ok: 'OK', slowed: 'Slowed down', paused: 'Paused (daily cap)', stopped: 'Stopped', offline: 'Offline', blocked: "Can't reach", 'key-lost': 'Key lost',
   };
 
   // Subscribed when this module loads, so requests made while the panel is closed are listed too. Newest first.

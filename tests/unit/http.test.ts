@@ -396,6 +396,58 @@ test('a request that succeeds while the queue is halted on "blocked" does not cl
   expect(http.getCounters().status).toBe('ok');
 });
 
+test('a stopped queue stays stopped: a late 429 and browser events never show ok; only Try again recovers', async () => {
+  const on: Record<string, () => void> = {};
+  vi.stubGlobal('addEventListener', (type: string, cb: () => void) => void (on[type] = cb));
+  http = await loadModule();
+  http.setKey(KEY);
+  const late = outcome(http.apiGet('/late'));
+  const bad = outcome(http.apiGet('/bad'));
+  await tick();
+  pending[1].reply(500);
+  await tick(2000);
+  pending[2].reply(500);
+  await tick(4000);
+  pending[3].reply(500);
+  expect((await bad).err?.kind).toBe('stopped');
+  pending[0].reply(429); // the other request was in flight and lands after the stop
+  expect((await late).err?.kind).toBe('stopped');
+  expect(http.getCounters().status).toBe('stopped');
+  // the user scrolls offline (a picture fails), then the connection comes back
+  vi.stubGlobal('navigator', { onLine: false });
+  on.offline();
+  const pic = outcome(http.publicGet(`${IMG}/a.png`));
+  await tick();
+  pending.at(-1)!.fail(new TypeError('Failed to fetch'));
+  expect((await pic).err?.kind).toBe('offline');
+  vi.stubGlobal('navigator', { onLine: true });
+  on.online();
+  await tick(60_000); // past the 429 pause: the scheduler wakes up
+  expect(http.getCounters().status).toBe('stopped');
+  expect((await outcome(http.apiGet('/next'))).err?.kind).toBe('stopped');
+  http.retry();
+  expect(http.getCounters().status).toBe('ok');
+  const again = outcome(http.apiGet('/again'));
+  await tick();
+  pending.at(-1)!.reply();
+  expect((await again).err).toBeUndefined();
+});
+
+test('a failed picture from the image host throws but never changes the status', async () => {
+  const seen: string[] = [];
+  http.onStatus((s) => seen.push(s));
+  const pic = outcome(http.publicGet(`${IMG}/a.png`));
+  await tick();
+  pending[0].fail(new TypeError('Failed to fetch'));
+  expect((await pic).err?.kind).toBe('blocked');
+  expect(http.getCounters().status).toBe('ok');
+  const api = outcome(http.apiGet('/characters'));
+  await tick();
+  pending[1].reply();
+  expect((await api).err).toBeUndefined();
+  expect(seen).toEqual([]);
+});
+
 test('a network failure followed by success is retried and resolves', async () => {
   const p = outcome(http.apiGet('/characters'));
   await tick();
