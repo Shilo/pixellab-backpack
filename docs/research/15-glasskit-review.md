@@ -1,5 +1,7 @@
 # 15: GlassKit review
 
+> Note: `mockups/simple/` is kept locally and not published, so links to it from this file do not resolve on the public repo.
+
 Research date: 2026-10-19. The owner asked whether Vitrine should use **GlassKit** ([site](https://glasskit.jungherz.com/), [repo](https://github.com/JUNGHERZ/GlassKit)). This review rests on a read of the whole library at commit [`c8558ab`](https://github.com/JUNGHERZ/GlassKit/tree/c8558abb020a1c163f4aec07fbc0b3def7064fc2) (v1.27.0, 2026-10-18), its npm package, the live site, and a build of Concept 4 on it ([theme F mockup](../../mockups/simple/themes/f-glasskit/README.md)). Nothing from the repo was run. Line links below point at that commit (`gk:` = `https://github.com/JUNGHERZ/GlassKit/blob/c8558ab/`).
 
 ## Verdict

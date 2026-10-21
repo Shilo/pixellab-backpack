@@ -1,6 +1,6 @@
 # MVP plan: PixelLab Backpack
 
-Status: 2026-10-19. Draft for the owner. "Vitrine" is a placeholder name (see concern 1).
+Status: 2026-10-19. Draft for the owner. The name is decided: PixelLab Backpack (see concern 1). The MVP and Phases 2 to 4 are built; owner checks remain (T7, Phase 0 Q1, Q4, Q6).
 
 **What the MVP is.** Paste your PixelLab API key. See your library as category tiles. Open a category, scroll through your art, and go back. That's it. Everything else waits.
 
@@ -45,11 +45,11 @@ Status: 2026-10-19. Draft for the owner. "Vitrine" is a placeholder name (see co
 | Option | Cost |
 |---|---|
 | Pick the name now | Blocks nothing, but takes your time now |
-| Keep "Vitrine" as a placeholder | Free in the MVP. Must be decided before folders, backups or real users arrive |
+| Keep "Vitrine" as a placeholder | Free in the MVP. Must be decided before folders, backups or real users arrive (not taken; the name was decided) |
 
 **Recommendation.** Keep "Vitrine" in the one constant. Decide the final name before the first feature that saves your own data (favorites, folders, backup) or before anyone else uses the app.
 
-**Status: DEFERRED.**
+**Status: DECIDED** (PixelLab Backpack, 2026-10-20).
 
 ---
 
@@ -308,7 +308,7 @@ Copy comes word for word from [02](../design/02-ux-spec.md) §12 and the mockups
 - **One gap:** for every request that carries your key, the browser first sends PixelLab a tiny automatic "is this website allowed to talk to you?" message. The browser does this on its own and hides it from the app, so the panel can only estimate how many there were (about one per kind of request every 10 minutes). Nothing in it is private and it does no real work, but it does reach PixelLab's server, which is why we count it.
 - **Cost:** it reads numbers the network module already keeps, so it adds no requests. The log lives only in memory and clears when the tab closes.
 
-**Status: PROPOSED** (decision 8).
+**Status: BUILT** (decision 8; see [Phase 2](phase2-plan.md) and the [MVP build log](mvp-build-log.md)).
 
 ---
 
@@ -321,7 +321,7 @@ Each has a recommended default. If you don't decide, the default applies and not
 | 1 | Keep the saved asset list on the device in "this tab only" key mode? | **Yes** (R6) | Without it, every new tab is a first open, and scrolled pages are paid again every time. The key itself still lives in the tab only. The list holds only names and picture links of your own art |
 | 2 | Leave Images and Maps out of the MVP? | **Yes, hidden** | See concern 5 |
 | 3 | Send PixelLab the questions in concern 2 (especially picture links in tileset list rows)? | **Yes, soon**; the MVP doesn't wait for answers | Each "yes" lowers the load. It also starts the ToS conversation needed before any public launch (D31) |
-| 4 | Who uses the MVP? | **Only you, privately** | The MVP has no "Forget key" button (Settings is inert). Until Settings ships, clearing the browser's site data removes the saved list. Pasting another account's key replaces the saved list by itself (concern 2, step 2) |
+| 4 | Who uses the MVP? | **Only you, privately** | The MVP had no "Forget key" button; Settings (Forget key, Keep me signed in) shipped in [Phase 2](phase2-plan.md). Pasting another account's key replaces the saved list by itself (concern 2, step 2) |
 | 5 | Run the 6 owner checks in [Phase 0](#phase-0-checks-owner-run-real-key) with your real key? | **Yes**, about 1 hour, read-only, no spending | They confirm the data shapes and two unknowns the MVP relies on |
 | 6 | Daily cap of 1,000 API requests per device | **Keep 1,000** | A daily visit uses 7. Scrolling through every Tilesets & tiles item uses about 376, once per device |
 | 7 | Final name | **Decided: PixelLab Backpack** | Owner choice, 2026-10-20 |
@@ -343,7 +343,7 @@ src/
   app.css                    layout, sizing and accessibility fixes on top of GlassKit (S-21 only)
   vendor/glasskit/           GlassKit v1.27.0 CSS + LICENSE, pinned and unmodified (S-20)
   lib/
-    app.ts                   APP_ID / APP_NAME: the only place the name "Vitrine" lives
+    app.ts                   APP_ID / APP_NAME: the only place the product name lives
     router.svelte.ts         #/ (home) and #/c/<category> (grid); browser Back works
     api/
       http.ts                the ONLY code that talks to PixelLab: holds the key, view-only guard, safety net
@@ -420,11 +420,11 @@ loadMore(id: Family['id']): Promise<void>
 About 1 hour in desktop Chrome, using the console helper in [plan 06 §2.2](../design/06-implementation-plan.md) (no key in any file, record only shapes and counts, never IDs or links; 06 §2.1 rules apply). Nothing is created, changed or spent. Results go to `docs/research/13-phase0-results.md`. The build can start before these finish, on made-up fixtures (B-1).
 
 - [ ] **Q1 Reads are free** (06 P0-1 + P0-14) `[P]`: check the balance before and after the other checks. Done when: credits unchanged.
-- [ ] **Q2 List row shapes** (06 P0-4) `[P]`: record the fields of one page of each of the 7 REST lists (name, status, picture link, total) and the wrong-key answer. Done when: shape-only fixtures saved in `tests/fixtures/rest/`.
-- [ ] **Q3 Pictures load in the browser** (06 P0-3, list links only) `[P]`: fetch one character, object and UI picture link and one Tiles Pro tile link from the page. Done when: each returns an image, with the host recorded.
-- [ ] **Q4 Tileset helpers in the browser** (R6 §4.1) `[P]`: fetch one top-down and one sidescroller helper with no headers, and one isometric download. Done when: the final picture link can be read and the image loads; a failed tileset answers 423.
-- [ ] **Q5 Sort order** (R6 §3, new) `[P]`: on page 0 of characters, objects, top-down tilesets and isometric tiles, check that rows are newest first. Done when: each recorded as newest first or not.
-- [ ] **Q6 Tileset overlap** (06 P0-5) `[P]`: does the top-down list also contain the sidescroller tilesets? Done when: the three counts recorded. If it contains all of them, drop the sidescroller list (one fewer request per open).
+- [x] **Q2 List row shapes** (06 P0-4) `[P]`: record the fields of one page of each of the 7 REST lists (name, status, picture link, total) and the wrong-key answer. Done when: shape-only fixtures saved in `tests/fixtures/rest/`. *Answered, see [results](../research/13-phase0-results.md).*
+- [x] **Q3 Pictures load in the browser** (06 P0-3, list links only) `[P]`: fetch one character, object and UI picture link and one Tiles Pro tile link from the page. Done when: each returns an image, with the host recorded. *Answered, see [results](../research/13-phase0-results.md).*
+- [ ] **Q4 Tileset helpers in the browser** (R6 §4.1) `[P]`: fetch one top-down and one sidescroller helper with no headers, and one isometric download. Done when: the final picture link can be read and the image loads; a failed tileset answers 423. *Partly answered (top-down only), see [results](../research/13-phase0-results.md); left open.*
+- [x] **Q5 Sort order** (R6 §3, new) `[P]`: on page 0 of characters, objects, top-down tilesets and isometric tiles, check that rows are newest first. Done when: each recorded as newest first or not. *Answered (all newest first), see [results](../research/13-phase0-results.md).*
+- [ ] **Q6 Tileset overlap** (06 P0-5) `[P]`: does the top-down list also contain the sidescroller tilesets? Done when: the three counts recorded. If it contains all of them, drop the sidescroller list (one fewer request per open). *Open, owner check.*
 
 ### MVP build
 
@@ -452,7 +452,7 @@ About 1 hour in desktop Chrome, using the console helper in [plan 06 §2.2](../d
 - [x] **T4 Key screen** (e2e, mocked API) `[P]`: good key, wrong key, offline, blocked, welcome back; the key never appears in the address bar or in storage outside the tab. *(with B8)*
 - [x] **T5 Navigation** (e2e) `[P]`: home → category → scroll loads more → back → home, by ‹ Library and by browser Back; desktop 1440 px and phone 390 px; no sideways scroll; keyboard reaches every working control. *(with B10)*
 - [x] **T6 Request counter** (e2e) `[P]`: first open = 7 API requests (+ up to 4 tileset helpers for the mosaic); back within an hour = 0; key pasted in a new tab within the hour = 1; another account's key wipes the saved copy; only GET requests; no key in any URL; no request for unfinished rows; the daily-cap banner appears (cap lowered for the test). *(with B7, B11)*
-- [ ] **T7 Real-key check** (owner-run, from a checklist the builder writes, B-2): open the MVP with your key and DevTools; count requests on first open, on a reopen within the hour, and the next day. Done when: the counts match the "Recommended MVP" row in concern 2 (allowing for new assets). *(last)*
+- [ ] **T7 Real-key check** (owner-run; checklist in [Phase 0 results](../research/13-phase0-results.md#t7-owner-checklist-count-requests-in-activity)): open the MVP with your key and DevTools; count requests on first open, on a reopen within the hour, and the next day. Done when: the counts match the "Recommended MVP" row in concern 2 (allowing for new assets). Read the numbers in the Activity panel; no debug hook is needed. Expected: first open 7 API requests (+ up to 4 tileset pictures), reopen within the hour 0, next day 7. Stays unticked until the owner has run it. *(last)*
 
 ### Deferred backlog (suggested order)
 
@@ -465,7 +465,7 @@ About 1 hour in desktop Chrome, using the console helper in [plan 06 §2.2](../d
 - [ ] Backup file export and import (the cross-device answer, concern 3)
 - [ ] Images (after Phase 0 P0-9 and approval A1) and Maps, with the MCP client and their own rate caps (R6 §4.2)
 - [ ] Play previews in the grid
-- [ ] Tilesets & tiles mixed by date, once sort orders are confirmed
+- [ ] Tilesets & tiles mixed by date (sort orders are confirmed newest first, but mixing is still not planned: deep pages would reshuffle, Phase 3 R4)
 - [ ] Help overlay and keyboard shortcuts
 - [ ] Built tileset picture links, only with PixelLab's written OK (R6 §4.1)
 - [ ] Opt-in "Sync with Dropbox", only if people ask (concern 3)

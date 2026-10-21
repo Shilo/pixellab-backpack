@@ -1,5 +1,7 @@
 # 08 — Simplicity Redesign: "Just the Art"
 
+> Note: `mockups/simple/` is kept locally and not published, so links to it from this file do not resolve on the public repo.
+
 Working name **Vitrine**, *Unofficial gallery for your PixelLab assets*. Status: canonical layout, visual-structure and control spec, 2026-10-19. The decisions are rows S-1 to S-17 in `00-decision-log.md`, which also holds the precedence order.
 
 **What this document owns:** the screens, the visible controls on each, where every hidden function lives, the menus, the folder overlay, the selection bar, and the phone mapping.
