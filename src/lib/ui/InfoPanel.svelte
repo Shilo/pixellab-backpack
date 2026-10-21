@@ -106,7 +106,7 @@
 
   <footer>
     {#if needsTierHint(familyId)}<p class="vt-text-2">Opening in PixelLab may need a paid plan.</p>{/if}
-    <a class="glass-btn glass-btn--tertiary" href={pixellabLink(familyId, card)} target="_blank" rel="noopener noreferrer">
+    <a class="glass-btn glass-btn--tertiary glass-btn--sm" href={pixellabLink(familyId, card)} target="_blank" rel="noopener noreferrer">
       Open in PixelLab ↗<span class="vt-sr"> (opens PixelLab in a new tab)</span>
     </a>
   </footer>

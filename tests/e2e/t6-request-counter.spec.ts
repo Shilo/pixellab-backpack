@@ -467,12 +467,9 @@ test('All assets: scrolling to the end in steps asks exactly the next pages the 
 });
 
 test('All assets: → at the last saved character sends exactly 1 list request and moves to the next card', async ({ page }) => {
-  // Characters only: with other families saved after it, the last saved character would not be the last card of All
-  // assets (R4: family after family), and → would move to the next family's first card instead.
-  const mock = await mockPixelLab(page, { a: { objects: 0, ui: 0, tilesets: 0, 'tilesets-side': 0, isometric: 0, 'tiles-pro': 0 } });
-  await page.goto('/');
-  await connect(page);
-  await settle(page, mock);
+  // Every family saved: Object 1 follows the last saved character in All assets (R4), yet → loads the next Characters
+  // page and moves to Character 101, as the Characters grid does (R8), instead of skipping 150 unloaded characters.
+  const mock = await openFirst(page);
   await openSearch(page);
   await field(page).fill('character 100');
   await expect(results(page)).toHaveText(['Character 100']); // index 99: the last of the 100 saved

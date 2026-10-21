@@ -186,7 +186,8 @@
   }
 
   /** Prev/next in the search's shown results, else in grid order (one card per character group). Not in the list: nothing.
-   * Next at the last loaded card of a screen asks for the family's next page first; results never load a page (R8). */
+   * Next at the last saved card of a family that is not fully saved asks for that family's next page first, as its grid
+   * does (All assets: before moving on to the next family); results never load a page (R8). */
   async function nav(d: 1 | -1) {
     if (!hit) return;
     const { card, familyId } = hit;
@@ -197,12 +198,11 @@
     const from = at(list);
     if (from < 0) return;
     let i = from + d;
-    if (d === 1 && i === list.length && !results) {
-      const last = list[list.length - 1].familyId;
-      const s = library.families[last];
-      if (!s || s.cards.length >= s.total) return;
-      await library.loadMore(last);
-      if (router.route.key !== card.key) return; // moved on or closed meanwhile
+    const s = library.families[familyId];
+    if (d === 1 && !results && list[i]?.familyId !== familyId && s && s.cards.length < s.total) {
+      await library.loadMore(familyId);
+      // Moved on or closed meanwhile; the page failed or is still loading elsewhere: stay, so no card is skipped.
+      if (router.route.key !== card.key || library.loading[familyId] || library.errors[familyId]) return;
       list = library.items(scope);
       i = at(list) + 1;
       if (i < 1) return;

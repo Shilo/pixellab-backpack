@@ -53,7 +53,8 @@
     results = shown;
   });
 
-  const checking = $derived(library.status === 'checking' && coverage === 'missing');
+  // As the viewer's wait: a 429 pause ('slowed') is still the check running (its retries are queued).
+  const checking = $derived(['idle', 'checking', 'slowed'].includes(library.status) && coverage === 'missing');
   const idleSprite = $derived(library.categories.find((c) => c.mosaic.length)?.mosaic[0] ?? null);
   const hasPanel = $derived(!idle || recent.length > 0 || gotos.length > 0 || added.length > 0 || showAll);
   const plural = (n: number) => `${n.toLocaleString()} result${n === 1 ? '' : 's'}`;
@@ -92,7 +93,7 @@
   }
 
   function onfieldkey(e: KeyboardEvent) {
-    if (e.key !== 'Enter') return;
+    if (e.key !== 'Enter' || e.isComposing) return; // an IME's Enter picks a candidate
     keep(q);
     panel?.querySelector<HTMLElement>('.res a[data-key]')?.focus();
   }
@@ -174,7 +175,7 @@
         <div class="recent">
           {#each recent as r (r)}
             <button type="button" class="glass-badge glass-badge--interactive" onclick={() => setQuery(r)}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>{r}
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg><span>{r}</span>
             </button>
           {/each}
         </div>
@@ -277,7 +278,9 @@
   .gh .glass-btn { padding: 0 12px; }
   .recent { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 16px; }
   .recent .glass-badge { height: 34px; padding: 0 14px 0 11px; font-size: 14px; gap: 7px; }
-  .recent svg { width: 15px; height: 15px; opacity: .7; }
+  .recent svg { flex: none; width: 15px; height: 15px; opacity: .7; }
+  .recent .glass-badge { max-width: 100%; box-sizing: border-box; }
+  .recent span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* a long query stays one chip line */
   .gotos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding-bottom: 16px; }
   .goto { --gl-space-lg: 8px; --gl-list-item-min-height: 56px; --gl-list-item-padding-y: 7px; }
   .goto .glass-list__item { text-decoration: none; color: inherit; gap: 10px; }
@@ -300,7 +303,7 @@
   /* No results (mockup .g2-empty, .g2-none, .g2-idle, .g2-hint) */
   .none { padding: 14px 16px 18px; }
   .idle { position: relative; display: block; width: 96px; height: 96px; margin-bottom: 4px; }
-  .none .glass-empty__title { font-size: 20px; letter-spacing: -.01em; }
+  .none .glass-empty__title { font-size: 20px; letter-spacing: -.01em; overflow-wrap: anywhere; } /* the query can be one long word */
   .none .glass-empty__text { font-size: 15px; color: var(--vt-text-2); }
   .none .glass-empty__action { margin-top: 14px; gap: 10px; }
   .none .glass-btn { padding: 0 18px; color: var(--gl-color-text); }
@@ -310,7 +313,8 @@
   /* Phone (mockup README "Phone layout"): full-width panel above the dock, 2 Go to columns, 3 recently added, Cancel; targets >= 44 px (R12). */
   @media (max-width: 600px) {
     .vt-field { width: auto; flex: 1; min-width: 0; }
-    .vt-field .glass-input, .vt-field:has(.clear) .glass-input { padding-inline-end: 50px; }
+    .vt-field .glass-input { padding-inline-end: 16px; }
+    .vt-field:has(.clear) .glass-input { padding-inline-end: 50px; }
     .vt-field kbd { display: none; }
     .clear { inset-inline-end: 2px; width: 44px; height: 44px; background: radial-gradient(circle closest-side, var(--gl-surface-3) 72%, transparent 74%); }
     .cancel { display: flex; }

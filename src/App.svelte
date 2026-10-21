@@ -28,8 +28,9 @@
 
   let searching = $state(false);
   let results = $state<Item[]>([]);
-  // True when this tab pushed the search's same-URL history entry (R3), so closing steps Back over it.
-  let searchPushed = false;
+  // The id of the same-URL history entry this search pushed (R3), 0 when none: closing steps Back over it. An id, not a
+  // flag: an entry left by an earlier search (Go to, a reload) must not keep a later search open on Back.
+  let searchEntry = 0;
 
   // The card last shown in the viewer: after closing, the grid (or the search it was opened from) brings it back and focuses it.
   let lastShown = $state<string | null>(null);
@@ -42,31 +43,31 @@
     if (searching) return;
     lastShown = null;
     searching = true;
-    history.pushState({ search: true }, '', location.hash);
-    searchPushed = true;
+    searchEntry = Date.now();
+    history.pushState({ search: searchEntry }, '', location.hash);
   }
   /** Esc, Cancel, the leading button, the dim and Back: off the search entry; focus returns to the dock's Search. */
   function closeSearch() {
     if (!searching) return;
     searching = false; // at once: a second Esc before the browser reports Back must not step back twice
     lastShown = null;
-    if (searchPushed) history.back();
-    searchPushed = false;
+    if (searchEntry) history.back();
+    searchEntry = 0;
     tick().then(() => document.querySelector<HTMLElement>('[data-search]')?.focus());
   }
   /** Go to and Show all: close, go, and focus the new screen's heading.
    * ponytail: the search's history entry stays under the new screen, one extra Back step (R3). */
   function goFromSearch(path: string) {
     searching = false;
-    searchPushed = false;
+    searchEntry = 0;
     lastShown = null;
     go(path);
     tick().then(() => h1?.focus());
   }
   // Back (phone or browser) onto an entry without the search closes it. Opening a result (an entry with a key) does not.
   function onpopstate() {
-    if (!searching || history.state?.search || parseRoute(location.hash).key) return;
-    searchPushed = false; // the browser already stepped Back
+    if (!searching || history.state?.search === searchEntry || parseRoute(location.hash).key) return;
+    searchEntry = 0; // the browser already stepped Back
     closeSearch();
   }
   $effect(() => {
@@ -86,7 +87,7 @@
   // "/" opens the search, unless typing in a field or something else is open on top. Esc closes it, wherever focus is.
   function onkeydown(e: KeyboardEvent) {
     const top = viewing || menu || settings || activity || router.activity;
-    if (e.key === 'Escape' && searching && !top && !e.defaultPrevented) {
+    if (e.key === 'Escape' && searching && !top && !e.defaultPrevented && !e.isComposing) { // an IME's Esc cancels its text
       e.preventDefault(); // a search field would clear itself first
       return closeSearch();
     }
