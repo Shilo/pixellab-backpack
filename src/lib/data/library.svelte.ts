@@ -185,7 +185,6 @@ class Library {
       // Another account's saved copy: wipe it with its favorites and folders (R4), then the check below runs for every family.
       clearOrg();
       await wipe().catch(() => {});
-      await loadOrg(); // the empty record, now: an open check already running has loaded org before the clear
       this.families = {} as Record<FamilyId, FamilyState | undefined>;
       this.errors = {};
     }
@@ -193,6 +192,9 @@ class Library {
     this.hasKey = true;
     this.keepSignedIn = keptSignedIn();
     await put('characters', applyCheck(this.families.characters, page, Date.now()));
+    // A check that started before this key (or before the wipe) loaded org too early, and may have been cut short by a sign-out:
+    // wait it out, then run this key's own check, which loads org after everything above (Phase 4 deferred N6).
+    while (running) await running;
     await this.openCheck();
     return 'ok';
   };
@@ -208,13 +210,15 @@ class Library {
       lastForce = Date.now();
     }
     running = (async () => {
+      const key = getKey();
       await adopt(); // show the saved copy at once
-      if (!getKey()) return;
+      if (!key || getKey() !== key) return;
       await loadOrg(); // after connect's possible wipe
       ran = true;
       // One check across tabs: a tab that waited for the lock re-reads what the other tab saved.
       await locked(async () => {
-        if (!getKey()) return; // forgotten while waiting for the lock: never bring the library back into memory
+        // Forgotten while waiting for the lock: never bring the library back into memory. Another key: its connect runs its own check.
+        if (getKey() !== key) return;
         await adopt();
         const ids = adapters.map((f) => f.id).filter((id) => opts.force || unchecked.has(id) || !isFresh(this.families[id], Date.now()));
         this.avoided += adapters.length - ids.length;

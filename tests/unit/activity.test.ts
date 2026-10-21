@@ -17,7 +17,7 @@ import Activity, { copyLog, estimatePreflights, formatLog, resultName, size, sta
 import MoreMenu, { runRefresh } from '../../src/lib/ui/MoreMenu.svelte';
 
 const at = new Date(2026, 9, 20, 9, 5, 7).getTime();
-const entry = (o = {}) => ({ time: at, label: 'Characters · first page', source: 'api' as const, result: 'ok' as const, status: 200, bytes: 2048, ms: 120, ...o });
+const entry = (o = {}) => ({ time: at, label: 'Characters · first page', source: 'api' as const, auth: true, result: 'ok' as const, status: 200, bytes: 2048, ms: 120, ...o });
 const counters = h.counters;
 
 describe('Activity text', () => {
@@ -32,9 +32,23 @@ describe('Activity text', () => {
     expect(statusName('key-lost')).toBe('Key lost');
   });
 
-  it('estimates hidden permission checks: one per kind of request per 10 minutes, API only', () => {
-    const list = [entry(), entry({ time: at + 1000 }), entry({ label: 'Objects · first page' }), entry({ time: at + 11 * 60_000 }), entry({ source: 'image', label: 'Picture' })];
+  it('estimates hidden permission checks: list pages once per label per 10 minutes, keyed only', () => {
+    const list = [entry(), entry({ time: at + 1000 }), entry({ label: 'Objects · first page' }), entry({ time: at + 11 * 60_000 }), entry({ source: 'image', label: 'Picture', auth: false })];
     expect(estimatePreflights(list)).toBe(3);
+  });
+
+  it('N2: counts keyed requests only, and each asset detail or keyed picture as its own check', () => {
+    const list = [
+      entry({ label: 'Isometric tiles · picture', auth: false }), // a keyless helper sends no check
+      entry({ label: 'Characters · details' }),
+      entry({ label: 'Characters · details', time: at + 1000 }), // another asset: another URL
+      entry({ label: 'Characters · details', time: at + 2000 }),
+      entry({ label: 'Tiles Pro · picture' }),
+      entry({ label: 'Characters · page 2' }),
+      entry({ label: 'Characters · page 2', time: at + 1000 }),
+      entry({ label: 'Objects · details', result: 'error', status: undefined }), // refused before sending (offline, stopped, no key)
+    ];
+    expect(estimatePreflights(list)).toBe(5);
   });
 
   it('copies a plain-text log with counters and one line per request', () => {

@@ -751,6 +751,55 @@ describe('favorites and folders', () => {
     expect([org.favorites, org.ready]).toEqual([[], true]);
   });
 
+  it('N6: a reconnect while an older open check is still running leaves org loaded', async () => {
+    const { lib, org } = await setup();
+    later(HOUR + 1);
+    let open!: () => void;
+    let waiting = false;
+    const gate = new Promise<void>((ok) => (open = ok));
+    vi.stubGlobal('navigator', { locks: { request: (_n: string, fn: () => Promise<void>) => ((waiting = true), gate.then(fn)) } });
+    try {
+      const old = lib.openCheck();
+      await vi.waitFor(() => expect(waiting).toBe(true)); // past its org load, queued for the lock
+      await lib.forget(); // clears org
+      fill('b');
+      const done = lib.connect('other-key'); // no saved copy left, so no account-switch wipe
+      await vi.waitFor(() => expect(lib.hasKey).toBe(true));
+      await new Promise((r) => setTimeout(r)); // connect is now waiting on the older check
+      open();
+      expect(await done).toBe('ok');
+      await old;
+      expect(org.ready).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('N6: an older check let through the lock after the key changed sends nothing; the new key checks', async () => {
+    const { lib } = await setup();
+    later(HOUR + 1);
+    let open!: () => void;
+    let waiting = false;
+    const gate = new Promise<void>((ok) => (open = ok));
+    vi.stubGlobal('navigator', { locks: { request: (_n: string, fn: () => Promise<void>) => ((waiting = true), gate.then(fn)) } });
+    try {
+      let sentByOld = -1;
+      const old = lib.openCheck();
+      void old.then(() => (sentByOld = lists().length)); // runs before connect starts its own check
+      await vi.waitFor(() => expect(waiting).toBe(true));
+      fill('b');
+      const done = lib.connect('other-key');
+      await vi.waitFor(() => expect(lib.hasKey).toBe(true));
+      await new Promise((r) => setTimeout(r));
+      open();
+      expect(await done).toBe('ok');
+      expect(sentByOld).toBe(1); // only connect's key test
+      expect(lists()).toHaveLength(7); // connect's own check asked the rest
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("a resolved costly link is written to the key's snapshot", async () => {
     const { lib } = await setup();
     const { setFavorite } = await orgOf();

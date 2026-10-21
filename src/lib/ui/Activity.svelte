@@ -29,9 +29,12 @@
   }
   export const statusName = (s: string) => STATUS[s] ?? s;
 
-  /** Browsers send PixelLab a hidden "may this site talk to you?" check the app cannot see; about one per kind of request per 10 minutes. */
+  /** Browsers send PixelLab a hidden "may this site talk to you?" check the app cannot see, before keyed requests only, about once
+   * per link per 10 minutes. Only a keyed first attempt that got an answer surely had one (`auth` marks first attempts).
+   * A list page repeats its link; each asset's details or keyed picture has its own, so counts one each. */
   export function estimatePreflights(list: ActivityEntry[]): number {
-    return new Set(list.filter((e) => e.source === 'api' && (e.result === 'ok' || e.result === 'error')).map((e) => `${e.label}|${Math.floor(e.time / 600_000)}`)).size;
+    const sent = list.filter((e) => e.auth && e.status !== undefined);
+    return new Set(sent.map((e, i) => (/page( \d+)?$/.test(e.label) ? `${e.label}|${Math.floor(e.time / 600_000)}` : i))).size;
   }
 
   /** Plain text for a bug report: labels and numbers only, never keys, ids or links. */
@@ -78,12 +81,22 @@
     return () => clearInterval(t);
   });
 
-  // Focus moves into the panel and returns to the dock button on close.
+  // Focus moves into the panel and returns to the dock button on close; Esc closes only this layer (capture phase keeps it from the rest).
   $effect(() => {
     if (!open) return;
     const back = document.activeElement as HTMLElement | null;
     panel?.focus();
-    return () => back?.focus?.();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      onClose();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      back?.focus?.();
+    };
   });
 
   async function copy() {
@@ -91,8 +104,6 @@
     setTimeout(() => (copied = ''), 2000);
   }
 </script>
-
-<svelte:window onkeydown={(e) => open && e.key === 'Escape' && onClose()} />
 
 {#if open}
   <button type="button" class="backdrop" tabindex="-1" aria-label="Close activity" onclick={onClose}></button>

@@ -27,6 +27,8 @@ export interface ActivityEntry {
   time: number;
   label: string;
   source: 'api' | 'image';
+  /** A keyed job's first attempt: the browser checks a keyed link once, so retries are not marked. */
+  auth: boolean;
   result: 'ok' | 'error' | 'cap' | 'cancelled';
   status?: number;
   bytes?: number;
@@ -89,13 +91,13 @@ function store(on: boolean): void {
   } catch {
     /* memory only */
   }
-  // Turning the saved copy off removes it even if the tab copy could not be written; turning it on keeps the old copy if the write failed.
-  if (ok || !on) {
-    try {
-      (on ? sessionStorage : localStorage).removeItem(on ? KEY_NAME : KEPT_NAME);
-    } catch {
-      /* memory only */
-    }
+  // Clear the other store. A saved copy that was turned off, or could not be written, is removed either way, so a replaced
+  // key never stays in the saved copy (the new one stays in memory, and in the tab copy if that still holds it).
+  try {
+    if (on && ok) sessionStorage.removeItem(KEY_NAME);
+    else localStorage.removeItem(KEPT_NAME);
+  } catch {
+    /* memory only */
   }
   kept = on && ok;
   if (was || kept) post('key-changed'); // the saved key was written, replaced or removed
@@ -163,8 +165,8 @@ export function onActivity(cb: (e: ActivityEntry) => void): () => void {
   return () => activityListeners.delete(cb);
 }
 
-function record(source: 'api' | 'image', label: string, result: ActivityEntry['result'], t0: number, status?: number, bytes?: number) {
-  const entry: ActivityEntry = { time: Date.now(), label, source, result, status, bytes, ms: Date.now() - t0 };
+function record(source: 'api' | 'image', { label, auth = false, retries = 0 }: { label: string; auth?: boolean; retries?: number }, result: ActivityEntry['result'], t0: number, status?: number, bytes?: number) {
+  const entry: ActivityEntry = { time: Date.now(), label, source, auth: auth && !retries, result, status, bytes, ms: Date.now() - t0 };
   activityListeners.forEach((cb) => cb(entry));
 }
 
@@ -255,7 +257,7 @@ function wake(ms: number): void {
 
 function fail(job: Job, err: HttpError, t0 = Date.now(), status?: number): void {
   const result = err.kind === 'cap' ? 'cap' : err.kind === 'cancelled' ? 'cancelled' : 'error';
-  record('api', job.label, result, t0, status);
+  record('api', job, result, t0, status);
   job.fail(err);
 }
 
@@ -337,7 +339,7 @@ async function attempt(job: Job): Promise<void> {
       } catch {
         return fail(job, new HttpError('http', s), t0, s);
       }
-      record('api', job.label, 'ok', t0, s, out.bytes);
+      record('api', job, 'ok', t0, s, out.bytes);
       return job.ok(out.value);
     }
     if (s === 401 && job.auth) {
@@ -349,7 +351,7 @@ async function attempt(job: Job): Promise<void> {
     if (res && s !== 429 && s < 500) {
       fails = 0; // the server answered (404, 423 ...): no retry
       if (job.strict) return fail(job, new HttpError('http', s), t0, s);
-      record('api', job.label, 'error', t0, s);
+      record('api', job, 'error', t0, s);
       return job.ok(res);
     }
     // 429, 5xx or a network failure (s = 0): back off, retry at most twice, stop on repeated trouble
@@ -370,7 +372,7 @@ async function attempt(job: Job): Promise<void> {
       if (!s) setStatus('blocked');
       return fail(job, new HttpError(s ? 'http' : 'blocked', s || undefined), t0, s || undefined);
     }
-    record('api', job.label, 'error', t0, s || undefined);
+    record('api', job, 'error', t0, s || undefined);
     job.retries++;
     const delay = s === 429 ? 0 : 1000 * 2 ** job.retries * (0.5 + Math.random());
     retrying.add(job);
@@ -491,12 +493,12 @@ async function direct(url: string, o: Opts): Promise<Response> {
   imageHost++;
   try {
     const res = await fetch(url, { method: 'GET', signal: timed(o.signal) });
-    record('image', label, res.ok ? 'ok' : 'error', t0, res.status, Number(res.headers.get('content-length')) || undefined);
+    record('image', { label }, res.ok ? 'ok' : 'error', t0, res.status, Number(res.headers.get('content-length')) || undefined);
     return res;
   } catch (e) {
     // One failed picture never changes the app's status (the API side needs 3 failures; 'offline' comes from the browser).
     const kind = netKind(e);
-    record('image', label, kind === 'cancelled' ? 'cancelled' : 'error', t0);
+    record('image', { label }, kind === 'cancelled' ? 'cancelled' : 'error', t0);
     throw new HttpError(kind);
   }
 }

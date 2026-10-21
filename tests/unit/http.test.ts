@@ -293,6 +293,20 @@ test.each([
   }
 });
 
+test('N2: a retried keyed request logs the key only on its first attempt; a refused one logs no answer status', async () => {
+  const entries: { auth: boolean; status?: number }[] = [];
+  http.onActivity((e) => entries.push(e));
+  const p = outcome(http.apiGet('/characters/x'));
+  await tick();
+  pending[0].reply(500);
+  await tick(5000);
+  pending[1].reply(200);
+  await p;
+  http.setKey(null);
+  await outcome(http.apiGet('/characters/y')); // never sent
+  expect(entries.map((e) => [e.auth, e.status])).toEqual([[true, 500], [false, 200], [true, undefined]]);
+});
+
 test('the key never appears in an Activity entry, an error, or localStorage', async () => {
   const entries: unknown[] = [];
   http.onActivity((e) => entries.push(e));
@@ -380,6 +394,20 @@ test('turning Keep me signed in off removes the saved key even if the tab copy c
   vi.stubGlobal('sessionStorage', { ...storage(session), setItem: () => { throw new Error('full'); } });
   http.setKeepSignedIn(false);
   expect([http.keptSignedIn(), local.has('pixellab-backpack:key-kept'), http.getKey()]).toEqual([false, false, KEY]);
+});
+
+test('N1: replacing a kept key when the saved copy cannot be written never leaves the old key saved', async () => {
+  const L = 'pixellab-backpack:key-kept';
+  http.setKeepSignedIn(true);
+  const kept = await loadModule(true); // another tab on the saved key
+  vi.stubGlobal('localStorage', { ...storage(local), setItem: () => { throw new Error('full'); } });
+  posts = [];
+  http.setKey('another-secret-456');
+  expect([local.has(L), http.getKey(), http.keptSignedIn()]).toEqual([false, 'another-secret-456', false]);
+  expect(posts).toEqual(['key-changed']); // a bare word, never a key
+  expect([kept.getKey(), kept.keptSignedIn()]).toEqual([null, false]); // the other kept tab signs out, not onto the old key
+  http = await loadModule(); // a reload never signs in with the replaced key
+  expect(http.getKey()).not.toBe(KEY);
 });
 
 test('Forget key signs out every other tab, tab-only or kept, with a bare message; no tab answers', async () => {
@@ -475,6 +503,8 @@ test('image-host requests go straight out, without the key, and do not count tow
 
 test('API-host helpers via publicGet use the safety net but send no key', async () => {
   autoReply();
+  const entries: { auth: boolean }[] = [];
+  http.onActivity((e) => entries.push(e));
   const ps = Array.from({ length: 10 }, (_, i) => outcome(http.publicGet(`${API}/characters/helper${i}`, { api: true })));
   await tick();
   expect(calls).toHaveLength(8); // burst of 8
@@ -482,6 +512,10 @@ test('API-host helpers via publicGet use the safety net but send no key', async 
   await tick(1000);
   await Promise.all(ps);
   expect(http.getCounters()).toMatchObject({ sessionApi: 10, todayApi: 10, imageHost: 0 });
+  const keyed = outcome(http.apiGet('/characters'));
+  await tick(1000);
+  await keyed;
+  expect(entries.map((e) => e.auth)).toEqual([...Array(10).fill(false), true]); // Activity's preflight estimate counts keyed ones only
 });
 
 test('publicGet hands non-ok answers back as is', async () => {

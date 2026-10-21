@@ -18,7 +18,7 @@ export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(version) },
   // ponytail: no CSS minify — Vite 8's Lightning CSS minifier merges GlassKit's `backdrop-filter` into its `-webkit-` twin, which
   // Chromium ignores (no glass blur). ~69 KB more raw CSS; re-enable when the minifier keeps both.
-  build: { assetsInlineLimit: 0, cssMinify: false },
+  build: { assetsInlineLimit: 0, cssMinify: false, modulePreload: { polyfill: false } }, // no polyfill: the support floor has modulepreload (05 §10.2)
   preview: { headers },
   test: { include: ['tests/unit/**/*.test.ts'] },
 });
