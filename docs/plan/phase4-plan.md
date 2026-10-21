@@ -406,5 +406,5 @@ In Group E, Task 8 owns App's root `CardMenu` and listeners; Task 9 owns only Ap
 - [x] Task 9: Ship the search Go to rows and failed-family hint
 - [x] Task 10: Prove 0 requests, security, screenshots, headed check and accessibility; tick the plan
 - [ ] Task 10 (owner): Check long press and the search keyboard on a real iPhone and Android phone
-- [ ] Task 10 (controller): Run the headed live browser test with the debug sign-in (`npm run dev`, `?devkey`) and fix what it finds
-- [ ] Task 11: Remove the temporary debug sign-in (last, after the live browser test)
+- [x] Task 10 (controller): Run the headed live browser test with the debug sign-in (`npm run dev`, `?devkey`) and fix what it finds
+- [x] Task 11: Remove the temporary debug sign-in (last, after the live browser test)
