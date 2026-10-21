@@ -165,89 +165,91 @@
   </div>
 
   {#if hasPanel}
-    <!-- tabindex -1: a click on the panel keeps focus inside, so Esc still closes. -->
+    <!-- tabindex -1 on the scroller: a click on blank panel space focuses it, so arrows and Page keys keep scrolling. -->
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="glass-popover is-open vt-scrim panel" class:typed={!idle} tabindex="-1" bind:this={panel} onclick={onpanelclick}>
-      {#if idle && recent.length}
-        <div class="gh">
-          <span class="glass-list__section-header">Recent</span>
-          <button type="button" class="glass-btn glass-btn--tertiary glass-btn--sm glass-btn--auto" onclick={() => (clearRecent(), field?.focus())}>Clear</button>
-        </div>
-        <div class="recent">
-          {#each recent as r (r)}
-            <button type="button" class="glass-badge glass-badge--interactive" onclick={() => setQuery(r)}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg><span>{r}</span>
-            </button>
-          {/each}
-        </div>
-      {/if}
-
-      {#if gotos.length}
-        <div class="gh"><span class="glass-list__section-header">Go to</span></div>
-        <div class="gotos">
-          {#each gotos as c (c.id)}
-            <div class="glass-list goto">
-              <a class="glass-list__item glass-list__item--interactive" href="#/c/{c.id}" onclick={(e) => go(e, `#/c/${c.id}`)}>
-                <span class="glass-list__leading glass-list__leading--lg" aria-hidden="true"><i>{@render art(c.mosaic[0] ?? null)}</i></span>
-                <span class="glass-list__content">
-                  <span class="glass-list__title">{@render runs(c.label)}</span>
-                  <span class="glass-list__subtitle">Type · {c.count.toLocaleString()}</span>
-                </span>
-              </a>
-            </div>
-          {/each}
-        </div>
-      {/if}
-
-      {#if added.length}
-        <div class="gh"><span class="glass-list__section-header">Recently added</span></div>
-        <div class="added">{@render cells(added)}</div>
-      {/if}
-
-      {#if showAll}
-        <hr class="glass-divider" />
-        <div class="glass-list glass-list--bare showall">
-          <a class="glass-list__item glass-list__item--interactive" href="#/all" onclick={(e) => go(e, '#/all')}>
-            <span class="glass-list__content"><span class="glass-list__title">Show all {library.count('all').toLocaleString()} assets</span></span>
-            <span class="glass-list__trailing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg></span>
-          </a>
-        </div>
-      {/if}
-
-      {#if !idle}
-        {#if found.length}
-          <div class="gh"><span class="glass-list__section-header">{plural(found.length)}</span></div>
-          <div class="res">{@render cells(shown)}</div>
-          {#if found.length > shown.length}<p class="hint">Showing the first {MAX_RESULTS}. Type more words to narrow it down.</p>{/if}
-        {:else if checking}
-          <div class="glass-empty none"><p class="glass-empty__text">Checking for new assets…</p></div>
-        {:else}
-          <div class="glass-empty none">
-            <span class="idle" aria-hidden="true">{@render art(idleSprite)}</span>
-            {#if all}
-              <h2 class="glass-empty__title">No matches for "{q.trim()}".</h2>
-              <p class="glass-empty__text">Try fewer words.</p>
-            {:else}
-              <h2 class="glass-empty__title">No matches for "{q.trim()}" in {label}.</h2>
-              <p class="glass-empty__text">Try fewer words, or search all types.</p>
-            {/if}
-            <div class="glass-empty__action">
-              <button type="button" class="glass-btn glass-btn--tertiary glass-btn--sm glass-btn--auto" onclick={() => setQuery('')}>Clear search</button>
-              {#if !all}
-                <button type="button" class="glass-btn glass-btn--tertiary glass-btn--sm glass-btn--auto" onclick={() => ((scope = 'all'), field?.focus())}>Search all types</button>
-              {/if}
-            </div>
+    <div class="glass-popover is-open vt-scrim panel" class:typed={!idle} bind:this={panel} onclick={onpanelclick}>
+      <div class="scroll" tabindex="-1">
+        {#if idle && recent.length}
+          <div class="gh">
+            <span class="glass-list__section-header">Recent</span>
+            <button type="button" class="glass-btn glass-btn--tertiary glass-btn--sm glass-btn--auto" onclick={() => (clearRecent(), field?.focus())}>Clear</button>
           </div>
+          <div class="recent">
+            {#each recent as r (r)}
+              <button type="button" class="glass-badge glass-badge--interactive" onclick={() => setQuery(r)}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg><span>{r}</span>
+              </button>
+            {/each}
+          </div>
+        {/if}
+
+        {#if gotos.length}
+          <div class="gh"><span class="glass-list__section-header">Go to</span></div>
+          <div class="gotos">
+            {#each gotos as c (c.id)}
+              <div class="glass-list goto">
+                <a class="glass-list__item glass-list__item--interactive" href="#/c/{c.id}" onclick={(e) => go(e, `#/c/${c.id}`)}>
+                  <span class="glass-list__leading glass-list__leading--lg" aria-hidden="true"><i>{@render art(c.mosaic[0] ?? null)}</i></span>
+                  <span class="glass-list__content">
+                    <span class="glass-list__title">{@render runs(c.label)}</span>
+                    <span class="glass-list__subtitle">Type · {c.count.toLocaleString()}</span>
+                  </span>
+                </a>
+              </div>
+            {/each}
+          </div>
+        {/if}
+
+        {#if added.length}
+          <div class="gh"><span class="glass-list__section-header">Recently added</span></div>
+          <div class="added">{@render cells(added)}</div>
+        {/if}
+
+        {#if showAll}
           <hr class="glass-divider" />
-          <p class="hint">Looking for fonts or effects? They aren't in PixelLab's public API yet.</p>
+          <div class="glass-list glass-list--bare showall">
+            <a class="glass-list__item glass-list__item--interactive" href="#/all" onclick={(e) => go(e, '#/all')}>
+              <span class="glass-list__content"><span class="glass-list__title">Show all {library.count('all').toLocaleString()} assets</span></span>
+              <span class="glass-list__trailing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg></span>
+            </a>
+          </div>
         {/if}
-        <!-- The screen's notice (a failure, a pause, offline) speaks here, as the saved-only advice cannot come true then (R1, R9). -->
-        {#if note}
-          <p class="hint">{note}</p>
-        {:else if coverage === 'partial'}
-          <p class="hint">Only assets saved on this device are searched. Scroll through {label} to load the rest.</p>
+
+        {#if !idle}
+          {#if found.length}
+            <div class="gh"><span class="glass-list__section-header">{plural(found.length)}</span></div>
+            <div class="res">{@render cells(shown)}</div>
+            {#if found.length > shown.length}<p class="hint">Showing the first {MAX_RESULTS}. Type more words to narrow it down.</p>{/if}
+          {:else if checking}
+            <div class="glass-empty none"><p class="glass-empty__text">Checking for new assets…</p></div>
+          {:else}
+            <div class="glass-empty none">
+              <span class="idle" aria-hidden="true">{@render art(idleSprite)}</span>
+              {#if all}
+                <h2 class="glass-empty__title">No matches for "{q.trim()}".</h2>
+                <p class="glass-empty__text">Try fewer words.</p>
+              {:else}
+                <h2 class="glass-empty__title">No matches for "{q.trim()}" in {label}.</h2>
+                <p class="glass-empty__text">Try fewer words, or search all types.</p>
+              {/if}
+              <div class="glass-empty__action">
+                <button type="button" class="glass-btn glass-btn--tertiary glass-btn--sm glass-btn--auto" onclick={() => setQuery('')}>Clear search</button>
+                {#if !all}
+                  <button type="button" class="glass-btn glass-btn--tertiary glass-btn--sm glass-btn--auto" onclick={() => ((scope = 'all'), field?.focus())}>Search all types</button>
+                {/if}
+              </div>
+            </div>
+            <hr class="glass-divider" />
+            <p class="hint">Looking for fonts or effects? They aren't in PixelLab's public API yet.</p>
+          {/if}
+          <!-- The screen's notice (a failure, a pause, offline) speaks here, as the saved-only advice cannot come true then (R1, R9). -->
+          {#if note}
+            <p class="hint">{note}</p>
+          {:else if coverage === 'partial'}
+            <p class="hint">Only assets saved on this device are searched. Scroll through {label} to load the rest.</p>
+          {/if}
         {/if}
-      {/if}
+      </div>
     </div>
   {/if}
 
@@ -273,10 +275,11 @@
   .cancel { display: none; }
 
   /* The panel (mockup .vt-spanel, .g2-panel): centred 100 px above the dock, scrolls inside itself. */
-  .glass-popover.panel { position: fixed; z-index: 910; left: 50%; bottom: 100px; top: auto; width: 660px; max-height: calc(100dvh - 140px); overflow-y: auto; box-sizing: border-box;
-    padding: 18px 18px 6px; border-radius: 28px; outline: none; --vt-scrim: rgba(20, 22, 30, .80);
+  .glass-popover.panel { position: fixed; z-index: 910; left: 50%; bottom: 100px; top: auto; width: 660px; max-height: calc(100dvh - 140px); overflow: hidden; box-sizing: border-box;
+    display: flex; flex-direction: column; padding: 18px 0 6px; border-radius: 28px; outline: none; --vt-scrim: rgba(20, 22, 30, .80);
     background: linear-gradient(var(--gl-surface-3), var(--gl-surface-3)), var(--vt-scrim); }
   .panel.typed { padding-bottom: 18px; }
+  .scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 18px; }
   .gh { display: flex; justify-content: space-between; align-items: center; min-height: 30px; padding-bottom: 6px; --gl-btn-height-sm: 28px; }
   .gh .glass-list__section-header { padding: 0 6px; }
   .gh .glass-btn { padding: 0 12px; }
@@ -321,7 +324,8 @@
     .vt-field kbd { display: none; }
     .clear { inset-inline-end: 2px; width: 44px; height: 44px; background: radial-gradient(circle closest-side, var(--gl-surface-3) 72%, transparent 74%); }
     .cancel { display: flex; }
-    .glass-popover.panel { left: 8px; right: 8px; bottom: calc(var(--vt-bot) + 72px); width: auto; transform: none; padding: 16px 14px 4px; }
+    .glass-popover.panel { left: 8px; right: 8px; bottom: calc(var(--vt-bot) + 72px); width: auto; transform: none; padding: 16px 0 4px; }
+    .scroll { padding: 0 14px; }
     .panel.typed { padding-bottom: 16px; }
     .gh { --gl-btn-height-sm: 44px; }
     .recent .glass-badge { height: 44px; }

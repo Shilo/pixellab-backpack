@@ -130,7 +130,7 @@ test('odd names: emoji, accents, non-Latin, regex characters and very long names
   await expect(panel(page).getByRole('heading', { name: 'No matches for ".*".' })).toBeVisible();
   await field(page).fill('very very');
   await expect(results(page)).toHaveCount(1);
-  expect(await page.evaluate(() => [document.documentElement, ...document.querySelectorAll('.panel, .res')].every((el) => el.scrollWidth <= el.clientWidth))).toBe(true);
+  expect(await page.evaluate(() => [document.documentElement, ...document.querySelectorAll('.panel, .scroll, .res')].every((el) => el.scrollWidth <= el.clientWidth))).toBe(true);
 });
 
 test('one letter: at most 100 cells, the cap line, and → stops at the 100th', async ({ page }) => {
@@ -342,10 +342,10 @@ test('a very long query with no spaces fits the no-results card and its Recent c
   await openSearch(page);
   await field(page).fill('x'.repeat(300));
   await expect(panel(page).getByRole('heading', { name: /^No matches for "x+"\.$/ })).toBeVisible();
-  expect(await page.evaluate(() => [document.documentElement, ...document.querySelectorAll('.panel, .none')].every((el) => el.scrollWidth <= el.clientWidth))).toBe(true);
+  expect(await page.evaluate(() => [document.documentElement, ...document.querySelectorAll('.panel, .scroll, .none')].every((el) => el.scrollWidth <= el.clientWidth))).toBe(true);
   // The same query as a Recent chip.
   await field(page).press('Enter');
   await field(page).fill('');
   await expect(panel(page).locator('.recent button')).toHaveCount(1);
-  expect(await page.evaluate(() => [document.documentElement, ...document.querySelectorAll('.panel, .recent')].every((el) => el.scrollWidth <= el.clientWidth))).toBe(true);
+  expect(await page.evaluate(() => [document.documentElement, ...document.querySelectorAll('.panel, .scroll, .recent')].every((el) => el.scrollWidth <= el.clientWidth))).toBe(true);
 });

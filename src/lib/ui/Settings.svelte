@@ -1,7 +1,7 @@
 <script lang="ts">
   // Settings: PixelLab connection + About, as a native modal <dialog> (R3: Esc and Android Back close it, no route).
   // The two confirms are GlassKit alert modals in a second dialog stacked above it.
-  import { APP_NAME, APP_SHORT } from '../app';
+  import { APP_NAME, APP_SHORT, NEW_TAB } from '../app';
   import { library } from '../data/library.svelte';
   import { OTHER_CONTENT, OTHER_TEXT, OTHER_TITLE } from '../info';
 
@@ -63,7 +63,7 @@
 </script>
 
 {#snippet ext(href: string, label: string)}
-  <a {href} target="_blank" rel="noopener noreferrer">{label}<span aria-hidden="true"> ↗</span><span class="vt-sr"> (opens in a new tab)</span></a>
+  <a {href} target="_blank" rel="noopener noreferrer">{label}<span aria-hidden="true">&nbsp;↗</span><span class="vt-sr">{NEW_TAB}</span></a>
 {/snippet}
 
 <dialog
@@ -73,55 +73,57 @@
   onclose={onClose}
   onclick={backdrop}
 >
-  <header>
-    <h2 id="st-title">Settings</h2>
-    <button type="button" class="x" aria-label="Close settings" onclick={() => sheet?.close()}>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
-    </button>
-  </header>
+  <div class="scroll">
+    <header>
+      <h2 id="st-title">Settings</h2>
+      <button type="button" class="x" aria-label="Close settings" onclick={() => sheet?.close()}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+      </button>
+    </header>
 
-  <h3>PixelLab connection</h3>
-  <div class="card">
-    <div class="row">
-      <span class="txt">
-        <b class="status"><i aria-hidden="true"></i>{library.hasKey ? 'Connected' : 'Disconnected'}</b>
-        {#if hint}<span class="sub">API key ending ••••{hint}</span>{/if}
-      </span>
-    </div>
-    <label class="row">
-      <span class="txt">
-        <b>Keep me signed in</b>
-        <span class="sub" id="st-keep-help">
-          {library.keepSignedIn
-            ? "Saved in this browser so you don't need to paste it again. Anyone using this browser profile could use it, so don't turn this on for shared computers."
-            : "Kept in this tab only. You'll paste it again in a new tab."}
+    <h3>PixelLab connection</h3>
+    <div class="card">
+      <div class="row">
+        <span class="txt">
+          <b class="status"><i aria-hidden="true"></i>{library.hasKey ? 'Connected' : 'Disconnected'}</b>
+          {#if hint}<span class="sub">API key ending ••••{hint}</span>{/if}
         </span>
-      </span>
-      <span class="sw">
-        <input type="checkbox" role="switch" class="glass-toggle__input" checked={library.keepSignedIn} aria-describedby="st-keep-help" onchange={keep} />
-        <span class="glass-toggle__track"><span class="glass-toggle__thumb"></span></span>
-      </span>
-    </label>
-    <button type="button" class="row danger" onclick={() => ((failed = false), (confirm = 'forget'))}>Forget key</button>
-  </div>
-  <p class="foot">Need to revoke this key? {@render ext(`${PIXELLAB}/account`, 'Generate a new API key in your PixelLab account')}</p>
+      </div>
+      <label class="row">
+        <span class="txt">
+          <b>Keep me signed in</b>
+          <span class="sub" id="st-keep-help">
+            {library.keepSignedIn
+              ? "Saved in this browser so you don't need to paste it again. Anyone using this browser profile could use it, so don't turn this on for shared computers."
+              : "Kept in this tab only. You'll paste it again in a new tab."}
+          </span>
+        </span>
+        <span class="sw">
+          <input type="checkbox" role="switch" class="glass-toggle__input" checked={library.keepSignedIn} aria-describedby="st-keep-help" onchange={keep} />
+          <span class="glass-toggle__track"><span class="glass-toggle__thumb"></span></span>
+        </span>
+      </label>
+      <button type="button" class="row danger" onclick={() => ((failed = false), (confirm = 'forget'))}>Forget key</button>
+    </div>
+    <p class="foot">Need to revoke this key? {@render ext(`${PIXELLAB}/account`, 'Generate a new API key in your PixelLab account')}</p>
 
-  <h3>About</h3>
-  <div class="card">
-    <div class="row">
-      <span class="txt"><b>{APP_NAME}</b><span class="sub">Version {__APP_VERSION__}</span></span>
+    <h3>About</h3>
+    <div class="card">
+      <div class="row">
+        <span class="txt"><b>{APP_NAME}</b><span class="sub">Version {__APP_VERSION__}</span></span>
+      </div>
+      <div class="row prose">
+        <p>{APP_NAME} is an unofficial gallery for your PixelLab assets. It isn't made by, affiliated with, or endorsed by PixelLab.</p>
+        <p>No analytics, no tracking, no servers. {APP_NAME} talks only to PixelLab's API and image host.</p>
+      </div>
+      <div class="row prose">
+        <p><b>{OTHER_TITLE}</b> {OTHER_TEXT} Find them in PixelLab:</p>
+        <ul class="links">
+          {#each OTHER_CONTENT as [label, url] (label)}<li>{@render ext(url, label)}</li>{/each}
+        </ul>
+      </div>
+      <div class="row prose">{@render ext('/licenses.txt', 'Licences')}</div>
     </div>
-    <div class="row prose">
-      <p>{APP_NAME} is an unofficial gallery for your PixelLab assets. It isn't made by, affiliated with, or endorsed by PixelLab.</p>
-      <p>No analytics, no tracking, no servers. {APP_NAME} talks only to PixelLab's API and image host.</p>
-    </div>
-    <div class="row prose">
-      <p><b>{OTHER_TITLE}</b> {OTHER_TEXT} Find them in PixelLab:</p>
-      <ul class="links">
-        {#each OTHER_CONTENT as [label, url] (label)}<li>{@render ext(url, label)}</li>{/each}
-      </ul>
-    </div>
-    <div class="row prose">{@render ext('/licenses.txt', 'Licences')}</div>
   </div>
 </dialog>
 
@@ -146,9 +148,11 @@
 </dialog>
 
 <style>
-  .sheet { position: fixed; inset: 0; box-sizing: border-box; width: 520px; max-width: calc(100vw - 16px); max-height: min(88vh, 760px); margin: auto; padding: 22px 18px 18px;
-    overflow-y: auto; overscroll-behavior: contain; border-radius: 28px; color: var(--gl-color-text); border: 1.5px solid var(--gl-border-medium);
+  .sheet { position: fixed; inset: 0; box-sizing: border-box; width: 520px; max-width: calc(100vw - 16px); max-height: min(88vh, 760px); margin: auto; padding: 22px 0 18px;
+    overflow: hidden; border-radius: 28px; color: var(--gl-color-text); border: 1.5px solid var(--gl-border-medium);
     background: linear-gradient(var(--gl-surface-3), var(--gl-surface-3)), #14161e; box-shadow: var(--gl-shadow-modal); }
+  .sheet[open] { display: flex; flex-direction: column; }
+  .scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 18px; }
   .sheet::backdrop { background: rgba(8, 10, 16, .45); backdrop-filter: blur(6px); }
   header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 6px; padding-inline: 4px; }
   h2 { font-size: 22px; font-weight: 600; }
@@ -181,7 +185,8 @@
   a:focus-visible { outline-offset: 2px; }
 
   @media (max-width: 600px) {
-    .sheet { inset: auto 8px var(--vt-bot, 12px) 8px; width: auto; max-width: none; max-height: 90vh; margin: 0; padding: 26px 14px 14px; border-radius: 30px; }
+    .sheet { inset: auto 8px var(--vt-bot, 12px) 8px; width: auto; max-width: none; max-height: 90vh; margin: 0; padding: 26px 0 14px; border-radius: 30px; }
+    .scroll { padding: 0 14px; }
     .sheet::before { content: ''; position: absolute; top: 7px; left: 50%; width: 36px; height: 5px; margin-left: -18px; border-radius: 3px; background: var(--gl-border-strong); }
   }
 </style>

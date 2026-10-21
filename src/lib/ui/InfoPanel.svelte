@@ -1,5 +1,6 @@
 <script lang="ts">
   // The viewer's Info panel: a side panel in wide landscape windows, otherwise a bottom sheet. Content comes from the pure info.ts.
+  import { NEW_TAB } from '../app';
   import { infoRows, kicker, maskId, needsTierHint, pixellabLink, PLAYBACK_NOTE, technicalRows, textBlock, UI_NOTE } from '../info';
   import type { Card, Detail, FamilyId } from '../types';
 
@@ -107,7 +108,7 @@
   <footer>
     {#if needsTierHint(familyId)}<p class="vt-text-2">Opening in PixelLab may need a paid plan.</p>{/if}
     <a class="glass-btn glass-btn--tertiary glass-btn--sm" href={pixellabLink(familyId, card)} target="_blank" rel="noopener noreferrer">
-      Open in PixelLab ↗<span class="vt-sr"> (opens PixelLab in a new tab)</span>
+      Open in PixelLab ↗<span class="vt-sr">{NEW_TAB}</span>
     </a>
   </footer>
   <span class="vt-sr" role="status">{copied ? 'Copied' : ''}</span>
@@ -122,7 +123,7 @@
   .grip { flex: none; display: grid; place-items: center; height: 44px; margin: 0 auto; width: 120px; border: 0; padding: 0; background: none; cursor: pointer; }
   .grip span { width: 42px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .35); }
   .grip:focus-visible { outline: 2px solid #fff; outline-offset: -4px; border-radius: 14px; }
-  .body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 25px 12px; }
+  .body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 25px 12px; scrollbar-gutter: stable; }
   header h2 { font-size: 26px; line-height: 1.2; font-weight: 600; letter-spacing: -.01em; overflow-wrap: anywhere; }
   header p { font-size: 15px; margin-top: 4px; }
 
@@ -153,7 +154,8 @@
   .tech summary:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 12px; }
   .warn { font-size: 13.5px; margin-top: 12px; }
 
-  footer { flex: none; padding: 12px 25px max(16px, env(safe-area-inset-bottom)); }
+  /* The footer reserves the same scrollbar gutter as the body, so its button lines up with the cards above. */
+  footer { flex: none; padding: 12px 25px max(16px, env(safe-area-inset-bottom)); overflow: hidden; scrollbar-gutter: stable; }
   footer p { font-size: 13.5px; text-align: center; margin-bottom: 8px; }
   footer .glass-btn { display: flex; width: 100%; justify-content: center; text-decoration: none; box-sizing: border-box; }
 
@@ -161,6 +163,6 @@
   @media (orientation: landscape) and (min-width: 840px) {
     .info { left: auto; top: 16px; right: 16px; bottom: 16px; width: 400px; height: auto; border-radius: 28px; border-bottom: 1px solid var(--gl-border-subtle); box-shadow: var(--gl-shadow-modal); }
     .grip { display: none; }
-    .body { padding-top: 26px; }
+    .body { margin-top: 26px; } /* margin, not padding: the scrollbar starts below the rounded corner */
   }
 </style>

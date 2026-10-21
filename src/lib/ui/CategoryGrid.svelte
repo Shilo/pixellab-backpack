@@ -33,6 +33,7 @@
 
 <script lang="ts">
   import { tick } from 'svelte';
+  import { NEW_TAB } from '../app';
   import { familiesOf } from '../categories';
   import { library } from '../data/library.svelte';
   import { OTHER_CONTENT, OTHER_TEXT, OTHER_TITLE } from '../info';
@@ -153,7 +154,7 @@
             <span>Find them in PixelLab:</span>
             {#each OTHER_CONTENT as [label, url] (label)}
               <a class="glass-btn glass-btn--tertiary glass-btn--sm glass-btn--auto" href={url} target="_blank" rel="noopener noreferrer"
-                >{label}<span aria-hidden="true">&nbsp;↗</span><span class="vt-sr">{' '}(opens PixelLab in a new tab)</span></a
+                >{label}<span aria-hidden="true">&nbsp;↗</span><span class="vt-sr">{NEW_TAB}</span></a
               >
             {/each}
           </div>

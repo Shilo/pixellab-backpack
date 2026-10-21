@@ -9,7 +9,7 @@
   import { untrack } from 'svelte';
   import { library } from '../data/library.svelte';
   import PixelArt from '../render/PixelArt.svelte';
-  import { highlight, stateName as stateOf } from '../search';
+  import { highlight, snippetFrom, stateName as stateOf } from '../search';
   import type { Card, FamilyId } from '../types';
 
   let { card, familyId, costly, href, terms = [] }: { card: Card; familyId: FamilyId; costly: boolean; href: string; terms?: string[] } = $props();
@@ -17,6 +17,8 @@
   // "Name · state" (R6): the state name of the card this cell opens, only when it has sibling states on this device.
   const name = $derived(card.name || 'Untitled');
   const stateName = $derived(stateOf(card, library.states(card, familyId)));
+  // Search results: a long name starts near its first match so the bold words show (grid cells pass no terms: whole name).
+  const from = $derived(snippetFrom(name, terms));
 
   let box: HTMLAnchorElement | undefined = $state();
   let onScreen = $state(false);
@@ -56,7 +58,7 @@
   <div class="sq">
     <div class="art" aria-hidden="true">{#if blob}<PixelArt {blob} alt={name} fill />{/if}</div>
   </div>
-  <span class="nm">{@render runs(name)}{#if stateName}{' '}<small>· {@render runs(stateName)}</small>{/if}</span>
+  <span class="nm">{#if from}<span class="vt-sr">{name.slice(0, from)}</span><span aria-hidden="true">…</span>{/if}{@render runs(name.slice(from))}{#if stateName}{' '}<small>· {@render runs(stateName)}</small>{/if}</span>
 </a>
 
 <style>

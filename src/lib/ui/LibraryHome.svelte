@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { NEW_TAB } from '../app';
   import { library } from '../data/library.svelte';
   import CategoryTile from './CategoryTile.svelte';
 
@@ -19,7 +20,7 @@
       <h2 class="glass-empty__title">Nothing here yet.</h2>
       <p class="glass-empty__text">Create something in PixelLab and it'll show up here.</p>
       <div class="glass-empty__action">
-        <a class="glass-btn glass-btn--primary glass-btn--auto" href="https://www.pixellab.ai/" target="_blank" rel="noopener noreferrer">Open PixelLab&nbsp;↗<span class="vt-sr"> (opens PixelLab in a new tab)</span></a>
+        <a class="glass-btn glass-btn--primary glass-btn--auto" href="https://www.pixellab.ai/" target="_blank" rel="noopener noreferrer">Open PixelLab&nbsp;↗<span class="vt-sr">{NEW_TAB}</span></a>
         <button type="button" class="glass-btn glass-btn--tertiary glass-btn--auto" onclick={() => library.openCheck({ force: true })}>Sync again</button>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fold, highlight, matches, newestFirst, remember, sameAsset, search, stateName, terms } from '../../src/lib/search';
+import { fold, highlight, matches, newestFirst, remember, sameAsset, search, snippetFrom, stateName, terms } from '../../src/lib/search';
 import type { Card, FamilyId, Item } from '../../src/lib/types';
 
 const card = (name: string, meta: Record<string, unknown> = {}, key = name): Card => ({ key, id: `id-${key}`, name, done: true, thumb: null, fp: 'f', meta });
@@ -42,6 +42,29 @@ describe('highlight', () => {
   it('returns one plain run with no terms, and nothing for empty text', () => {
     expect(highlight('Chest', [])).toEqual([{ text: 'Chest', mark: false }]);
     expect(highlight('', ['a'])).toEqual([]);
+  });
+});
+
+describe('snippetFrom', () => {
+  const long = 'A front-facing pixel-art forest ranger with a hooded green cloak';
+  it('starts at a word a few characters before a late match', () => {
+    const at = snippetFrom(long, terms('ranger'));
+    expect(long.slice(at)).toBe('forest ranger with a hooded green cloak');
+  });
+  it('uses the earliest match of several terms, ignoring accents and case', () => {
+    expect(long.slice(snippetFrom(long, terms('CLOAK fôrest')))).toBe('pixel-art forest ranger with a hooded green cloak');
+    const accented = 'Une très grande épée enchantée';
+    expect(accented.slice(snippetFrom(accented, terms('EPEE')))).toBe('grande épée enchantée');
+  });
+  it('keeps the whole label for a match at or near the start, no match, or no terms', () => {
+    expect(snippetFrom(long, terms('front'))).toBe(0);
+    expect(snippetFrom(long, terms('a'))).toBe(0);
+    expect(snippetFrom(long, terms('zzz'))).toBe(0);
+    expect(snippetFrom(long, [])).toBe(0);
+  });
+  it('cuts inside a very long word when no word starts in reach', () => {
+    const name = `${'x'.repeat(300)}dragon`;
+    expect(name.slice(snippetFrom(name, terms('dragon')))).toBe('xxxxxxxxxxdragon');
   });
 });
 

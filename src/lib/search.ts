@@ -51,6 +51,23 @@ export function highlight(text: string, ts: string[]): { text: string; mark: boo
   return runs;
 }
 
+// ponytail: a fixed character budget, not a measured one; the narrowest result cell (phone) still shows ~17 characters.
+/** Where a one-line label starts so its first match shows: 0 when the match begins within `lead` characters (or nothing
+ * matches), else a word start at most `lead` characters before it. The caller shows "…" in place of the cut text. */
+export function snippetFrom(text: string, ts: string[], lead = 10): number {
+  let at = 0;
+  for (const r of highlight(text, ts)) {
+    if (r.mark) break;
+    at += r.text.length;
+  }
+  if (at <= lead || at >= text.length) return 0;
+  let s = at - lead;
+  if (/[\uDC00-\uDFFF]/.test(text[s])) s++; // never split an emoji or other astral character
+  if (/\s/.test(text[s - 1])) return s;
+  const gap = text.slice(s, at).search(/\s\S/);
+  return gap < 0 ? s : s + gap + 1; // no word start in reach: cut inside the word
+}
+
 /** The state name a card shows and is searched by (R6): only when it has sibling states saved on this device
  * (`states` is its group, itself included). Live data gives nearly every lone card a state name ("Idle", "base"). */
 export const stateName = (c: Card, states: readonly Card[]): string =>

@@ -1,7 +1,7 @@
 <script lang="ts">
   // The API key screen (S1): paste or "Test key", every state of the key test. On success App switches on library.hasKey.
   import { onMount, tick } from 'svelte';
-  import { APP_NAME, APP_SHORT } from '../app';
+  import { APP_NAME, APP_SHORT, NEW_TAB } from '../app';
   import { library } from '../data/library.svelte';
 
   type Phase = 'idle' | 'testing' | 'empty' | 'invalid' | 'offline' | 'blocked' | 'server' | 'paused';
@@ -114,7 +114,7 @@
       <ol class="g1-steps">
         <li>
           <span class="glass-steps__num">1</span>
-          <p><a class="g1-link" href="https://www.pixellab.ai/account" target="_blank" rel="noopener noreferrer">Open your PixelLab account page&nbsp;↗<span class="vt-sr"> (opens PixelLab in a new tab)</span></a> (sign in if PixelLab asks).</p>
+          <p><a class="g1-link" href="https://www.pixellab.ai/account" target="_blank" rel="noopener noreferrer">Open your PixelLab account page&nbsp;↗<span class="vt-sr">{NEW_TAB}</span></a> (sign in if PixelLab asks).</p>
         </li>
         <li>
           <span class="glass-steps__num">2</span>

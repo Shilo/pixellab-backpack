@@ -11,6 +11,7 @@
 
 <script lang="ts">
   import { tick } from 'svelte';
+  import { NEW_TAB } from '../app';
   import { DEFAULT_FPS, MAX_FPS, MIN_FPS } from '../render/player';
   import type { createPlayer } from '../render/player.svelte';
 
@@ -108,7 +109,7 @@
     </div>
     <hr class="glass-divider" />
     <a class="glass-list__item glass-list__item--interactive open" href={link} target="_blank" rel="noopener noreferrer">
-      <span class="title">Open in PixelLab ↗<span class="vt-sr"> (opens PixelLab in a new tab)</span></span>
+      <span class="title">Open in PixelLab ↗<span class="vt-sr">{NEW_TAB}</span></span>
     </a>
   </div>
 {/if}

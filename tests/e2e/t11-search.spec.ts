@@ -8,7 +8,7 @@ const panel = (page: Page) => page.locator('.glass-popover.panel');
 const results = (page: Page) => panel(page).locator('.res a[data-key]');
 const viewer = (page: Page, name: string) => page.getByRole('dialog', { name, exact: true });
 const noSideways = (page: Page) =>
-  page.evaluate(() => [document.documentElement, ...document.querySelectorAll('main, .panel')].every((el) => el.scrollWidth <= el.clientWidth));
+  page.evaluate(() => [document.documentElement, ...document.querySelectorAll('main, .panel, .scroll')].every((el) => el.scrollWidth <= el.clientWidth));
 
 async function start(page: Page, counts?: Parameters<typeof mockPixelLab>[1]): Promise<Mock> {
   const mock = await mockPixelLab(page, counts);

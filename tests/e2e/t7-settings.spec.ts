@@ -138,6 +138,8 @@ test('About shows the version and the outbound links, all safe', async ({ page }
     ['Licences', '/licenses.txt'],
     ['Generate a new API key in your PixelLab account', 'https://www.pixellab.ai/account'],
   ];
+  // One screen-reader suffix, with its space (Svelte drops a tag's leading space), as on the All assets card.
+  await expect(dialog.getByRole('link', { name: 'Fonts (opens in a new tab)', exact: true })).toBeVisible();
   for (const [name, href] of want) {
     const link = dialog.getByRole('link', { name: new RegExp(`^${name}`) });
     await expect(link).toHaveAttribute('href', href);
@@ -163,7 +165,7 @@ test('no sideways scroll, and the keyboard reaches every control', async ({ page
   await start(page);
   const dialog = await open(page);
   const fits = await page.evaluate(() => {
-    const d = document.querySelector('dialog[open]')!;
+    const d = document.querySelector('dialog[open] .scroll')!; // the sheet's scroller
     return d.scrollWidth <= d.clientWidth && document.documentElement.scrollWidth <= innerWidth;
   });
   expect(fits).toBe(true);
