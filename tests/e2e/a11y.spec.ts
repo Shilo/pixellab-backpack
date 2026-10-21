@@ -1,7 +1,8 @@
-// Accessibility smoke (mocked PixelLab): on the key screen, home, a grid, the viewer (with its menu, picker and Info), Settings, the search panel and All assets,
+// Accessibility smoke (mocked PixelLab): on the key screen, home, a grid, the viewer (with its menu, picker and Info), Settings, the search panel, All assets,
+// Favorites, the folder overlay, the card menu, Add to folder and the folder dialogs,
 // Tab reaches every visible control, each shows a focus ring, and on phone every control is at least 44 × 44 px.
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { connect, mockPixelLab, settle } from '../fixtures/pixellab-mock';
+import { connect, mockPixelLab, seedOrg, settle } from '../fixtures/pixellab-mock';
 
 interface Audit {
   missing: string[];
@@ -179,4 +180,107 @@ test('search panel, no-results panel and All assets end: Tab reaches every contr
   await settle(page, mock, 600);
   await grid.locator('a[data-key]').last().focus();
   await check(page, phone, 'All assets end', '.end');
+});
+
+/** True when Chromium's accessibility tree exposes this text (not hidden by a modal or inert layer), as a screen reader gets it. */
+async function exposed(page: Page, text: string): Promise<boolean> {
+  const cdp = await page.context().newCDPSession(page);
+  const { nodes } = (await cdp.send('Accessibility.getFullAXTree')) as { nodes: { ignored: boolean; name?: { value?: unknown } }[] };
+  await cdp.detach();
+  return nodes.some((n) => !n.ignored && String(n.name?.value ?? '').includes(text));
+}
+
+test('Favorites, folders, the card menu, Add to folder and the folder dialogs: Tab, focus rings, 44 px phone targets; the menu by keyboard', async ({ page }, info) => {
+  test.setTimeout(120_000);
+  const phone = info.project.name === 'phone';
+  const mock = await mockPixelLab(page);
+  await page.goto('/');
+  await connect(page);
+  await settle(page, mock);
+  await page.getByRole('link', { name: 'Favorites, 0' }).click();
+  await expect(page.getByRole('heading', { name: 'No favorites yet.' })).toBeVisible();
+  await check(page, phone, 'Favorites (empty)');
+
+  await seedOrg(page, {
+    favorites: ['Character 1', 'Object 2', 'UI piece 1', 'Tileset 1'],
+    folders: [
+      { name: 'Empty shelf', items: [] },
+      { name: 'Hero party', items: ['Character 2', 'Object 3', 'Object 5'] },
+      { name: 'Lost and found', items: ['gone', 'Object 9'] },
+    ],
+  });
+  await page.reload();
+  await expect(page.locator('main.grid a.cell')).toHaveCount(4);
+  await settle(page, mock, 600);
+  await check(page, phone, 'Favorites');
+
+  // The overlay: full, empty, and with the unavailable-items note.
+  await page.getByRole('button', { name: 'Library' }).click();
+  for (const [tile, where] of [['Hero party, 3', 'folder'], ['Empty shelf, 0', 'empty folder'], ['Lost and found, 1', 'folder with the note']]) {
+    await page.getByRole('link', { name: tile }).click();
+    await expect(page.locator('.ov h2')).toBeFocused();
+    await settle(page, mock, 600);
+    await check(page, phone, where, '.ov');
+    await page.getByRole('button', { name: 'Close folder' }).click();
+    await expect(page.locator('.ov')).toHaveCount(0);
+  }
+
+  // The folder's "…", the name dialog and the delete confirm.
+  await page.getByRole('link', { name: 'Hero party, 3' }).click();
+  await page.getByRole('button', { name: 'Folder actions' }).click();
+  await opened(page.getByRole('menu', { name: 'Folder actions' }));
+  await check(page, phone, 'folder menu', '.ov [role="menu"]');
+  await page.getByRole('menuitem', { name: 'Rename…' }).click();
+  await opened(page.getByRole('dialog', { name: 'Rename folder' }));
+  await check(page, phone, 'folder name dialog', 'dialog[open]');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Folder actions' }).click();
+  await page.getByRole('menuitem', { name: 'Delete folder…' }).click();
+  await opened(page.getByRole('alertdialog', { name: 'Delete "Hero party"?' }));
+  await check(page, phone, 'delete confirm', 'dialog[open]');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Close folder' }).click();
+
+  // The card menu by keyboard: Tab to a cell, Shift+F10, ↓, Enter on Favorite: focus back on the cell, the live region speaks.
+  await page.getByRole('link', { name: /^Objects, / }).click();
+  await settle(page, mock, 600);
+  const cell = page.getByRole('link', { name: /^Object 3(, favorite)?$/ });
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  for (let i = 0; i < 20 && !(await cell.evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press('Tab');
+  await expect(cell).toBeFocused();
+  await page.keyboard.press('Shift+F10');
+  const menu = page.getByRole('dialog', { name: 'Object 3' });
+  await expect(page.getByRole('menuitem', { name: 'Open' })).toBeFocused();
+  await check(page, phone, 'card menu', 'dialog.cm');
+  await page.getByRole('menuitem', { name: 'Open' }).focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitem', { name: 'Favorite', exact: true })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(menu).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Object 3, favorite', exact: true })).toBeFocused();
+  await expect.poll(() => exposed(page, 'Added to Favorites.')).toBe(true);
+  await page.keyboard.press('Shift+F10');
+  await expect(page.getByRole('menuitem').first()).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Object 3, favorite', exact: true })).toBeFocused();
+
+  // Add to folder: Tab, rings and sizes; each folder's real checkbox shows a ring on its box and sits in a row of at least 44 px.
+  await page.keyboard.press('Shift+F10');
+  await page.getByRole('menuitem', { name: 'Add to folder…' }).click();
+  const atf = page.getByRole('dialog', { name: 'Add to folder' });
+  await opened(atf);
+  await check(page, phone, 'Add to folder', 'dialog.cm');
+  const boxes = atf.getByRole('checkbox');
+  await expect(boxes).toHaveCount(3);
+  await atf.getByRole('button', { name: 'New folder' }).focus();
+  for (let i = 0; i < 3; i++) {
+    await page.keyboard.press('ArrowDown');
+    await expect(boxes.nth(i)).toBeFocused();
+    const look = await boxes.nth(i).evaluate((el) => ({ ring: getComputedStyle(el.nextElementSibling!).boxShadow, row: el.closest('label')!.getBoundingClientRect().height }));
+    expect.soft(look.ring, `checkbox ${i}: no visible focus`).not.toBe('none');
+    if (phone) expect.soft(look.row, `checkbox ${i}: row under 44 px`).toBeGreaterThanOrEqual(44);
+  }
+  await page.keyboard.press('Escape');
+  await expect(atf).toHaveCount(0);
 });

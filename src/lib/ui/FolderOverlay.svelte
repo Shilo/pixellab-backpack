@@ -195,9 +195,9 @@
   .note .glass-btn { padding: 0 16px; color: var(--gl-color-text); }
 
   /* The "…" popover (MoreMenu's look), under the pill; a bottom sheet on phones. */
-  .backdrop { position: fixed; inset: 0; z-index: 3; border: 0; padding: 0; background: rgba(8, 10, 16, .25); cursor: default; }
+  .backdrop { position: fixed; inset: 0; z-index: 3; border: 0; padding: 0; background: none; cursor: default; } /* the overlay is dim already (g4-folder-menu) */
   .menu { position: absolute; z-index: 4; top: calc(100% + 10px); left: calc(50% - 135px); bottom: auto; width: 270px; padding: 6px 0; border-radius: 20px; transform: none;
-    background: linear-gradient(var(--gl-surface-3), var(--gl-surface-3)), var(--vt-scrim); --gl-list-item-min-height: 44px; --gl-list-item-padding-y: 9px; }
+    background: linear-gradient(var(--gl-surface-3), var(--gl-surface-3)), var(--vt-scrim); overflow: hidden; --gl-list-item-min-height: 44px; --gl-list-item-padding-y: 9px; }
   .menu .glass-list__item { cursor: pointer; }
   .glass-list__content { display: block; flex: 1; min-width: 0; }
   .glass-list__trailing svg { width: 19px; height: 19px; }
@@ -214,7 +214,7 @@
     .fpanel.emptyp { width: 100%; padding: 28px 16px 26px; }
     .note { flex-wrap: wrap; padding: 12px 12px 12px 14px; font-size: 13.5px; }
     .note > span:nth-child(2) { flex: 1 1 calc(100% - 40px); }
-    .note .glass-btn { margin-left: 32px; height: 40px; }
+    .note .glass-btn { margin-left: 32px; height: 44px; } /* 44 px phone target (mockup: 40) */
     .backdrop { background: rgba(8, 10, 16, .45); }
     .menu { position: fixed; left: 8px; right: 8px; top: auto; bottom: var(--vt-bot, 12px); width: auto; padding: 18px 0 8px; border-radius: 30px; --gl-list-item-min-height: 50px; }
     .menu::before { content: ''; position: absolute; top: 7px; left: 50%; width: 36px; height: 5px; margin-left: -18px; border-radius: 3px; background: var(--gl-border-strong); }

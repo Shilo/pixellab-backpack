@@ -1,6 +1,6 @@
 // T6 Request counter (mocked PixelLab): proves how few requests the app sends.
-import { expect, test, type Page } from '@playwright/test';
-import { GOOD_KEY, OTHER_KEY, connect, deviceStorage, mockPixelLab, settle, type Hit, type Mock } from '../fixtures/pixellab-mock';
+import { expect, test, type Locator, type Page } from '@playwright/test';
+import { GOOD_KEY, OTHER_KEY, ageSaved, connect, deviceStorage, mockPixelLab, settle, type Hit, type Mock } from '../fixtures/pixellab-mock';
 
 const api = (hits: Hit[]) => hits.filter((h) => h.host === 'api');
 const lists = (hits: Hit[]) => hits.filter((h) => h.list);
@@ -580,5 +580,250 @@ test('viewer from a result: first open sends 1 detail request, reopen 0; → thr
   await settle(page, mock, 600);
   expect(lists(mock.hits.slice(at))).toEqual([]);
   cleanAddress(page);
+  cleanHits(mock);
+});
+
+// ---- Favorites and folders (Phase 4): drawn from this device only. The counts are exact. ----
+const HOUR = 3_600_000;
+const GRIDS = [/^Characters, /, /^Objects, /, /^Tilesets & tiles, /, /^UI, /];
+const cellOf = (page: Page, name: string) => page.getByRole('link', { name: new RegExp(`^${name}(, favorite)?$`) });
+const said = (page: Page, text: string) => page.getByRole('status').filter({ hasText: text });
+const result = (page: Page, name: string) => panel(page).locator(`.res a[data-key][title="${name}"]`);
+
+/** Right-click a cell (a grid, the overlay or a result), then Favorite. */
+async function favorite(page: Page, cell: Locator) {
+  await cell.click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Favorite', exact: true }).click();
+  await expect(said(page, 'Added to Favorites.')).toBeAttached();
+}
+/** Right-click a cell, Add to folder…, check the folder, Done. */
+async function addTo(page: Page, cell: Locator, folder: string) {
+  await cell.click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Add to folder…' }).click();
+  await page.getByRole('checkbox', { name: new RegExp(`^${folder}`) }).check();
+  await expect(said(page, `Added to ${folder}.`)).toBeAttached();
+  await page.getByRole('button', { name: 'Done' }).click();
+}
+/** The New folder tile: name, Create, then the overlay's ✕. */
+async function newFolder(page: Page, name: string) {
+  await page.getByRole('button', { name: 'New folder' }).click();
+  await page.getByRole('textbox', { name: 'Folder name' }).fill(name);
+  await page.getByRole('button', { name: 'Create' }).click();
+  await page.getByRole('button', { name: 'Close folder' }).click();
+  await expect(page).toHaveURL(/#\/$/);
+}
+
+test('organize: favorites, a folder made, filled, renamed, another deleted; Favorites, the folder, Go to and the menu; a reload: 0 API requests', async ({ page }) => {
+  test.setTimeout(90_000);
+  const mock = await openFirst(page);
+  for (const name of GRIDS) {
+    await page.getByRole('link', { name }).click();
+    await settle(page, mock, 600);
+    await page.getByRole('button', { name: 'Library' }).click();
+  }
+  await settle(page, mock);
+  const at = mock.hits.length;
+
+  for (const [grid, name] of [[GRIDS[0], 'Character 1'], [GRIDS[1], 'Object 2'], [GRIDS[3], 'UI piece 1'], [GRIDS[2], 'Tileset 1']] as const) {
+    await page.getByRole('link', { name: grid }).click();
+    await favorite(page, cellOf(page, name));
+    await page.getByRole('button', { name: 'Library' }).click();
+  }
+  await newFolder(page, 'Keep');
+  await newFolder(page, 'Trash');
+  await page.getByRole('link', { name: GRIDS[1] }).click();
+  await addTo(page, cellOf(page, 'Object 3'), 'Keep');
+  await addTo(page, cellOf(page, 'Object 2'), 'Keep');
+  await page.getByRole('button', { name: 'Library' }).click();
+  await page.getByRole('link', { name: 'Keep, 2' }).click();
+  await page.getByRole('button', { name: 'Folder actions' }).click();
+  await page.getByRole('menuitem', { name: 'Rename…' }).click();
+  await page.getByRole('textbox', { name: 'Folder name' }).fill('Hero party');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: 'Close folder' }).click();
+  await page.getByRole('link', { name: 'Trash, 0' }).click();
+  await page.getByRole('button', { name: 'Folder actions' }).click();
+  await page.getByRole('menuitem', { name: 'Delete folder…' }).click();
+  await page.getByRole('button', { name: 'Delete folder', exact: true }).click();
+  await expect(said(page, 'Deleted "Trash".')).toBeAttached();
+  await settle(page, mock);
+  expect(api(mock.hits.slice(at))).toEqual([]);
+
+  // Favorites, the folder, Go to both and the card menu.
+  const favs = page.locator('main.grid a.cell');
+  const ov = page.getByRole('dialog', { name: 'Hero party', exact: true });
+  await page.getByRole('link', { name: 'Favorites, 4' }).click();
+  await expect(favs).toHaveCount(4);
+  await page.getByRole('button', { name: 'Library' }).click();
+  await page.getByRole('link', { name: 'Hero party, 2' }).click();
+  await expect(ov.locator('a.cell')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Close folder' }).click();
+  await openSearch(page);
+  await panel(page).locator('.gotos a').filter({ hasText: 'Favorites' }).click();
+  await expect(page).toHaveURL(/#\/fav$/);
+  await expect(favs).toHaveCount(4);
+  await openSearch(page);
+  await panel(page).locator('.gotos a').filter({ hasText: 'Hero party' }).click();
+  await expect(ov.locator('a.cell')).toHaveCount(2);
+  await ov.getByRole('link', { name: /^Object 3/ }).click({ button: 'right' });
+  await expect(page.getByRole('menuitem')).toHaveCount(3);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menuitem')).toHaveCount(0);
+  await settle(page, mock);
+  expect(api(mock.hits.slice(at))).toEqual([]);
+
+  // A reload within the hour, then Favorites and the folder.
+  const reloadAt = mock.hits.length;
+  await page.goto('/');
+  await expect(page.getByRole('link', { name: 'Characters, 250' })).toBeVisible();
+  await page.getByRole('link', { name: 'Favorites, 4' }).click();
+  await expect(favs).toHaveCount(4);
+  await expect(favs.locator('.art canvas')).toHaveCount(4); // every picture drawn, the tileset's too
+  await page.getByRole('button', { name: 'Library' }).click();
+  await page.getByRole('link', { name: 'Hero party, 2' }).click();
+  await expect(ov.locator('a.cell .art canvas')).toHaveCount(2);
+  await settle(page, mock);
+  expect(api(mock.hits.slice(reloadAt))).toEqual([]);
+  cleanHits(mock);
+});
+
+test('organize: a page-2 favorite after the deep pages expired shows in Favorites; only the 7 first-page checks are sent', async ({ page }) => {
+  const mock = await openFirst(page);
+  await page.getByRole('link', { name: GRIDS[0] }).click();
+  const grid = page.locator('main.grid');
+  const deep = () => mock.hits.some((h) => h.url.includes('/v2/characters?') && h.url.endsWith('offset=99'));
+  await expect.poll(async () => (await grid.evaluate((el) => el.scrollTo(0, el.scrollHeight)), deep()), { timeout: 15_000 }).toBe(true);
+  await settle(page, mock, 600);
+  await openSearch(page);
+  await field(page).fill('character 151');
+  await favorite(page, result(page, 'Character 151'));
+  await settle(page, mock);
+
+  for (const fam of ['characters', 'objects', 'ui', 'tilesets', 'tilesets-side', 'isometric', 'tiles-pro'] as const)
+    await ageSaved(page, fam, { checkedMs: 2 * HOUR, deepMs: 8 * 24 * HOUR }); // every first page is due; Characters' deep rows expired
+  const at = mock.hits.length;
+  await page.goto('/');
+  await expect(page.getByRole('link', { name: 'Characters, 250' })).toBeVisible();
+  await page.getByRole('link', { name: 'Favorites, 1' }).click();
+  await expect(page.getByRole('link', { name: 'Character 151, favorite', exact: true })).toBeVisible();
+  await settle(page, mock);
+  const sent = api(mock.hits.slice(at));
+  expect(sent.filter((h) => !h.list)).toEqual([]); // nothing changed: no picture or detail asked
+  expect(sent.map((h) => new URL(h.url).searchParams.get('offset'))).toEqual(Array(7).fill('0'));
+});
+
+test('organize: a tileset favorited before its picture resolved asks at most 1 costly request in Favorites, and 0 after a reload', async ({ page }) => {
+  const mock = await openFirst(page);
+  // Hold the side tileset helpers' answers: the picture is asked, not yet resolved, when it is favorited.
+  const HELPERS = 'https://api.pixellab.ai/mcp/sidescroller-tilesets/**';
+  let release = () => {};
+  const held = new Promise<void>((r) => (release = r));
+  await page.route(HELPERS, async (route) => {
+    await held;
+    await route.fallback().catch(() => {});
+  });
+  await openSearch(page);
+  await field(page).fill('side tileset 3');
+  await expect(results(page)).toHaveText(['Side tileset 3']);
+  await favorite(page, results(page).first());
+  await page.keyboard.press('Escape');
+  await expect(field(page)).toHaveCount(0);
+  release();
+  await settle(page, mock);
+  await page.unroute(HELPERS);
+  const asks = (hits: Hit[]) => api(hits).filter((h) => h.url.includes('a-tilesets-side-2'));
+
+  let at = mock.hits.length;
+  await page.getByRole('link', { name: 'Favorites, 1' }).click();
+  await expect(page.locator('main.grid a.cell .art canvas')).toHaveCount(1);
+  await settle(page, mock);
+  expect(asks(mock.hits.slice(at)).length).toBeLessThanOrEqual(1);
+  expect(api(mock.hits.slice(at))).toEqual(asks(mock.hits.slice(at)));
+
+  at = mock.hits.length;
+  await page.reload();
+  await expect(page.locator('main.grid a.cell .art canvas')).toHaveCount(1);
+  await settle(page, mock);
+  expect(api(mock.hits.slice(at))).toEqual([]);
+});
+
+test('organize: → through a viewer opened from Favorites never sends a list request, even at the last item', async ({ page }) => {
+  const mock = await openFirst(page);
+  // Character 100 is the last saved character: from the Characters grid, → there would load the next page.
+  for (const name of ['Character 100', 'Character 99']) {
+    await openSearch(page);
+    await field(page).fill(name);
+    await favorite(page, result(page, name));
+    await page.keyboard.press('Escape');
+    await expect(field(page)).toHaveCount(0);
+  }
+  await page.getByRole('link', { name: 'Favorites, 2' }).click();
+  await page.getByRole('link', { name: 'Character 99, favorite', exact: true }).click(); // newest added first
+  await expect(dialog(page, 'Character 99')).toBeVisible();
+  await settle(page, mock, 600);
+  const at = mock.hits.length;
+  await page.keyboard.press('ArrowRight');
+  await expect(dialog(page, 'Character 100')).toBeVisible();
+  await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(500);
+  await expect(dialog(page, 'Character 100')).toBeVisible();
+  await settle(page, mock, 600);
+  expect(lists(mock.hits.slice(at))).toEqual([]);
+  cleanAddress(page);
+  cleanHits(mock);
+});
+
+test('request order (R14): a next page goes ahead of queued tileset helpers; the totals are unchanged', async ({ page }) => {
+  test.setTimeout(90_000);
+  const mock = await openFirst(page);
+  // Every API request in the order the app sent it; costly picture answers (tileset helpers, Tiles Pro) held until released:
+  // two are in flight, the rest wait in the app's queue.
+  const order: string[] = [];
+  const holds: (() => void)[] = [];
+  let holding = true;
+  await page.route('https://api.pixellab.ai/**', async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (route.request().method() === 'GET') order.push(path);
+    if (holding && /^\/(mcp|v2\/tiles-pro)\//.test(path)) await new Promise<void>((r) => holds.push(r));
+    await route.fallback().catch(() => {});
+  });
+  const costly = () => order.filter((p) => p.startsWith('/mcp/') || p.startsWith('/v2/tiles-pro/'));
+  const at = mock.hits.length;
+  await page.getByRole('link', { name: GRIDS[2] }).click();
+  await expect.poll(() => holds.length, { timeout: 15_000 }).toBe(2);
+  await page.waitForTimeout(1000); // every costly cell on screen has asked (0.3 s): the rest are queued
+  await page.getByRole('button', { name: 'Library' }).click();
+  await page.getByRole('link', { name: GRIDS[0] }).click();
+  const grid = page.locator('main.grid');
+  await grid.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+  await page.waitForTimeout(1000);
+  expect(lists(mock.hits.slice(at))).toEqual([]); // both slots are taken by held helpers
+
+  expect(order).toHaveLength(2);
+  holds.shift()!(); // one slot frees: the next page is sent before any queued helper
+  await expect.poll(() => order.length, { timeout: 10_000 }).toBeGreaterThan(2);
+  expect(order[2]).toBe('/v2/characters');
+  expect(lists(mock.hits.slice(at))[0].url).toContain('/v2/characters?limit=100&offset=99');
+
+  holding = false;
+  holds.splice(0).forEach((r) => r());
+  await expect.poll(async () => (await grid.evaluate((el) => el.scrollTo(0, el.scrollHeight)), lists(mock.hits.slice(at)).length), { timeout: 30_000 }).toBe(2);
+  await settle(page, mock);
+  const all = mock.hits.slice(at);
+  const queued = costly().length - 2;
+  expect(queued, 'costly pictures waiting in the queue').toBeGreaterThanOrEqual(6);
+  // Totals: each costly picture asked once; the two Characters next pages and no other list request.
+  const asked = api(all).filter((h) => !h.list).flatMap((h) => ids(h.url));
+  expect(new Set(asked).size).toBe(asked.length);
+  expect(listPaths(all)).toEqual(['/v2/characters', '/v2/characters']);
+
+  // Activity (newest first): page 2 finished before every helper that was still queued.
+  await page.getByRole('button', { name: 'Library' }).click();
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitem', { name: /Activity/ }).click();
+  const log = (await dialog(page, 'Activity').locator('.log li', { hasText: 'PixelLab API' }).locator('.what').allInnerTexts()).reverse();
+  const page2 = log.indexOf('Characters · page 2');
+  expect(page2).toBeGreaterThan(0);
+  expect(log.slice(page2 + 1).filter((t) => / · picture$/.test(t)).length).toBeGreaterThanOrEqual(queued);
   cleanHits(mock);
 });

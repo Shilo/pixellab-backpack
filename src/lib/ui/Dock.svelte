@@ -1,6 +1,7 @@
 <script lang="ts">
   // The floating glass dock. Search opens the search (onSearch); its controls carry data-search so focus can return to them.
-  // Select stays visible but inert: a real button, aria-disabled, "Coming soon" for screen readers, no handler.
+  // Select stays visible but inert (a real button, aria-disabled, "Coming soon" for screen readers, no handler), and is left out
+  // when the screen holds nothing (count 0).
   // "…" calls onMore when given (B14), else it is inert too.
   let {
     mode,
@@ -36,10 +37,12 @@
       <button type="button" class="glass-tab-bar__item vt-icon" data-search aria-label="Search" onclick={onSearch}>
         <span class="glass-tab-bar__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></svg></span>
       </button>
-      <button type="button" class="glass-tab-bar__item" aria-disabled="true">
-        <span class="glass-tab-bar__label" aria-hidden="true">Select</span>
-        {@render soon('Select')}
-      </button>
+      {#if count !== 0}<!-- nothing to select: no Select (mockup g2-favorites-empty) -->
+        <button type="button" class="glass-tab-bar__item" aria-disabled="true">
+          <span class="glass-tab-bar__label" aria-hidden="true">Select</span>
+          {@render soon('Select')}
+        </button>
+      {/if}
     {/if}
     <button type="button" class="glass-tab-bar__item vt-icon" aria-disabled={onMore ? undefined : 'true'} aria-haspopup={onMore ? 'menu' : undefined} onclick={onMore}>
       <span class="glass-tab-bar__icon"><svg viewBox="0 0 24 24" class="dots" aria-hidden="true"><circle cx="5.5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="18.5" cy="12" r="1.7" /></svg></span>

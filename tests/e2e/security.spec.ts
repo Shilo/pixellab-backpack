@@ -166,3 +166,112 @@ test('search text stays in memory: never in the address bar, history, device sto
     expect(r.method(), r.url()).toBe('GET');
   }
 });
+
+// Favorites and folders stay on this device (Phase 4): a distinctive folder name, raw PixelLab ids and picture links never reach
+// the address bar, history state, the Activity panel or the console; addresses hold route words, keys and 12-hex folder ids.
+const NAME = 'Zebra Vault Ünïque 42';
+const NAME_FORMS = [NAME, NAME.toLowerCase(), encodeURIComponent(NAME), encodeURIComponent(NAME.toLowerCase()), 'Zebra Vault', 'zebra%20vault'];
+const RAW = /\b[ab]-(?:characters|objects|ui|tilesets-side|tilesets|isometric|tiles-pro)-\d+|pixellab\.ai|backblaze|https?:\/\/(?!localhost)/;
+/** #/, #/all, #/c/<id>, #/fav, #/f/<12 hex>, each optionally with /a/<12 hex key>, or #/a/<key>. */
+const ORG_ROUTE = /^#\/(?:(?:all|fav|c\/[a-z]+|f\/[0-9a-f]{12})(?:\/a\/[0-9a-f]{12})?|a\/[0-9a-f]{12})?$/;
+const private_ = (text: string, where: string) => {
+  for (const f of NAME_FORMS) expect(text.includes(f), `${where} holds "${f}"`).toBe(false);
+  expect(text, where).not.toMatch(RAW);
+};
+
+test('folders and favorites stay private: never in the address, history, Activity or console; Forget key wipes them in both tabs', async ({ page, context }) => {
+  test.setTimeout(90_000);
+  const mock = await mockPixelLab(context);
+  const urls: string[] = [];
+  const consoleText: string[] = [];
+  page.on('framenavigated', (f) => f === page.mainFrame() && urls.push(f.url()));
+  page.on('console', (m) => consoleText.push(m.text()));
+  page.on('pageerror', (e) => consoleText.push(String(e)));
+  const here = async (where: string) => private_(await page.evaluate(() => location.href + '\n' + JSON.stringify(history.state)), `${where}: address and history state`);
+  const said = (text: string) => page.getByRole('status').filter({ hasText: text });
+
+  await page.goto('/');
+  await connect(page);
+  await settle(page, mock);
+  await page.getByRole('button', { name: 'New folder' }).click();
+  await page.getByRole('textbox', { name: 'Folder name' }).fill(NAME);
+  await page.getByRole('button', { name: 'Create' }).click();
+  const ov = page.getByRole('dialog', { name: NAME, exact: true });
+  await expect(ov).toBeVisible();
+  await here('new folder');
+  await page.getByRole('button', { name: 'Close folder' }).click();
+
+  // Favorites and folder items: a character, an object and a tileset (its picture is a resolved link).
+  for (const [grid, name] of [[/^Characters, /, 'Character 1'], [/^Objects, /, 'Object 2'], [/^Tilesets & tiles, /, 'Tileset 1']] as const) {
+    await page.getByRole('link', { name: grid }).click();
+    await settle(page, mock, 600);
+    const cell = page.getByRole('link', { name: new RegExp(`^${name}(, favorite)?$`) });
+    await cell.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Favorite', exact: true }).click();
+    await expect(said('Added to Favorites.')).toBeAttached();
+    await cell.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Add to folder…' }).click();
+    await page.getByRole('checkbox', { name: new RegExp(`^${NAME}`) }).check();
+    await expect(said(`Added to ${NAME}.`)).toBeAttached();
+    await page.getByRole('button', { name: 'Done' }).click();
+    await page.getByRole('button', { name: 'Library' }).click();
+  }
+
+  // Every screen and viewer route of Phase 4.
+  await page.getByRole('link', { name: `${NAME}, 3` }).click();
+  await here('folder');
+  await ov.getByRole('link', { name: /^Character 1/ }).click();
+  await expect(page.getByRole('dialog', { name: 'Character 1', exact: true })).toBeVisible();
+  await settle(page, mock, 600);
+  await here('viewer over the folder');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Character 1', exact: true })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(ov).toHaveCount(0);
+  await page.getByRole('link', { name: 'Favorites, 3' }).click();
+  await page.getByRole('link', { name: 'Tileset 1, favorite', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Tileset 1', exact: true })).toBeVisible();
+  await settle(page, mock, 600);
+  await here('viewer from Favorites');
+  await page.keyboard.press('Escape');
+  await page.locator('[data-search]').click();
+  await page.getByRole('searchbox', { name: 'Search' }).fill('zebra');
+  await page.locator('.glass-popover.panel .gotos a').filter({ hasText: NAME }).click();
+  await expect(ov).toBeVisible();
+  await here('Go to the folder');
+  await page.getByRole('button', { name: 'Close folder' }).click();
+
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitem', { name: /Activity/ }).click();
+  const activity = page.getByRole('dialog', { name: 'Activity' });
+  await expect(activity).toBeVisible();
+  private_(await activity.innerText(), 'Activity panel');
+  await activity.getByRole('button', { name: 'Close' }).click();
+  expect(urls.some((u) => /#\/f\/[0-9a-f]{12}\/a\/[0-9a-f]{12}$/.test(u))).toBe(true); // hash changes are recorded
+  for (const u of [...urls, page.url()]) {
+    private_(decodeURIComponent(u).replace(/^http:\/\/localhost:\d+\//, ''), `address ${u}`);
+    expect(new URL(u).hash || '#/', `address ${u}`).toMatch(ORG_ROUTE);
+  }
+
+  // A second tab of the same key holds the folder too; Forget key here wipes it there as well.
+  const tab = await context.newPage();
+  await tab.goto('/');
+  await connect(tab);
+  await expect(tab.getByRole('link', { name: `${NAME}, 3` })).toBeVisible();
+  expect(await deviceStorage(tab)).toContain('"org"');
+  await page.bringToFront();
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitem', { name: /Settings/ }).click();
+  await page.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'Forget key' }).click();
+  await page.getByRole('dialog', { name: 'Forget your API key?' }).getByRole('button', { name: 'Forget key' }).click();
+  await expect(page.getByLabel('PixelLab API key')).toBeVisible();
+  for (const [p, where] of [[page, 'this tab'], [tab, 'second tab']] as const) {
+    await p.bringToFront();
+    await expect(p.getByRole('link', { name: `${NAME}, 3` })).toHaveCount(0);
+    await p.waitForTimeout(500); // nothing written back late
+    const stored = await deviceStorage(p);
+    expect(stored, where).not.toContain('"org"');
+    private_(stored, `${where}: device storage`);
+  }
+  private_(consoleText.join('\n'), 'console');
+});

@@ -1,7 +1,8 @@
-// Visual check: screenshots of the key screen, home, two grids, the menu, Activity, the viewer, the search and All assets into test-results/shots/ (git-ignored) for a person
-// to look at, plus a crispness check: every drawn picture is scaled by a whole number of device pixels, pixelated.
+// Visual check: screenshots of the key screen, home, two grids, the menu, Activity, the viewer, the search, All assets, Favorites
+// and folders into test-results/shots/ (git-ignored) for a person to look at, plus a crispness check: every drawn picture is
+// scaled by a whole number of device pixels, pixelated.
 import { expect, test, type Page } from '@playwright/test';
-import { connect, mockPixelLab, settle } from '../fixtures/pixellab-mock';
+import { connect, mockPixelLab, seedOrg, settle } from '../fixtures/pixellab-mock';
 
 /** Pictures that are not drawn at a whole device-pixel scale with hard pixel edges (expected: none). */
 const blurry = (page: Page) =>
@@ -149,6 +150,115 @@ for (const dpr of [1, 1.5, 2.625]) {
       await expect(panel).toBeVisible();
       await expect(offline).toHaveCount(0);
       await context.setOffline(false);
+    });
+
+    test('Favorites, folders, card menu, Add to folder, the folder dialogs and the viewer ♡: screenshots, crisp pixel art', async ({ page }, info) => {
+      test.setTimeout(90_000);
+      const shot = async (name: string) => {
+        await page.waitForTimeout(300); // GlassKit's focus and open transitions end
+        await page.screenshot({ path: `test-results/shots/${info.project.name}-${dpr}x-${name}.png` });
+      };
+      const blur = () => page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+      const mock = await mockPixelLab(page);
+      await page.goto('/');
+      await connect(page);
+      await settle(page, mock);
+      await page.getByRole('link', { name: 'Favorites, 0' }).click();
+      await expect(page.getByRole('heading', { name: 'No favorites yet.' })).toBeVisible();
+      await settle(page, mock);
+      await shot('favorites-empty');
+
+      // Finished rows only (Phase 4 Task 7 ruling); "gone" is an object deleted in PixelLab.
+      await seedOrg(page, {
+        favorites: ['Character 1', 'Character 7', 'Object 2', 'Object 5', 'UI piece 1', 'Tileset 1', 'Character 3', 'Object 3'],
+        folders: [
+          { name: 'Hero party', items: ['Character 1', 'Character 2', 'Character 7', 'Character 5', 'Object 2', 'Object 3', 'Object 6', 'Object 7'] },
+          { name: 'Boss rush', items: ['Object 6', 'Object 7', 'Character 5'] },
+          { name: 'Empty shelf', items: [] },
+          { name: 'Lost and found', items: ['gone', 'Object 9'] },
+        ],
+      });
+      await page.goto('/');
+      await expect(page.getByRole('link', { name: 'Hero party, 8' })).toBeVisible();
+      await page.locator('main.library').evaluate((el) => el.scrollTo(0, el.scrollHeight));
+      await settle(page, mock);
+      expect(await blurry(page)).toEqual([]);
+      await shot('home-folders');
+
+      await page.getByRole('link', { name: 'Favorites, 8' }).click();
+      await expect(page.locator('main.grid a.cell')).toHaveCount(8);
+      await settle(page, mock);
+      await expect.poll(() => drawn(page)).toBe(8);
+      expect(await blurry(page)).toEqual([]);
+      await shot('favorites');
+
+      // The open folder, its "…" and the delete confirm.
+      await page.getByRole('button', { name: 'Library' }).click();
+      await page.getByRole('link', { name: 'Hero party, 8' }).click();
+      const ov = page.getByRole('dialog', { name: 'Hero party', exact: true });
+      await expect(ov.getByText('8 assets', { exact: true })).toBeVisible();
+      await settle(page, mock);
+      expect(await drawn(page)).toBeGreaterThan(0);
+      expect(await blurry(page)).toEqual([]);
+      await blur();
+      await shot('folder-open');
+      await page.getByRole('button', { name: 'Folder actions' }).click();
+      await shot('folder-menu');
+      // The overlay is dim already: on desktop its "…" adds no second dim (mockup g4-folder-menu); a phone sheet dims as every sheet.
+      if (info.project.name === 'desktop') expect(await page.locator('.ov .backdrop').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+      await page.getByRole('menuitem', { name: 'Delete folder…' }).click();
+      await expect(page.getByRole('alertdialog', { name: 'Delete "Hero party"?' })).toBeVisible();
+      await shot('confirm-delete-folder');
+      await page.getByRole('button', { name: 'Cancel' }).click();
+      await page.getByRole('button', { name: 'Close folder' }).click();
+
+      await page.getByRole('link', { name: 'Empty shelf, 0' }).click();
+      await expect(page.getByText('This folder is empty.')).toBeVisible();
+      await settle(page, mock);
+      await blur();
+      await shot('folder-empty');
+      await page.getByRole('button', { name: 'Close folder' }).click();
+      await page.getByRole('link', { name: 'Lost and found, 1' }).click();
+      await expect(page.getByText("1 item in this folder isn't in your PixelLab library anymore.")).toBeVisible();
+      await settle(page, mock);
+      expect(await blurry(page)).toEqual([]);
+      await blur();
+      await shot('folder-unavailable');
+      await page.getByRole('button', { name: 'Close folder' }).click();
+
+      // A card's menu, Add to folder and the folder name with the duplicate error.
+      await page.getByRole('link', { name: /^Objects, / }).click();
+      await settle(page, mock);
+      await page.getByRole('link', { name: 'Object 6', exact: true }).click({ button: 'right' });
+      await expect(page.getByRole('menuitem')).toHaveCount(3);
+      await settle(page, mock);
+      await shot('card-menu');
+      await page.getByRole('menuitem', { name: 'Add to folder…' }).click();
+      await expect(page.getByRole('dialog', { name: 'Add to folder' })).toBeVisible();
+      await settle(page, mock);
+      await shot('add-to-folder');
+      // The rounded panel clips its rows: the last row's corner (highlighted on hover) never pokes out past the curve.
+      const poke = await page.locator('dialog.cm .panel').evaluate((p) => {
+        const r = p.getBoundingClientRect();
+        const row = [...p.querySelectorAll('.glass-list__item')].pop()!.getBoundingClientRect();
+        return p.contains(document.elementFromPoint(r.right - 2, row.bottom - 1));
+      });
+      expect(poke).toBe(false);
+      await page.getByRole('button', { name: 'New folder' }).click();
+      await page.getByRole('textbox', { name: 'Folder name' }).fill('hero PARTY');
+      await expect(page.getByText('You already have a folder with that name.')).toBeVisible();
+      await shot('folder-name');
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+
+      await page.getByRole('link', { name: 'Object 2, favorite', exact: true }).click();
+      const v = page.getByRole('dialog', { name: 'Object 2', exact: true });
+      await expect(v.getByRole('button', { name: 'Favorite', exact: true })).toHaveAttribute('aria-pressed', 'true');
+      await settle(page, mock);
+      expect(await blurry(page)).toEqual([]);
+      await blur();
+      await shot('viewer-fav');
     });
   });
 }

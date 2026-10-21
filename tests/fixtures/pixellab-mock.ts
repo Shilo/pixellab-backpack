@@ -243,6 +243,52 @@ export function deviceStorage(page: Page): Promise<string> {
   });
 }
 
+/** Writes the saved `org` record (favorites and folders) from asset names, as the app would after the same clicks. Folder ids
+ * are a0…01, a0…02, … in list order. "gone" stands for an object deleted in PixelLab (a snapshot no saved card has). Reload after. */
+export function seedOrg(page: Page, o: { favorites: string[]; folders: { name: string; items: string[] }[] }): Promise<void> {
+  return page.evaluate(
+    (o) =>
+      new Promise<void>((done, fail) => {
+        const r = indexedDB.open('pixellab-backpack');
+        r.onerror = () => fail(r.error);
+        r.onsuccess = () => {
+          const kv = r.result.transaction('kv', 'readwrite').objectStore('kv');
+          const all = kv.getAll();
+          const keys = kv.getAllKeys();
+          keys.onsuccess = () => { // answered after getAll
+            try {
+            const byName = new Map<string, { familyId: string; card: { key: string; name: string; done: boolean } }>();
+            keys.result.forEach((k, i) => {
+              const fam = String(k).startsWith('family:') && String(k).slice(7);
+              if (fam) for (const card of all.result[i].cards) if (card.done && !byName.has(card.name)) byName.set(card.name, { familyId: fam, card });
+            });
+            const cards: Record<string, unknown> = {};
+            const key = (name: string) => {
+              const s = byName.get(name === 'gone' ? 'Object 1' : name);
+              if (!s) throw new Error(`${name} is not saved`);
+              const snap = name === 'gone' ? { ...s, card: { ...s.card, key: 'ffffffffffff', id: 'a-objects-999' } } : s;
+              cards[snap.card.key] = snap;
+              return snap.card.key;
+            };
+            const rec = {
+              v: 1,
+              favorites: o.favorites.map(key),
+              folders: o.folders.map((f, i) => ({ id: `a${String(i + 1).padStart(11, '0')}`, name: f.name, at: i, items: f.items.map(key) })),
+              cards,
+            };
+            kv.put(rec, 'org');
+            } catch (e) {
+              fail(String(e));
+            }
+          };
+          kv.transaction.oncomplete = () => (r.result.close(), done());
+          kv.transaction.onerror = () => fail(kv.transaction.error);
+        };
+      }),
+    o,
+  );
+}
+
 /** Rewrites the saved `family:<fam>` in IndexedDB: checkedAt and deepLoadedAt (when set) moved this many ms into the past. Reload after. */
 export function ageSaved(page: Page, fam: Fam, o: { checkedMs?: number; deepMs?: number }): Promise<void> {
   return page.evaluate(

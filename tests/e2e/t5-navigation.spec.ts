@@ -129,14 +129,14 @@ test('the keyboard reaches every working control; inert controls cause no reques
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/#\/$/);
 
-  // Favorites: opening it asks nothing, and its Select is inert too.
+  // Favorites: opening it asks nothing; empty, it has no Select (mockup g2-favorites-empty).
   await settle(page, mock);
   const atHome = mock.hits.length;
   await page.getByRole('link', { name: 'Favorites, 0' }).click();
   await expect(page).toHaveURL(/#\/fav$/);
-  await page.getByRole('button', { name: 'Select, coming soon', exact: true }).click({ force: true });
+  await expect(page.locator('.crumb')).toHaveText('Favorites0');
+  await expect(page.getByRole('button', { name: 'Select, coming soon', exact: true })).toHaveCount(0);
   await page.waitForTimeout(600);
-  await expect(page).toHaveURL(/#\/fav$/);
   expect(mock.hits.length).toBe(atHome);
 });
 

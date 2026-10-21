@@ -20,6 +20,7 @@
   let vw = $state(0);
   let vh = $state(0);
   let opened = ''; // the key the menu opened for, kept for the focus return after `item` is gone
+  let shown = false; // closed() runs once per opening
 
   const name = $derived(item ? item.card.name || 'Untitled' : '');
   const keys = $derived(item ? library.groupKeys(item.card, item.familyId) : []); // R7, as the viewer's ♡ and the cell's heart
@@ -39,13 +40,18 @@
       opened = item.card.key;
       down = false;
       view = start;
+      shown = true;
       dlg.showModal();
       tick().then(first);
     } else if (!item && dlg?.open) dlg.close();
   });
 
   // Focus goes back to the cell, else the screen's heading. Opened without a cell (the viewer), the dialog's own return stands.
+  // Run at once by every close this menu makes (shut): the dialog's own close event comes a task later, and a Shift+F10 pressed
+  // in between must open the menu again, not reach the browser's own menu. That late event is ignored once it has reopened.
   function closed() {
+    if (!shown) return;
+    shown = false;
     naming = null;
     if (rect)
       // The first copy that is not inert: a grid under the open search or a folder overlay holds an inert one earlier in the page.
@@ -54,6 +60,16 @@
         if (el && document.activeElement === el) break;
       }
     onClose();
+  }
+
+  function shut() {
+    dlg?.close();
+    closed();
+  }
+  // Esc: closed here, at once (the native close's event comes later).
+  function oncancel(e: Event) {
+    e.preventDefault();
+    shut();
   }
 
   // Keys stay in the dialog (Esc must not also close the search or the viewer); ↑/↓/Home/End move between the items.
@@ -71,11 +87,11 @@
   // The dialog covers the window and is see-through: a click on it is a click outside the panel. It must also start there, so the
   // release that ends a long press, or a drag out of the panel, does not close the menu it just opened.
   let down = false;
-  const outside = (e: MouseEvent) => down && e.target === dlg && dlg?.close();
+  const outside = (e: MouseEvent) => down && e.target === dlg && shut();
 
   function favorite() {
     if (item) setFavorite(item, keys, !fav).catch(() => {});
-    dlg?.close();
+    shut();
   }
 
   async function folders() {
@@ -99,7 +115,7 @@
 {/snippet}
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-<dialog bind:this={dlg} class="cm" aria-label={view === 'menu' ? name : 'Add to folder'} onclose={closed} onpointerdown={(e) => (down = e.target === dlg)} onclick={outside} {onkeydown}>
+<dialog bind:this={dlg} class="cm" aria-label={view === 'menu' ? name : 'Add to folder'} onclose={() => !dlg?.open && closed()} {oncancel} onpointerdown={(e) => (down = e.target === dlg)} onclick={outside} {onkeydown}>
   {#if item}
     {#if rect}
       <div class="lifted" aria-hidden="true" style="left: {rect.left}px; top: {rect.top}px; width: {rect.width}px">
@@ -110,7 +126,7 @@
     <div class="glass-popover is-open vt-scrim panel" class:at={rect} class:atf={view === 'folders'} style={at} bind:this={panel} bind:offsetWidth={pw} bind:offsetHeight={ph}>
       {#if view === 'menu'}
         <div class="glass-list glass-list--bare" role="menu">
-          <a class="glass-list__item glass-list__item--interactive" role="menuitem" data-nav {href} onclick={() => dlg?.close()}>
+          <a class="glass-list__item glass-list__item--interactive" role="menuitem" data-nav {href} onclick={shut}>
             <span class="glass-list__content"><span class="glass-list__title">Open</span></span>
             <span class="glass-list__trailing"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4" /><path d="M10 14l4-4M10.5 10H14v3.5" /></svg></span>
           </a>
@@ -126,7 +142,7 @@
       {:else}
         <div class="ph">
           <div><b>Add to folder</b><span>{name}</span></div>
-          <button type="button" class="glass-btn glass-btn--tertiary glass-btn--sm glass-btn--auto" onclick={() => dlg?.close()}>Done</button>
+          <button type="button" class="glass-btn glass-btn--tertiary glass-btn--sm glass-btn--auto" onclick={shut}>Done</button>
         </div>
         <div class="glass-list glass-list--bare fl" role="group" aria-label="Folders">
           <button type="button" class="glass-list__item glass-list__item--interactive" data-nav onclick={() => item && (naming = { kind: 'new', add: item })}>
@@ -168,6 +184,7 @@
 
   .panel { position: fixed; top: 92px; right: calc(24px + var(--side, 0px)); left: auto; bottom: auto; width: 270px; min-width: 0; box-sizing: border-box; padding: 6px 0;
     border-radius: 20px; transform: none; background: linear-gradient(var(--gl-surface-3), var(--gl-surface-3)), var(--vt-scrim);
+    overflow: hidden; /* a highlighted last row stays inside the rounded corners */
     --gl-list-item-min-height: 44px; --gl-list-item-padding-y: 9px; }
   .panel.at { left: var(--x); top: var(--y); right: auto; }
   .panel.atf { width: 340px; padding: 0 0 6px; --gl-list-item-min-height: 56px; --gl-list-item-padding-y: 8px; }

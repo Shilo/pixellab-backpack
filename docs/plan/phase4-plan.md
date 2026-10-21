@@ -50,6 +50,17 @@ Select mode and the selection bar, downloads and ZIP (the menu's "Download…", 
 | R16 | **Reuse.** Favorites is the existing `CategoryGrid` over a given list (no next pages, no end block). The overlay is a plain CSS grid of `AssetCell`s. Home tiles reuse `CategoryTile`. Dialogs follow Settings' native `<dialog>` and GlassKit alert modal | KISS; no new dependency | None |
 | R17 | **Debug sign-in removal** by hand (not `git revert`, which would also undo the later `cssMinify: false`), last, after the live browser test | It is the tool for that test | None |
 
+## Rulings made while building
+
+| Task | Ruling | Cost if wrong |
+|---|---|---|
+| 5 | Two copy lines join R12: "Couldn't save. Try again." and "The asset in it stays in your library." | Copy only |
+| 7 | The folder title sits just above its card, which is centered in the window, so a short folder's title is lower than in `g4-folder-unavailable` (6 items); tall content still fits | None |
+| 7 | Only finished assets can enter a folder or Favorites (unfinished ones have no cell) | None |
+| 9 | Typing in the search also matches the Favorites Go to row by its label, like types and folders | None |
+| 10 | A category dock with a count of 0 has no Select (mockup `g2-favorites-empty`: nothing to select) | None |
+| 10 | "Remove them" is 44 px tall on phone, not the mockup's 40 px (Global Constraints: 44 px phone targets) | None |
+
 ## API-call budget for Phase 4
 
 "Calls + checks" as in Phase 2. Phase 4 adds **no request path**: no new `apiGet`, `publicGet`, `loadMore` or `openCheck` caller; `library.art` is called only where pictures are drawn (cells, tiles, Go to rows, Add to folder rows, the lifted picture). The measured cases start after home has rendered. "A costly card" is a tileset, Tiles Pro or isometric card whose picture link was never resolved on this device.
@@ -392,7 +403,7 @@ In Group E, Task 8 owns App's root `CardMenu` and listeners; Task 9 owns only Ap
 - [x] Task 7: Ship the Folders slice with `t13-folders`
 - [x] Task 8: Ship the card menu slice with `t13-menu`
 - [x] Task 9: Ship the search Go to rows and failed-family hint
-- [ ] Task 10: Prove 0 requests, security, screenshots, headed check and accessibility; tick the plan
+- [x] Task 10: Prove 0 requests, security, screenshots, headed check and accessibility; tick the plan
 - [ ] Task 10 (owner): Check long press and the search keyboard on a real iPhone and Android phone
 - [ ] Task 10 (controller): Run the headed live browser test with the debug sign-in (`npm run dev`, `?devkey`) and fix what it finds
 - [ ] Task 11: Remove the temporary debug sign-in (last, after the live browser test)
