@@ -20,3 +20,4 @@ mockups/full/tools/edge-prof-*/
 dist/
 test-results/
 playwright-report/
+.env
