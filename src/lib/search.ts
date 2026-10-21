@@ -1,4 +1,4 @@
-// Search rules, pure (Phase 3 R5/R6/R8): case- and accent-insensitive substring match on a card's name and state name.
+// Search rules, pure (Phase 3 R5/R6/R8): case- and accent-insensitive substring match on a card's name and (grouped cards only) state name.
 import type { Card } from './types';
 
 export const MAX_RESULTS = 100;
@@ -51,8 +51,13 @@ export function highlight(text: string, ts: string[]): { text: string; mark: boo
   return runs;
 }
 
+/** The state name a card shows and is searched by (R6): only when it has sibling states saved on this device
+ * (`states` is its group, itself included). Live data gives nearly every lone card a state name ("Idle", "base"). */
+export const stateName = (c: Card, states: readonly Card[]): string =>
+  states.length > 1 && typeof c.meta.state_name === 'string' ? c.meta.state_name.trim() : '';
+
 /** The line a card is searched and shown by: "Name state". */
-const label = (c: Card) => `${c.name} ${typeof c.meta.state_name === 'string' ? c.meta.state_name : ''}`;
+const label = (c: Card, states: readonly Card[]) => `${c.name} ${stateName(c, states)}`;
 
 // ponytail: folds every label on every call (no index); fine for a few thousand cards, cache folded labels per fp if search gets slow.
 /**
@@ -64,7 +69,8 @@ export function search<T extends { card: Card }>(items: T[], q: string, statesOf
   if (!ts.length) return [];
   const out: T[] = [];
   for (const it of items) {
-    const hits = statesOf(it).filter((c) => matches(label(c), ts));
+    const states = statesOf(it);
+    const hits = states.filter((c) => matches(label(c, states), ts));
     if (!hits.length) continue;
     const shown = hits.find((c) => c.key === it.card.key) ?? hits[0];
     out.push(shown.key === it.card.key ? it : { ...it, card: shown });

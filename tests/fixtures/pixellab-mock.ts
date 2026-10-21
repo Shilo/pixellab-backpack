@@ -31,7 +31,7 @@ const charDirs = (i: number) => (i % 2 ? D4 : D8);
 const charAnims = (i: number) => (i % 3 ? [] : ['walk', 'breathing-idle']);
 /** Character rows 6 and 7 are two states of one character. */
 const GROUPED = [6, 7];
-/** Object row 4 ("Object 5") has a state name, so its cell reads "Object 5 · open". */
+/** Object row 4 ("Object 5") has a state name but no sibling states, so its cell reads just "Object 5" (R6). */
 const OPEN_OBJECT = 4;
 
 /** A tiny RGBA PNG: a w×w (16 by default) two-colour checker with a 1px border, colours from the seed (crispness is easy to see). */

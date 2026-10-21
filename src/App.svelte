@@ -83,12 +83,17 @@
     closeActivity();
   };
 
-  // "/" opens the search, unless typing in a field or something else is open on top.
+  // "/" opens the search, unless typing in a field or something else is open on top. Esc closes it, wherever focus is.
   function onkeydown(e: KeyboardEvent) {
+    const top = viewing || menu || settings || activity || router.activity;
+    if (e.key === 'Escape' && searching && !top && !e.defaultPrevented) {
+      e.preventDefault(); // a search field would clear itself first
+      return closeSearch();
+    }
     if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
     const t = e.target as HTMLElement;
     if (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
-    if (!library.hasKey || searching || viewing || menu || settings || activity || router.activity) return;
+    if (!library.hasKey || searching || top) return;
     e.preventDefault(); // else the "/" lands in the field that just took focus
     openSearch();
   }

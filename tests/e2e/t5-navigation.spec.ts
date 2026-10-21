@@ -53,10 +53,10 @@ test('home -> category -> more pages -> back home by ‹ Library and by browser 
 
   await page.getByRole('link', { name: 'Objects, 12' }).click();
   await expect(page.getByTitle('Object 1', { exact: true })).toBeVisible();
-  // A card with a state name shows it after the name ("Name · state"); the link is named by that whole line.
-  const open = page.getByRole('link', { name: 'Object 5 · open', exact: true });
-  await expect(open).toHaveAttribute('title', 'Object 5 · open');
-  await expect(open.locator('small')).toHaveText('· open');
+  // A state name shows only for a card with sibling states (R6): the lone "open" object shows its name alone.
+  const open = page.getByRole('link', { name: 'Object 5', exact: true });
+  await expect(open).toHaveAttribute('title', 'Object 5');
+  await expect(open.locator('small')).toHaveCount(0);
   await page.goBack();
   await expect(page.getByRole('link', { name: 'Objects, 12' })).toBeVisible();
   await expect(page).toHaveURL(/#\/$/);

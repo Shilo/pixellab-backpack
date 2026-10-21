@@ -9,14 +9,14 @@
   import { untrack } from 'svelte';
   import { library } from '../data/library.svelte';
   import PixelArt from '../render/PixelArt.svelte';
-  import { highlight } from '../search';
+  import { highlight, stateName as stateOf } from '../search';
   import type { Card, FamilyId } from '../types';
 
   let { card, familyId, costly, href, terms = [] }: { card: Card; familyId: FamilyId; costly: boolean; href: string; terms?: string[] } = $props();
 
-  // "Name · state" (R6): the state name of the card this cell opens, when it has one.
+  // "Name · state" (R6): the state name of the card this cell opens, only when it has sibling states on this device.
   const name = $derived(card.name || 'Untitled');
-  const stateName = $derived(typeof card.meta.state_name === 'string' ? card.meta.state_name.trim() : '');
+  const stateName = $derived(stateOf(card, library.states(card, familyId)));
 
   let box: HTMLAnchorElement | undefined = $state();
   let onScreen = $state(false);

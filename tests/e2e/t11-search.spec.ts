@@ -38,7 +38,11 @@ test('"/" focuses an empty search on home, in a grid and on All assets, but not 
   await page.keyboard.press('/');
   await expect(field(page)).toBeFocused();
   await expect(field(page)).toHaveValue('');
+  // Esc closes it even when focus fell to the page itself.
+  await page.evaluate(() => (document.activeElement as HTMLElement).blur());
+  await expect(field(page)).not.toBeFocused();
   await page.keyboard.press('Escape');
+  await expect(field(page)).toHaveCount(0);
 
   // Open the viewer from the grid and close it: "/" still lands in the field, not on the cell.
   await page.getByRole('link', { name: 'Character 2', exact: true }).click();
@@ -109,7 +113,7 @@ test('empty field: Go to with counts, Recently added, Show all', async ({ page, 
   await expect(panel(page).getByRole('link', { name: /^Show all/ })).toHaveCount(0);
 });
 
-test('typing: matching cells with the match in bold, accents ignored, cells keep their picture, state names match', async ({ page }) => {
+test('typing: matching cells with the match in bold, accents ignored, cells keep their picture, lone state names ignored', async ({ page }) => {
   await start(page);
   await openSearch(page);
   await field(page).fill('object 1');
@@ -131,9 +135,11 @@ test('typing: matching cells with the match in bold, accents ignored, cells keep
   await expect(results(page).locator('canvas')).toBeVisible();
   expect(await results(page).getAttribute('title')).toBe('Object 12');
 
+  // An object's state name is neither shown nor searched (R6, live data).
   await field(page).fill('open');
-  await expect(results(page)).toHaveText(['Object 5 · open']);
-  await expect(results(page).locator('mark')).toHaveText('open');
+  await expect(panel(page).getByRole('heading', { name: 'No matches for "open".' })).toBeVisible();
+  await field(page).fill('object 5');
+  await expect(results(page)).toHaveText(['Object 5']);
 
   // ✕ clears and keeps focus.
   await page.getByRole('button', { name: 'Clear search' }).click();
@@ -179,6 +185,7 @@ test('groups: one cell per character, showing and opening the state that matched
   await openSearch(page);
   await field(page).fill('armored');
   await expect(results(page)).toHaveText(['Character 7 · Armored']);
+  await expect(results(page).locator('mark')).toHaveText('Armored');
   await results(page).click();
   await expect(viewer(page, 'Character 7').getByText('Character · Armored')).toBeVisible();
 });

@@ -81,7 +81,7 @@
   // A polite status 0.5 s after the last change.
   let said = $state('');
   $effect(() => {
-    const text = idle ? '' : found.length ? plural(found.length) : 'No matches';
+    const text = idle ? '' : found.length ? plural(found.length) : checking ? 'Checking for new assets…' : 'No matches';
     const t = setTimeout(() => (said = text), 500);
     return () => clearTimeout(t);
   });
@@ -89,12 +89,6 @@
   function setQuery(v: string) {
     q = v;
     field?.focus();
-  }
-
-  function onkeydown(e: KeyboardEvent) {
-    if (e.key !== 'Escape') return;
-    e.preventDefault(); // a search field would clear itself first
-    onClose();
   }
 
   function onfieldkey(e: KeyboardEvent) {
@@ -126,9 +120,8 @@
   {/if}
 {/snippet}
 
-<!-- Esc anywhere inside closes the search. -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div {onkeydown}>
+<!-- Esc closes the search from anywhere (App's window keydown), even with focus on the page itself. -->
+<div>
   <button type="button" class="dim" tabindex="-1" aria-label="Close search" onclick={onClose}></button>
 
   <div class="glass-tab-bar-dock sdock">

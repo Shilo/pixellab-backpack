@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fold, highlight, matches, newestFirst, remember, search, terms } from '../../src/lib/search';
+import { fold, highlight, matches, newestFirst, remember, search, stateName, terms } from '../../src/lib/search';
 import type { Card } from '../../src/lib/types';
 
 const card = (name: string, meta: Record<string, unknown> = {}, key = name): Card => ({ key, id: `id-${key}`, name, done: true, thumb: null, fp: 'f', meta });
@@ -50,10 +50,14 @@ describe('search', () => {
   const slime = card('Green Slime');
   const items = [item(slime), item(chest)];
 
-  it('ANDs words, across name and state name, in input order', () => {
-    expect(search(items, 'chest open', solo)).toEqual([item(chest)]);
+  it('ANDs words in input order', () => {
+    expect(search(items, 'treasure chest', solo)).toEqual([item(chest)]);
     expect(search(items, 'slime chest', solo)).toEqual([]);
     expect(search(items, 'e', solo)).toEqual(items);
+  });
+  it('ignores the state name of a card with no sibling states (live data: "Idle", "base" everywhere)', () => {
+    expect(search(items, 'open', solo)).toEqual([]);
+    expect(search(items, 'chest open', solo)).toEqual([]);
   });
   it('returns nothing for an empty query', () => {
     expect(search(items, '', solo)).toEqual([]);
@@ -85,6 +89,16 @@ describe('search', () => {
     it('returns nothing when no state matches', () => {
       expect(search([group], 'zzz', states)).toEqual([]);
     });
+  });
+});
+
+describe('stateName', () => {
+  const idle = card('Mage', { state_name: ' Idle ' }, 'm1');
+  const robe = card('Mage', { state_name: 'Robe' }, 'm2');
+  it('is shown only with sibling states saved', () => {
+    expect(stateName(idle, [idle])).toBe('');
+    expect(stateName(idle, [idle, robe])).toBe('Idle');
+    expect(stateName(card('Mage', {}, 'm3'), [idle, robe])).toBe('');
   });
 });
 
