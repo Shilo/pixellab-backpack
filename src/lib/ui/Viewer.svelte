@@ -5,22 +5,23 @@
 
 <script lang="ts">
   import { tick, untrack } from 'svelte';
-  import type { CategoryId } from '../categories';
+  import type { Scope } from '../categories';
   import { library } from '../data/library.svelte';
   import { kicker, pixellabLink } from '../info';
   import PixelArt from '../render/PixelArt.svelte';
   import { zoomLabel, zoomScale, zoomStep } from '../render/fit';
   import { createPlayer } from '../render/player.svelte';
   import { closeViewer, replaceViewer, router } from '../router.svelte';
-  import type { Detail, Dir } from '../types';
+  import type { Detail, Dir, Item } from '../types';
   import { chipLabel, chipVisible, defaultAnim, dirsFor, pickDir } from '../viewer';
   import AnimPicker from './AnimPicker.svelte';
   import { COSTLY_WAIT_MS } from './AssetCell.svelte';
   import InfoPanel from './InfoPanel.svelte';
   import ViewerMenu, { BACKDROPS } from './ViewerMenu.svelte';
 
-  // One asset, full window, over the grid (which stays mounted underneath). Keys: ←/→, Esc, Space only (R9).
-  let { categoryId, assetKey }: { categoryId: CategoryId; assetKey: string } = $props();
+  // One asset, full window, over the screen (which stays mounted underneath). Keys: ←/→, Esc, Space only (R9).
+  // The key is found in every family; `results` (a search's shown matches) or the scope's items only order prev/next (R8).
+  let { scope, assetKey, results = null }: { scope: Scope; assetKey: string; results?: Item[] | null } = $props();
 
   const hit = $derived(library.find(assetKey));
   const cur = $derived(hit?.card.key ?? null); // a string: effects keyed on it re-run only when the asset changes
@@ -184,23 +185,27 @@
     });
   }
 
-  /** Prev/next in grid order (one card per character group). Next at the last loaded card asks for the family's next page first. */
+  /** Prev/next in the search's shown results, else in grid order (one card per character group). Not in the list: nothing.
+   * Next at the last loaded card of a screen asks for the family's next page first; results never load a page (R8). */
   async function nav(d: 1 | -1) {
     if (!hit) return;
     const { card, familyId } = hit;
     const g = card.meta.group_id;
-    const at = (l: ReturnType<typeof library.items>) =>
+    const at = (l: Item[]) =>
       l.findIndex((it) => it.card.key === card.key || (typeof g === 'string' && !!g && it.familyId === familyId && it.card.meta.group_id === g));
-    let list = library.items(categoryId);
-    let i = at(list) + d;
-    if (d === 1 && i === list.length && list.length) {
+    let list = results ?? library.items(scope);
+    const from = at(list);
+    if (from < 0) return;
+    let i = from + d;
+    if (d === 1 && i === list.length && !results) {
       const last = list[list.length - 1].familyId;
       const s = library.families[last];
       if (!s || s.cards.length >= s.total) return;
       await library.loadMore(last);
-      if (router.route.name !== 'category' || router.route.key !== card.key) return; // moved on or closed meanwhile
-      list = library.items(categoryId);
+      if (router.route.key !== card.key) return; // moved on or closed meanwhile
+      list = library.items(scope);
       i = at(list) + 1;
+      if (i < 1) return;
     }
     if (i >= 0 && i < list.length) {
       titleOn = true;

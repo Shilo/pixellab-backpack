@@ -76,9 +76,10 @@ svg.dots { fill: currentColor; stroke: none; }
 .crumb { display: inline-flex; align-items: baseline; gap: 8px; padding: 0 14px 0 6px; font-size: 15px; font-weight: 600; }
 .crumb span { color: var(--vt-text-2); font-weight: 400; font-variant-numeric: tabular-nums; }
 .vr { width: 1px; height: 24px; background: var(--gl-border-subtle); }
-/* Inert search pill: a button that looks like GlassKit's search field. */
+/* Home search pill: a button that looks like GlassKit's search field, with the "/" hint (desktop). */
 .vt-search { display: flex; align-items: center; gap: 10px; width: 300px; height: 48px; padding: 0 16px; border: 1px solid var(--gl-border-subtle); border-radius: 24px;
-  background: var(--gl-surface-1); color: var(--gl-placeholder); font-size: 15px; text-align: start; cursor: default; }
+  background: var(--gl-surface-1); color: var(--gl-placeholder); font-size: 15px; text-align: start; cursor: pointer; }
+.vt-search kbd { margin-inline-start: auto; font: 12px/1 var(--gl-font-family); color: var(--gl-color-text-muted); border: 1px solid var(--gl-border-subtle); border-radius: 6px; padding: 3px 6px; }
 
 /* Notice: a floating glass pill above the dock */
 .vt-notice { position: fixed; z-index: 900; left: 50%; bottom: 104px; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; gap: 12px;
@@ -113,6 +114,7 @@ svg.dots { fill: currentColor; stroke: none; }
   .vt-dock .glass-tab-bar__item:has(.glass-tab-bar__icon + .glass-tab-bar__label), .vt-dock .vt-back { width: 48px; padding: 0; justify-content: center; flex: none; }
   .vt-dock .glass-tab-bar__item { padding: 0 14px; }
   .vt-search { width: auto; flex: 1; min-width: 0; }
+  .vt-search kbd { display: none; }
   .crumb { flex: 1; padding: 0 4px; }
 
   .vt-notice { bottom: calc(var(--vt-bot) + 80px); }

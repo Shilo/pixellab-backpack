@@ -1,7 +1,15 @@
 <script lang="ts">
-  // The floating glass dock. Search and Select are visible but inert in the MVP: real buttons, aria-disabled,
-  // "Coming soon" for screen readers, no handler. "…" calls onMore when given (B14), else it is inert too.
-  let { mode, title, count, onBack, onMore }: { mode: 'home' | 'category'; title?: string; count?: number; onBack?: () => void; onMore?: () => void } = $props();
+  // The floating glass dock. Search opens the search (onSearch); its controls carry data-search so focus can return to them.
+  // Select stays visible but inert: a real button, aria-disabled, "Coming soon" for screen readers, no handler.
+  // "…" calls onMore when given (B14), else it is inert too.
+  let {
+    mode,
+    title,
+    count,
+    onBack,
+    onSearch,
+    onMore,
+  }: { mode: 'home' | 'category'; title?: string; count?: number; onBack?: () => void; onSearch: () => void; onMore?: () => void } = $props();
 </script>
 
 {#snippet soon(name: string)}<span class="vt-sr">{name}, coming soon</span>{/snippet}
@@ -13,10 +21,10 @@
         <span class="glass-tab-bar__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2" /><rect x="13" y="4" width="7" height="7" rx="2" /><rect x="4" y="13" width="7" height="7" rx="2" /><rect x="13" y="13" width="7" height="7" rx="2" /></svg></span>
         <span class="glass-tab-bar__label">Library</span>
       </button>
-      <button type="button" class="vt-search" aria-disabled="true">
+      <button type="button" class="vt-search" data-search onclick={onSearch}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>
-        <span aria-hidden="true">Search your library</span>
-        {@render soon('Search')}
+        <span>Search your library</span>
+        <kbd aria-hidden="true">/</kbd>
       </button>
     {:else}
       <button type="button" class="glass-tab-bar__item vt-back" onclick={onBack}>
@@ -25,9 +33,8 @@
       </button>
       <span class="vr"></span>
       <span class="crumb">{title}{#if count !== undefined}<span>{count}</span>{/if}</span>
-      <button type="button" class="glass-tab-bar__item vt-icon" aria-disabled="true">
+      <button type="button" class="glass-tab-bar__item vt-icon" data-search aria-label="Search" onclick={onSearch}>
         <span class="glass-tab-bar__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></svg></span>
-        {@render soon('Search')}
       </button>
       <button type="button" class="glass-tab-bar__item" aria-disabled="true">
         <span class="glass-tab-bar__label" aria-hidden="true">Select</span>

@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { APP_NAME } from './lib/app';
-  import { CATEGORIES } from './lib/categories';
+  import { familiesOf, scopeLabel } from './lib/categories';
   import { library } from './lib/data/library.svelte';
-  import { closeActivity, go, router } from './lib/router.svelte';
-  import type { FamilyId } from './lib/types';
+  import { closeActivity, go, parseRoute, router, scopeOf, screenOf } from './lib/router.svelte';
+  import type { FamilyId, Item } from './lib/types';
   import Activity from './lib/ui/Activity.svelte';
   import CategoryGrid from './lib/ui/CategoryGrid.svelte';
   import Dock from './lib/ui/Dock.svelte';
@@ -12,6 +12,7 @@
   import LibraryHome from './lib/ui/LibraryHome.svelte';
   import MoreMenu from './lib/ui/MoreMenu.svelte';
   import Notice from './lib/ui/Notice.svelte';
+  import Search, { clearRecent } from './lib/ui/Search.svelte';
   import Settings from './lib/ui/Settings.svelte';
   import Viewer from './lib/ui/Viewer.svelte';
 
@@ -19,14 +20,59 @@
   onMount(() => void library.openCheck());
 
   const route = $derived(router.route);
-  const category = $derived(route.name === 'category' ? library.categories.find((c) => c.id === route.id)! : null);
+  const screen = $derived(screenOf(route));
+  const scope = $derived(scopeOf(route));
+  const grid = $derived(route.name !== 'home'); // a category or All assets
+  const viewing = $derived(route.key ?? null);
+  let h1 = $state<HTMLElement>();
 
-  const viewing = $derived(route.name === 'category' && route.key ? route.key : null);
-  // The card last shown in the viewer: the grid brings it back into view and focuses it after closing.
+  let searching = $state(false);
+  let results = $state<Item[]>([]);
+  // True when this tab pushed the search's same-URL history entry (R3), so closing steps Back over it.
+  let searchPushed = false;
+
+  // The card last shown in the viewer: after closing, the grid (or the search it was opened from) brings it back and focuses it.
   let lastShown = $state<string | null>(null);
   $effect(() => {
     if (viewing) lastShown = viewing;
-    else if (!category) lastShown = null;
+    else if (route.name === 'home' && !searching) lastShown = null;
+  });
+
+  function openSearch() {
+    if (searching) return;
+    lastShown = null;
+    searching = true;
+    history.pushState({ search: true }, '', location.hash);
+    searchPushed = true;
+  }
+  /** Esc, Cancel, the leading button, the dim and Back: off the search entry; focus returns to the dock's Search. */
+  function closeSearch() {
+    if (!searching) return;
+    searching = false; // at once: a second Esc before the browser reports Back must not step back twice
+    lastShown = null;
+    if (searchPushed) history.back();
+    searchPushed = false;
+    tick().then(() => document.querySelector<HTMLElement>('[data-search]')?.focus());
+  }
+  /** Go to and Show all: close, go, and focus the new screen's heading.
+   * ponytail: the search's history entry stays under the new screen, one extra Back step (R3). */
+  function goFromSearch(path: string) {
+    searching = false;
+    searchPushed = false;
+    lastShown = null;
+    go(path);
+    tick().then(() => h1?.focus());
+  }
+  // Back (phone or browser) onto an entry without the search closes it. Opening a result (an entry with a key) does not.
+  function onpopstate() {
+    if (!searching || history.state?.search || parseRoute(location.hash).key) return;
+    searchPushed = false; // the browser already stepped Back
+    closeSearch();
+  }
+  $effect(() => {
+    if (library.hasKey) return;
+    searching = false;
+    clearRecent();
   });
 
   let menu = $state(false);
@@ -37,16 +83,24 @@
     closeActivity();
   };
 
+  // "/" opens the search, unless typing in a field or something else is open on top.
+  function onkeydown(e: KeyboardEvent) {
+    if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+    const t = e.target as HTMLElement;
+    if (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+    if (!library.hasKey || searching || viewing || menu || settings || activity || router.activity) return;
+    e.preventDefault(); // else the "/" lands in the field that just took focus
+    openSearch();
+  }
+
   const failed = $derived(Object.keys(library.errors) as FamilyId[]);
-  const failedHere = $derived(category ? failed.filter((id) => (category.families as readonly FamilyId[]).includes(id)) : failed);
-  // Home with every family failed and nothing saved: an error card instead of a blank screen.
-  const errorCard = $derived(
-    !category && failed.length > 0 && library.status !== 'checking' && CATEGORIES.every((c) => c.families.every((id) => !library.families[id])),
-  );
-  // A category whose families are fully loaded and hold no finished asset.
-  const emptyCategory = $derived(
-    !!category &&
-      category.families.every((id) => {
+  const failedHere = $derived(failed.filter((id) => familiesOf(scope).includes(id)));
+  // Every family of the screen failed and nothing is saved: an error card instead of a blank screen.
+  const errorCard = $derived(failedHere.length > 0 && library.status !== 'checking' && familiesOf(scope).every((id) => !library.families[id]));
+  // A grid whose families are fully loaded and hold no finished asset.
+  const emptyGrid = $derived(
+    grid &&
+      familiesOf(scope).every((id) => {
         const s = library.families[id];
         return s && s.cards.length >= s.total && !s.cards.some((c) => c.done);
       }),
@@ -83,11 +137,13 @@
         return { text: "You're offline. Showing your saved library." };
     }
     if (!failedHere.length) return null;
-    return { text: category ? "Couldn't load more" : "Some assets didn't load", action: 'Try again', on: tryAgain, tone: 'warn' };
+    return { text: grid ? "Couldn't load more" : "Some assets didn't load", action: 'Try again', on: tryAgain, tone: 'warn' };
   });
 </script>
 
-<h1 class="vt-sr">{category?.label ?? APP_NAME}</h1>
+<svelte:window {onkeydown} {onpopstate} />
+
+<h1 class="vt-sr" tabindex="-1" bind:this={h1}>{grid ? scopeLabel(scope) : APP_NAME}</h1>
 
 {#snippet retryButton()}
   <div class="glass-empty__action">
@@ -100,8 +156,10 @@
 {#if !library.hasKey}
   <KeyScreen />
 {:else}
-  <!-- The viewer is a modal over the screen: what is under it stays mounted (the grid keeps its scroll) but inert. -->
+  <!-- The viewer is a modal over the screen: what is under it stays mounted (the grid keeps its scroll) but inert.
+       The search is a layer too: the screen under it is inert while it is open. -->
   <div inert={!!viewing}>
+  <div inert={searching}>
   {#if library.status === 'blocked'}
     <main class="vt-state">
       <div class="glass-empty vt-scrim">
@@ -124,31 +182,34 @@
         {@render retryButton()}
       </div>
     </main>
-  {:else if category && emptyCategory}
+  {:else if emptyGrid}
     <main class="vt-state">
       <div class="glass-empty vt-scrim">
         <h2 class="glass-empty__title">Nothing here yet.</h2>
         <p class="glass-empty__text">Create something in PixelLab and it'll show up here.</p>
       </div>
     </main>
-  {:else if category}
-    <CategoryGrid scope={category.id} reveal={viewing ? null : lastShown} />
+  {:else if grid}
+    <CategoryGrid {scope} reveal={viewing || searching ? null : lastShown} />
   {:else}
     <LibraryHome />
   {/if}
+  </div>
 
-  {#if notice && !errorCard && library.status !== 'blocked'}
+  {#if notice && !errorCard && !searching && library.status !== 'blocked'}
     <Notice text={notice.text} actionLabel={notice.action} onAction={notice.on} tone={notice.tone} />
   {/if}
-  {#if category}
-    <Dock mode="category" title={category.label} count={category.count} onBack={() => go('#/')} onMore={() => (menu = true)} />
+  {#if searching}
+    <Search {screen} reveal={viewing ? null : lastShown} onClose={closeSearch} onGo={goFromSearch} bind:results />
+  {:else if grid}
+    <Dock mode="category" title={scopeLabel(scope)} count={library.count(scope)} onBack={() => go('#/')} onSearch={openSearch} onMore={() => (menu = true)} />
   {:else}
-    <Dock mode="home" onMore={() => (menu = true)} />
+    <Dock mode="home" onSearch={openSearch} onMore={() => (menu = true)} />
   {/if}
   <MoreMenu open={menu} onClose={() => (menu = false)} onActivity={() => (activity = true)} onSettings={() => (settings = true)} />
   </div>
-  {#if category && viewing}
-    <Viewer categoryId={category.id} assetKey={viewing} />
+  {#if viewing}
+    <Viewer {scope} assetKey={viewing} results={searching && results.length ? results : null} />
   {/if}
 {/if}
 

@@ -99,12 +99,16 @@ test('the keyboard reaches every working control; inert controls cause no reques
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menu')).toHaveCount(0);
 
-  const before = mock.hits.length;
-  const url = page.url();
-  await page.getByRole('button', { name: 'Search, coming soon' }).click({ force: true });
+  // Search is real now (no "coming soon"); opening and closing it asks PixelLab nothing (its new cells may load pictures).
+  const api = () => mock.hits.filter((h) => h.host === 'api').length;
+  const before = api();
+  await expect(page.getByRole('button', { name: /coming soon/ })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Search your library' }).click();
+  await expect(page.getByRole('searchbox', { name: 'Search' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('searchbox', { name: 'Search' })).toHaveCount(0);
   await page.waitForTimeout(600);
-  await expect(page).toHaveURL(url);
-  expect(mock.hits.length).toBe(before);
+  expect(api()).toBe(before);
 
   await page.getByRole('link', { name: 'Objects, 12' }).focus();
   await page.keyboard.press('Enter');
@@ -114,7 +118,9 @@ test('the keyboard reaches every working control; inert controls cause no reques
   for (const name of ['Library', 'More']) expect(cat).toContain(name);
 
   const inCategory = mock.hits.length;
-  for (const name of ['Search, coming soon', 'Select, coming soon']) await page.getByRole('button', { name, exact: true }).click({ force: true });
+  await expect(page.getByRole('button', { name: 'Search, coming soon' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Search', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Select, coming soon', exact: true }).click({ force: true });
   await page.waitForTimeout(600);
   await expect(page).toHaveURL(/#\/c\/objects$/);
   expect(mock.hits.length).toBe(inCategory);
