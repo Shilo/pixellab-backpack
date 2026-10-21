@@ -1,30 +1,42 @@
-// Hash router: `#/` is home, `#/all` is All assets, `#/c/<categoryId>` is a category grid. Anything else is home.
+// Hash router: `#/` is home, `#/all` is All assets, `#/c/<categoryId>` is a category grid, `#/fav` is Favorites and
+// `#/f/<folderId>` is a folder overlay over home. Anything else is home.
 // `#activity` opens the Activity panel over the screen that was showing (the route stays).
-// The viewer nests under the screen it was opened from: `#/a/<key>`, `#/all/a/<key>` or `#/c/<id>/a/<key>`;
-// <key> is the card's opaque 12-hex key (a bad key is dropped).
-// Category ids and keys are the app's own words, never PixelLab ids, so they are safe in the address bar.
+// The viewer nests under the screen it was opened from: `#/a/<key>`, `#/all/a/<key>`, `#/c/<id>/a/<key>`,
+// `#/fav/a/<key>` or `#/f/<id>/a/<key>`; <key> is the card's opaque 12-hex key (a bad key is dropped).
+// <folderId> is 12 random hex characters made on this device (a bad one is home); folder names never reach the address.
+// Category ids, folder ids and keys are the app's own words, never PixelLab ids, so they are safe in the address bar.
 import { CATEGORIES, type CategoryId } from './categories';
 
-export type Route = { name: 'home'; key?: string } | { name: 'all'; key?: string } | { name: 'category'; id: CategoryId; key?: string };
+export type Route =
+  | { name: 'home'; key?: string }
+  | { name: 'all'; key?: string }
+  | { name: 'category'; id: CategoryId; key?: string }
+  | { name: 'fav'; key?: string }
+  | { name: 'folder'; id: string; key?: string };
 
-const keyOf = (k?: string) => (k && /^[0-9a-f]{12}$/.test(k) ? { key: k } : {});
+const isHex12 = (k?: string) => !!k && /^[0-9a-f]{12}$/.test(k);
+const keyOf = (k?: string) => (isHex12(k) ? { key: k } : {});
 
 export function parseRoute(hash: string): Route {
   const [, homeKey] = /^#\/a\/([^/?]+)\/?$/.exec(hash) ?? [];
   if (homeKey) return { name: 'home', ...keyOf(homeKey) };
-  const [, screen, key] = /^#\/(all|c\/[^/?]+)(?:\/a\/([^/?]+))?\/?$/.exec(hash) ?? [];
+  const [, screen, key] = /^#\/(all|fav|c\/[^/?]+|f\/[^/?]+)(?:\/a\/([^/?]+))?\/?$/.exec(hash) ?? [];
   if (screen === 'all') return { name: 'all', ...keyOf(key) };
+  if (screen === 'fav') return { name: 'fav', ...keyOf(key) };
   const id = screen?.slice(2);
+  if (screen?.startsWith('f/')) return isHex12(id) ? { name: 'folder', id: id!, ...keyOf(key) } : { name: 'home' };
   return CATEGORIES.some((c) => c.id === id) ? { name: 'category', id: id as CategoryId, ...keyOf(key) } : { name: 'home' };
 }
 
 export const pathOf = (r: Route): string => {
   const tail = r.key ? `/a/${r.key}` : '';
-  return r.name === 'home' ? (r.key ? `#/a/${r.key}` : '#/') : r.name === 'all' ? `#/all${tail}` : `#/c/${r.id}${tail}`;
+  if (r.name === 'home') return r.key ? `#/a/${r.key}` : '#/';
+  return r.name === 'all' || r.name === 'fav' ? `#/${r.name}${tail}` : `#/${r.name === 'folder' ? 'f' : 'c'}/${r.id}${tail}`;
 };
 
 /** The route without its viewer key. */
-export const screenOf = (r: Route): Route => (r.name === 'category' ? { name: 'category', id: r.id } : { name: r.name });
+export const screenOf = (r: Route): Route =>
+  r.name === 'category' ? { name: 'category', id: r.id } : r.name === 'folder' ? { name: 'folder', id: r.id } : { name: r.name };
 
 /** The category id, else 'all' (home and All assets cover everything). */
 export const scopeOf = (r: Route): CategoryId | 'all' => (r.name === 'category' ? r.id : 'all');
@@ -67,6 +79,17 @@ export function closeViewer(): void {
   router.route = screen;
 }
 
+// True when this tab went from home to the folder, so Back returns to home (kept while moving between this folder's entries).
+// ponytail: module memory, so a reload inside a folder forgets it and closing leaves a duplicate home entry in history.
+let folderPushed = false;
+
+/** Closes the folder overlay: Back when this tab opened it from home, else home replaces it in place. Close any viewer first. */
+export function closeFolder(): void {
+  if (folderPushed) return history.back();
+  history.replaceState(history.state, '', '#/');
+  router.route = { name: 'home' };
+}
+
 /** Previous/next: swaps the key in place, with no new history entry. */
 export function replaceViewer(key: string): void {
   if (!router.route.key) return;
@@ -80,6 +103,8 @@ globalThis.addEventListener?.('hashchange', () => {
   if (router.activity) return;
   const next = parseRoute(location.hash);
   const prev = router.route;
+  const sameFolder = prev.name === 'folder' && next.name === 'folder' && prev.id === next.id;
+  if (!sameFolder) folderPushed = prev.name === 'home' && !prev.key && next.name === 'folder' && !next.key;
   pushed = !!next.key && pathOf(screenOf(prev)) === pathOf(screenOf(next)) && (!prev.key || pushed);
   router.route = next;
 });

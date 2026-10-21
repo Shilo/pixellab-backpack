@@ -143,3 +143,68 @@ test('viewer over All assets: pushed from #/all steps back to it', async () => {
   expect(stack()).toEqual(['#/all']);
   vi.unstubAllGlobals();
 });
+
+const FID = 'abcdef012345';
+const KEY = '0123456789ab';
+
+test('favorites and folder routes round trip', () => {
+  const cases: [Route, string][] = [
+    [{ name: 'fav' }, '#/fav'],
+    [{ name: 'fav', key: KEY }, `#/fav/a/${KEY}`],
+    [{ name: 'folder', id: FID }, `#/f/${FID}`],
+    [{ name: 'folder', id: FID, key: KEY }, `#/f/${FID}/a/${KEY}`],
+  ];
+  for (const [r, path] of cases) {
+    expect(pathOf(r)).toBe(path);
+    expect(parseRoute(path)).toEqual(r);
+    expect(parseRoute(`${path}/`)).toEqual(r);
+    expect(scopeOf(r)).toBe('all');
+  }
+  expect(screenOf({ name: 'fav', key: KEY })).toEqual({ name: 'fav' });
+  expect(screenOf({ name: 'folder', id: FID, key: KEY })).toEqual({ name: 'folder', id: FID });
+});
+
+test('bad folder ids and malformed fav and folder forms', () => {
+  for (const id of ['toString', FID.slice(1), `${FID}0`, FID.toUpperCase(), '123e4567-e89b-12d3-a456-426614174000'])
+    expect(parseRoute(`#/f/${id}`)).toEqual({ name: 'home' });
+  for (const h of ['#/favx', '#/f/', '#/f', '#/fav/x', '#/fav/a/', `#/f/${FID}/x`]) expect(parseRoute(h)).toEqual({ name: 'home' });
+  expect(parseRoute('#/fav/a/toString')).toEqual({ name: 'fav' });
+  expect(parseRoute(`#/f/${FID}/a/0123456789A`)).toEqual({ name: 'folder', id: FID });
+});
+
+test('closeFolder: Back when this tab went from home to the folder, else the address is replaced', async () => {
+  const pushed = await fakeBar('#/');
+  pushed.m.go(`#/f/${FID}`);
+  expect(pushed.m.router.route).toEqual({ name: 'folder', id: FID });
+  pushed.m.closeFolder();
+  expect(pushed.m.router.route).toEqual({ name: 'home' });
+  expect(pushed.stack()).toEqual(['#/']);
+
+  const direct = await fakeBar(`#/f/${FID}`);
+  direct.m.closeFolder();
+  expect(direct.m.router.route).toEqual({ name: 'home' });
+  expect(direct.stack()).toEqual(['#/']);
+  vi.unstubAllGlobals();
+});
+
+test('closeFolder still uses Back after a viewer was opened and closed in the folder', async () => {
+  const { m, stack } = await fakeBar('#/');
+  m.go(`#/f/${FID}`);
+  m.go(`#/f/${FID}/a/${KEY}`);
+  history.back();
+  expect(m.router.route).toEqual({ name: 'folder', id: FID });
+  m.closeFolder();
+  expect(m.router.route).toEqual({ name: 'home' });
+  expect(stack()).toEqual(['#/']);
+  vi.unstubAllGlobals();
+});
+
+test('closeViewer on a folder viewer pushed from the folder steps back to it', async () => {
+  const { m, stack } = await fakeBar('#/');
+  m.go(`#/f/${FID}`);
+  m.go(`#/f/${FID}/a/${KEY}`);
+  m.closeViewer();
+  expect(m.router.route).toEqual({ name: 'folder', id: FID });
+  expect(stack()).toEqual(['#/', `#/f/${FID}`]);
+  vi.unstubAllGlobals();
+});
