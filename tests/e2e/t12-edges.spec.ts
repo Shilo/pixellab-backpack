@@ -253,6 +253,9 @@ test('All assets: jump to the bottom loads the partial family, and closing a vie
   await expect.poll(async () => (await grid.evaluate((el) => el.scrollTo(0, el.scrollHeight)), await end.count()), { timeout: 30_000 }).toBe(1);
   expect(mock.hits.slice(at).filter((h) => h.list).map((h) => new URL(h.url).pathname)).toEqual(['/v2/characters', '/v2/characters']);
 
+  // The last page can land between the poll's scroll and its count: the grid then sits at the old bottom, and the cells
+  // below it are not in the page (only rows on screen are). Everything is loaded now, so one more scroll is the real bottom.
+  await grid.evaluate((el) => el.scrollTo(0, el.scrollHeight));
   const cell = page.getByTitle('Iso tile 2', { exact: true }); // near the end, so on screen
   await cell.scrollIntoViewIfNeeded();
   const top = await grid.evaluate((el) => el.scrollTop);
