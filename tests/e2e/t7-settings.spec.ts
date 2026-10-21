@@ -251,10 +251,13 @@ test('Forget key in one tab signs out a second kept tab, which sends nothing wit
   await expect(tab.getByRole('link', { name: 'Characters, 250' })).toBeVisible();
   await settle(tab, mock);
 
+  // Each tab is brought to the front before it is used: a background tab throttles its frames, so actions wait.
   const at = mock.hits.length;
+  await page.bringToFront();
   await dialog.getByRole('button', { name: 'Forget key' }).click();
   await page.getByRole('dialog', { name: 'Forget your API key?' }).getByRole('button', { name: 'Forget key' }).click();
   await expect(page.getByRole('heading', { name: 'Your PixelLab art, all in one place' })).toBeVisible();
+  await tab.bringToFront();
   await expect(tab.getByLabel('PixelLab API key')).toBeVisible();
   expect(await tab.evaluate(() => [localStorage.getItem('pixellab-backpack:key-kept'), sessionStorage.length])).toEqual([null, 0]);
   // The second tab cannot bring the key back: a refresh there has no key to send.
@@ -277,10 +280,12 @@ test('Forget key in one tab signs out a second "this tab only" tab, which then w
   expect(await keptKey(tab)).toBeNull();
 
   const at = mock.hits.length;
+  await page.bringToFront(); // a background tab throttles its frames, so actions wait
   const dialog = await open(page);
   await dialog.getByRole('button', { name: 'Forget key' }).click();
   await page.getByRole('dialog', { name: 'Forget your API key?' }).getByRole('button', { name: 'Forget key' }).click();
   await expect(page.getByRole('heading', { name: 'Your PixelLab art, all in one place' })).toBeVisible();
+  await tab.bringToFront();
   // The plain key screen: no library, no "Welcome back", no "stopped working".
   await expect(tab.getByRole('heading', { name: 'Your PixelLab art, all in one place' })).toBeVisible();
   await expect(tab.getByText('Welcome back!')).toHaveCount(0);

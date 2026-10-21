@@ -79,7 +79,10 @@ svg.dots { fill: currentColor; stroke: none; }
 /* Home search pill: a button that looks like GlassKit's search field, with the "/" hint (desktop). */
 .vt-search { display: flex; align-items: center; gap: 10px; width: 300px; height: 48px; padding: 0 16px; border: 1px solid var(--gl-border-subtle); border-radius: 24px;
   background: var(--gl-surface-1); color: var(--gl-placeholder); font-size: 15px; text-align: start; cursor: pointer; }
-.vt-search kbd { margin-inline-start: auto; font: 12px/1 var(--gl-font-family); color: var(--gl-color-text-muted); border: 1px solid var(--gl-border-subtle); border-radius: 6px; padding: 3px 6px; }
+.vt-search kbd, .vt-field kbd { font: 12px/1 var(--gl-font-family); color: var(--gl-color-text-muted); border: 1px solid var(--gl-border-subtle); border-radius: 6px; padding: 3px 6px; }
+.vt-search kbd { margin-inline-start: auto; }
+/* A search match inside a name (cells and Go to rows). */
+mark { background: none; color: var(--gl-color-text); font-weight: 650; }
 
 /* Notice: a floating glass pill above the dock */
 .vt-notice { position: fixed; z-index: 900; left: 50%; bottom: 104px; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; gap: 12px;

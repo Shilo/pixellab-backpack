@@ -32,7 +32,7 @@
         <span class="glass-tab-bar__label">Library</span>
       </button>
       <span class="vr"></span>
-      <span class="crumb">{title}{#if count !== undefined}<span>{count}</span>{/if}</span>
+      <span class="crumb">{title}{#if count !== undefined}<span>{count.toLocaleString()}</span>{/if}</span>
       <button type="button" class="glass-tab-bar__item vt-icon" data-search aria-label="Search" onclick={onSearch}>
         <span class="glass-tab-bar__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></svg></span>
       </button>

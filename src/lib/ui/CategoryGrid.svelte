@@ -37,6 +37,7 @@
   import { library } from '../data/library.svelte';
   import { OTHER_CONTENT, OTHER_TEXT, OTHER_TITLE } from '../info';
   import { pathOf, type Route } from '../router.svelte';
+  import { sameAsset } from '../search';
   import AssetCell from './AssetCell.svelte';
 
   let { scope, reveal = null }: { scope: Scope; reveal?: string | null } = $props();
@@ -104,8 +105,7 @@
     revealed = key;
     // A grouped character's other state is shown by its group's one card.
     const hit = key ? library.find(key) : null;
-    const g = hit?.card.meta.group_id;
-    const i = hit ? items.findIndex((it) => it.card.key === key || (typeof g === 'string' && !!g && it.familyId === hit.familyId && it.card.meta.group_id === g)) : -1;
+    const i = hit ? items.findIndex((it) => sameAsset(it, hit)) : -1;
     if (i < 0) return;
     const top = m.top + Math.floor(i / m.cols) * m.stride;
     if (top < el.scrollTop || top + m.stride > el.scrollTop + m.viewH) el.scrollTop = scrollTop = Math.max(0, top - (m.viewH - m.stride) / 2);

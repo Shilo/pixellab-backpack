@@ -352,7 +352,7 @@ test('search: five queries, Recent, Clear search, Search all types and closing s
   await expect(field(page)).toHaveValue('');
   await field(page).fill('object');
   await expect(results(page)).toHaveCount(11);
-  await page.getByRole('button', { name: 'Clear search' }).click(); // the field's ✕
+  await page.getByRole('button', { name: 'Clear search text' }).click(); // the field's ✕
   await panel(page).getByRole('button', { name: 'armored' }).click(); // a Recent chip
   await expect(field(page)).toHaveValue('armored');
   await field(page).fill('');
@@ -393,11 +393,16 @@ test('search: "tileset" results ask at most one costly picture per visible tiles
   let at = mock.hits.length;
   await field(page).fill('tileset');
   await expect(results(page)).toHaveText(['Tileset 1', 'Tileset 2', 'Tileset 3', 'Tileset 5', 'Side tileset 1', 'Side tileset 2', 'Side tileset 3']);
+  const onScreen = () =>
+    results(page).evaluateAll((els) => {
+      const p = els[0].closest('.panel')!.getBoundingClientRect();
+      return els.filter((e) => e.getBoundingClientRect().bottom > p.top && e.getBoundingClientRect().top < p.bottom).map((e) => ({ title: e.getAttribute('title')!, shown: !!e.querySelector('.art canvas') }));
+    });
+  // Every cell on screen shows its picture before anything is counted or closed: costly requests go 2 at a time, so under
+  // load one can still be queued after a quiet spell and would be sent after `at` below, looking like a second ask.
+  await expect.poll(async () => (await onScreen()).every((c) => c.shown), { timeout: 15_000 }).toBe(true);
   await settle(page, mock);
-  const visible = await results(page).evaluateAll((els) => {
-    const p = els[0].closest('.panel')!.getBoundingClientRect();
-    return els.filter((e) => e.getBoundingClientRect().bottom > p.top && e.getBoundingClientRect().top < p.bottom).map((e) => e.getAttribute('title')!);
-  });
+  const visible = (await onScreen()).map((c) => c.title);
   const visibleIds = visible.map((t) => {
     const [, fam, n] = /^(Side tileset|Tileset) (\d+)$/.exec(t)!;
     return `a-${fam === 'Tileset' ? 'tilesets' : 'tilesets-side'}-${Number(n) - 1}`;
@@ -418,6 +423,34 @@ test('search: "tileset" results ask at most one costly picture per visible tiles
   expect(api(mock.hits.slice(at))).toEqual([]);
 });
 
+test('search: a costly picture still loading when the search closes is kept, so reopening asks 0', async ({ page }) => {
+  const mock = await openFirst(page);
+  // Hold PixelLab's answers to the side tileset helpers: their requests are sent, the answers not yet back.
+  let release = () => {};
+  const held = new Promise<void>((r) => (release = r));
+  let sent = 0;
+  await page.route('https://api.pixellab.ai/mcp/sidescroller-tilesets/**', async (route) => {
+    sent++;
+    await held;
+    await route.fallback().catch(() => {}); // an aborted request has nothing to answer
+  });
+  await openSearch(page);
+  await field(page).fill('side tileset');
+  await expect(results(page)).toHaveCount(3);
+  await expect.poll(() => sent, { timeout: 15_000 }).toBe(2); // two at a time: the third waits in the queue
+  await page.keyboard.press('Escape');
+  await expect(field(page)).toHaveCount(0);
+  release();
+  await settle(page, mock);
+
+  const at = mock.hits.length;
+  await openSearch(page);
+  await field(page).fill('side tileset');
+  await expect(results(page).locator('.art canvas')).toHaveCount(3);
+  await settle(page, mock);
+  expect(api(mock.hits.slice(at))).toEqual([]);
+});
+
 test('All assets: Show all sends 0 API requests at the top of the grid; a reload on #/all within the hour sends 0', async ({ page }) => {
   const mock = await openFirst(page);
   await openSearch(page);
@@ -432,6 +465,31 @@ test('All assets: Show all sends 0 API requests at the top of the grid; a reload
   at = mock.hits.length;
   await page.reload();
   await expect(page.locator('.crumb')).toHaveText('All assets283');
+  await expect(page.getByTitle('Character 1', { exact: true })).toBeVisible();
+  await settle(page, mock);
+  expect(api(mock.hits.slice(at))).toEqual([]);
+});
+
+test('Go to from a scrolled All assets grid sends 0 API requests at the top of the new grid', async ({ page }) => {
+  const mock = await mockPixelLab(page, { a: { objects: 100, ui: 100 } }); // fully saved after the first page; Characters 100/250
+  await page.goto('/');
+  await connect(page);
+  await settle(page, mock);
+  await page.evaluate(() => (location.hash = '#/all'));
+  const grid = page.locator('main.grid');
+  await expect(page.getByTitle('Character 1', { exact: true })).toBeVisible();
+  await settle(page, mock);
+  // A jump into the middle of the objects: past the end of the saved characters, far from the bottom, so nothing is due.
+  await grid.evaluate((el) => el.scrollTo(0, el.scrollHeight / 2));
+  await expect(page.getByTitle(/^Object \d+$/).first()).toBeVisible();
+  await settle(page, mock, 600);
+  const at = mock.hits.length;
+  await page.waitForTimeout(600);
+  expect(lists(mock.hits.slice(at))).toEqual([]);
+
+  await page.keyboard.press('/');
+  await panel(page).locator('.gotos a').filter({ hasText: 'Characters' }).click();
+  await expect(page).toHaveURL(/#\/c\/characters$/);
   await expect(page.getByTitle('Character 1', { exact: true })).toBeVisible();
   await settle(page, mock);
   expect(api(mock.hits.slice(at))).toEqual([]);

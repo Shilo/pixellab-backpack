@@ -38,6 +38,16 @@
     if (viewing) lastShown = viewing;
     else if (route.name === 'home' && !searching) lastShown = null;
   });
+  // A viewer closed with nothing to reveal (a deep link, home): focus the screen's heading, not <body>. After the grid's or
+  // the search's own reveal focus (they run one tick after closing).
+  let wasViewing = false;
+  $effect(() => {
+    if (viewing) wasViewing = true;
+    else if (wasViewing) {
+      wasViewing = false;
+      tick().then(tick).then(() => document.activeElement === document.body && h1?.focus());
+    }
+  });
 
   function openSearch() {
     if (searching) return;
@@ -61,8 +71,10 @@
     searching = false;
     searchEntry = 0;
     lastShown = null;
+    // After the heading's text changes (hashchange is a later task), so a screen reader reads the new screen.
+    if (location.hash === path) h1?.focus();
+    else addEventListener('hashchange', () => tick().then(() => h1?.focus()), { once: true });
     go(path);
-    tick().then(() => h1?.focus());
   }
   // Back (phone or browser) onto an entry without the search closes it. Opening a result (an entry with a key) does not.
   function onpopstate() {
@@ -196,7 +208,8 @@
       </div>
     </main>
   {:else if grid}
-    <CategoryGrid {scope} reveal={viewing || searching ? null : lastShown} />
+    <!-- Keyed: each scope mounts a fresh grid (as from home), so no scroll position or asked pages carry over (Go to). -->
+    {#key scope}<CategoryGrid {scope} reveal={viewing || searching ? null : lastShown} />{/key}
   {:else}
     <LibraryHome />
   {/if}
@@ -206,7 +219,7 @@
     <Notice text={notice.text} actionLabel={notice.action} onAction={notice.on} tone={notice.tone} />
   {/if}
   {#if searching}
-    <Search {screen} reveal={viewing ? null : lastShown} onClose={closeSearch} onGo={goFromSearch} bind:results />
+    <Search {screen} note={notice?.text ?? null} reveal={viewing ? null : lastShown} onClose={closeSearch} onGo={goFromSearch} bind:results />
   {:else if grid}
     <Dock mode="category" title={scopeLabel(scope)} count={library.count(scope)} onBack={() => go('#/')} onSearch={openSearch} onMore={() => (menu = true)} />
   {:else}

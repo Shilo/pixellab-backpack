@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { fold, highlight, matches, newestFirst, remember, search, stateName, terms } from '../../src/lib/search';
-import type { Card } from '../../src/lib/types';
+import { fold, highlight, matches, newestFirst, remember, sameAsset, search, stateName, terms } from '../../src/lib/search';
+import type { Card, FamilyId, Item } from '../../src/lib/types';
 
 const card = (name: string, meta: Record<string, unknown> = {}, key = name): Card => ({ key, id: `id-${key}`, name, done: true, thumb: null, fp: 'f', meta });
 const item = (c: Card) => ({ card: c });
@@ -129,5 +129,20 @@ describe('remember', () => {
     expect(remember(list, ' x ')).toBe(list);
     expect(remember(list, '  ')).toBe(list);
     expect(remember(list, '  slime  ')).toEqual(['slime', 'aa']);
+  });
+});
+
+describe('sameAsset', () => {
+  const at = (key: string, meta: Record<string, unknown> = {}, familyId: FamilyId = 'characters'): Item => ({ card: card(key, meta, key), familyId });
+  it('matches the same key, or another state of the same group in the same family', () => {
+    const hit = at('b', { group_id: 'g' });
+    expect(sameAsset(at('b'), hit)).toBe(true);
+    expect(sameAsset(at('a', { group_id: 'g' }), hit)).toBe(true);
+    expect(sameAsset(at('a', { group_id: 'g' }, 'objects'), hit)).toBe(false);
+    expect(sameAsset(at('a', { group_id: 'h' }), hit)).toBe(false);
+  });
+  it('never groups by an empty or missing group id', () => {
+    expect(sameAsset(at('a', { group_id: '' }), at('b', { group_id: '' }))).toBe(false);
+    expect(sameAsset(at('a'), at('b'))).toBe(false);
   });
 });

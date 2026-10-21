@@ -64,11 +64,6 @@
     position: absolute;
     inset: 9%;
   }
-  mark {
-    background: none;
-    color: var(--gl-color-text);
-    font-weight: 650;
-  }
   small {
     color: var(--vt-text-3);
     font-size: 13px;

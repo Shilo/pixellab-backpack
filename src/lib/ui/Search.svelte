@@ -17,7 +17,7 @@
   import { library } from '../data/library.svelte';
   import PixelArt from '../render/PixelArt.svelte';
   import { pathOf, scopeOf, type Route } from '../router.svelte';
-  import { highlight, matches, MAX_RESULTS, newestFirst, search, terms } from '../search';
+  import { highlight, matches, MAX_RESULTS, newestFirst, sameAsset, search, terms } from '../search';
   import type { Item } from '../types';
   import AssetCell from './AssetCell.svelte';
 
@@ -25,11 +25,12 @@
   // Searches only what is saved (no request of its own); the text never leaves this component's memory.
   let {
     screen,
+    note = null,
     reveal = null,
     onClose,
     onGo,
     results = $bindable([]),
-  }: { screen: Route; reveal?: string | null; onClose: () => void; onGo: (path: string) => void; results?: Item[] } = $props();
+  }: { screen: Route; note?: string | null; reveal?: string | null; onClose: () => void; onGo: (path: string) => void; results?: Item[] } = $props();
 
   let q = $state('');
   let scope = $state<Scope>(scopeOf(untrack(() => screen))); // R7: Search all types widens it
@@ -74,15 +75,15 @@
     revealed = key; // null while a viewer is open, so reopening the same result focuses it again
     if (!key) return;
     const hit = library.find(key);
-    const g = hit?.card.meta.group_id;
-    const it = [...shown, ...added].find((it) => it.card.key === key || (typeof g === 'string' && !!g && it.familyId === hit!.familyId && it.card.meta.group_id === g));
+    const it = hit && [...shown, ...added].find((it) => sameAsset(it, hit));
     tick().then(() => ((it && panel?.querySelector<HTMLElement>(`a[data-key="${it.card.key}"]`)) || field)?.focus());
   });
 
   // A polite status 0.5 s after the last change.
   let said = $state('');
   $effect(() => {
-    const text = idle ? '' : found.length ? plural(found.length) : checking ? 'Checking for new assets…' : 'No matches';
+    const base = idle ? '' : found.length ? plural(found.length) : checking ? 'Checking for new assets…' : 'No matches';
+    const text = base && note ? `${base}. ${note}` : base; // the failure or pause shown in the panel is announced too
     const t = setTimeout(() => (said = text), 500);
     return () => clearTimeout(t);
   });
@@ -153,7 +154,7 @@
           onkeydown={onfieldkey}
         />
         {#if q}
-          <button type="button" class="clear" aria-label="Clear search" onclick={() => setQuery('')}>
+          <button type="button" class="clear" aria-label="Clear search text" onclick={() => setQuery('')}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" /></svg>
           </button>
         {/if}
@@ -240,7 +241,10 @@
           <hr class="glass-divider" />
           <p class="hint">Looking for fonts or effects? They aren't in PixelLab's public API yet.</p>
         {/if}
-        {#if coverage === 'partial'}
+        <!-- The screen's notice (a failure, a pause, offline) speaks here, as the saved-only advice cannot come true then (R1, R9). -->
+        {#if note}
+          <p class="hint">{note}</p>
+        {:else if coverage === 'partial'}
           <p class="hint">Only assets saved on this device are searched. Scroll through {label} to load the rest.</p>
         {/if}
       {/if}
@@ -261,7 +265,7 @@
   .vt-field .glass-input { padding-inline-end: 44px; font-size: 15px; }
   .vt-field:has(.clear) .glass-input { padding-inline-end: 90px; }
   .vt-field input::-webkit-search-cancel-button { display: none; }
-  .vt-field kbd { position: absolute; inset-inline-end: 14px; font: 12px/1 var(--gl-font-family); color: var(--gl-color-text-muted); border: 1px solid var(--gl-border-subtle); border-radius: 6px; padding: 3px 6px; }
+  .vt-field kbd { position: absolute; inset-inline-end: 14px; }
   .clear { position: absolute; inset-inline-end: 50px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%;
     display: grid; place-items: center; background: var(--gl-surface-3); color: var(--gl-color-text); cursor: pointer; z-index: 2; }
   .clear svg { width: 15px; height: 15px; stroke-width: 2.2; }
@@ -288,7 +292,6 @@
   .glass-list__content { display: block; flex: 1; min-width: 0; }
   .glass-list__title, .glass-list__subtitle { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .glass-list__subtitle { font-size: 12.5px; }
-  mark { background: none; color: inherit; font-weight: 650; }
   .added { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; padding-bottom: 14px; }
   .added :global(.sq) { border-radius: 16px; }
   .added :global(.nm) { font-size: 12px; padding-top: 6px; }

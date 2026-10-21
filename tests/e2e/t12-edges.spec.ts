@@ -55,15 +55,19 @@ test('Forget key in another tab closes the search and drops Recent; signing in a
   await connect(tab);
   await settle(tab, mock, 600);
 
+  // Each tab is brought to the front before it is used: a background tab throttles its frames, so actions wait.
+  await page.bringToFront();
   await openSearch(page);
   await field(page).fill('object 1');
   await field(page).press('Enter');
   await field(page).fill('object');
+  await tab.bringToFront();
   await tab.getByRole('button', { name: 'More' }).click();
   await tab.getByRole('menuitem', { name: /Settings/ }).click();
   await tab.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'Forget key' }).click();
   await tab.getByRole('dialog', { name: 'Forget your API key?' }).getByRole('button', { name: 'Forget key' }).click();
 
+  await page.bringToFront();
   await expect(page.getByLabel('PixelLab API key')).toBeVisible();
   await expect(field(page)).toHaveCount(0);
   await connect(page);

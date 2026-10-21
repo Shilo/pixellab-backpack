@@ -97,10 +97,13 @@ test('empty field: Go to with counts, Recently added, Show all', async ({ page, 
   await expect(panel(page).locator('.added a[data-key]')).toHaveCount(6);
   await expect(panel(page).locator('.added a[data-key]:visible')).toHaveCount(isMobile ? 3 : 6);
 
+  // The heading takes focus after its text changes, so a screen reader reads the new screen.
+  await page.evaluate(() => document.querySelector('h1')!.addEventListener('focus', (e) => ((window as unknown as { h1Said: string }).h1Said = (e.target as HTMLElement).textContent!), { once: true }));
   await rows.filter({ hasText: 'Objects' }).click();
   await expect(page).toHaveURL(/#\/c\/objects$/);
   await expect(field(page)).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 1, name: 'Objects' })).toBeFocused();
+  expect(await page.evaluate(() => (window as unknown as { h1Said: string }).h1Said)).toBe('Objects');
 
   await page.getByRole('button', { name: 'Library' }).click();
   await openSearch(page);
@@ -142,7 +145,7 @@ test('typing: matching cells with the match in bold, accents ignored, cells keep
   await expect(results(page)).toHaveText(['Object 5']);
 
   // ✕ clears and keeps focus.
-  await page.getByRole('button', { name: 'Clear search' }).click();
+  await page.getByRole('button', { name: 'Clear search text' }).click();
   await expect(field(page)).toHaveValue('');
   await expect(field(page)).toBeFocused();
 });
@@ -308,6 +311,39 @@ test('saved-only note: absent when a family has nothing saved (its first page fa
   await expect(panel(page).getByText(/^Only assets saved on this device/)).toHaveCount(0);
 });
 
+test("while searching, a failed family's notice shows in the panel instead of a silent No matches", async ({ page }) => {
+  const mock = await mockPixelLab(page);
+  mock.fail = ['/v2/objects?'];
+  await page.goto('/');
+  await connect(page);
+  await settle(page, mock, 600);
+  await openSearch(page);
+  await field(page).fill('object');
+  await expect(panel(page).getByRole('heading', { name: 'No matches for "object".' })).toBeVisible();
+  await expect(panel(page).getByText("Some assets didn't load")).toBeVisible();
+});
+
+test('while searching offline, the offline notice replaces the saved-only advice (scrolling cannot load now)', async ({ page, context }) => {
+  await start(page); // 250 characters, 100 saved
+  await page.getByRole('link', { name: 'Characters, 250' }).click();
+  await context.setOffline(true);
+  await page.locator('main.grid').evaluate((el) => el.scrollTo(0, el.scrollHeight)); // a next page, asked offline
+  await expect(page.getByRole('status').filter({ hasText: "You're offline." })).toBeVisible();
+  await openSearch(page);
+  await field(page).fill('character 1');
+  await expect(results(page).first()).toBeVisible();
+  await expect(panel(page).getByText("You're offline. Showing your saved library.")).toBeVisible();
+  await expect(panel(page).getByText(/^Only assets saved on this device/)).toHaveCount(0);
+  await context.setOffline(false);
+});
+
+test('a count over 999 reads the same in Show all and the All assets crumb', async ({ page }) => {
+  await start(page, { a: { characters: 1200 } });
+  await openSearch(page);
+  await panel(page).getByRole('link', { name: 'Show all 1,233 assets' }).click();
+  await expect(page.locator('.crumb')).toHaveText('All assets1,233');
+});
+
 test('All assets: scrolling to the end shows "That\'s everything" and the note with its four links', async ({ page }) => {
   await start(page);
   await page.evaluate(() => (location.hash = '#/all'));
@@ -339,6 +375,7 @@ test('deep links: #/all/a/<key> and #/a/<key> open the viewer; an unknown key cl
   await expect(viewer(page, 'Object 2')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page).toHaveURL(/#\/$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'PixelLab Backpack' })).toBeFocused(); // home has no cell to reveal
 
   await page.evaluate(() => (location.hash = '#/all/a/0123456789ab'));
   await page.reload();

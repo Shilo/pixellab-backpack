@@ -157,7 +157,7 @@ test('search panel, no-results panel and All assets end: Tab reaches every contr
 
   await field.fill('object');
   await expect(panel.locator('.res a[data-key]')).toHaveCount(11);
-  await expect(page.getByRole('button', { name: 'Clear search' })).toBeVisible(); // the field's ✕
+  await expect(page.getByRole('button', { name: 'Clear search text' })).toBeVisible(); // the field's ✕
   await check(page, phone, 'search panel (results)');
   await page.keyboard.press('Escape');
 
@@ -166,6 +166,7 @@ test('search panel, no-results panel and All assets end: Tab reaches every contr
   await page.locator('[data-search]').click();
   await field.fill('slime');
   await expect(panel.getByRole('button', { name: 'Search all types' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Clear search', exact: true })).toHaveCount(1); // the ✕ has its own name
   await check(page, phone, 'no-results panel');
   await page.keyboard.press('Escape');
 

@@ -12,6 +12,7 @@
   import { zoomLabel, zoomScale, zoomStep } from '../render/fit';
   import { createPlayer } from '../render/player.svelte';
   import { closeViewer, replaceViewer, router } from '../router.svelte';
+  import { sameAsset } from '../search';
   import type { Detail, Dir, Item } from '../types';
   import { chipLabel, chipVisible, defaultAnim, dirsFor, pickDir } from '../viewer';
   import AnimPicker from './AnimPicker.svelte';
@@ -191,9 +192,7 @@
   async function nav(d: 1 | -1) {
     if (!hit) return;
     const { card, familyId } = hit;
-    const g = card.meta.group_id;
-    const at = (l: Item[]) =>
-      l.findIndex((it) => it.card.key === card.key || (typeof g === 'string' && !!g && it.familyId === familyId && it.card.meta.group_id === g));
+    const at = (l: Item[]) => l.findIndex((it) => sameAsset(it, { card, familyId })); // the card nav started from
     let list = results ?? library.items(scope);
     const from = at(list);
     if (from < 0) return;

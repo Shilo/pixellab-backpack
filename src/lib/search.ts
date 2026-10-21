@@ -1,5 +1,5 @@
 // Search rules, pure (Phase 3 R5/R6/R8): case- and accent-insensitive substring match on a card's name and (grouped cards only) state name.
-import type { Card } from './types';
+import type { Card, Item } from './types';
 
 export const MAX_RESULTS = 100;
 
@@ -55,6 +55,12 @@ export function highlight(text: string, ts: string[]): { text: string; mark: boo
  * (`states` is its group, itself included). Live data gives nearly every lone card a state name ("Idle", "base"). */
 export const stateName = (c: Card, states: readonly Card[]): string =>
   states.length > 1 && typeof c.meta.state_name === 'string' ? c.meta.state_name.trim() : '';
+
+/** `it` is `hit` or (a character group) another of its states: the grid, the search and the viewer show a group as one card. */
+export function sameAsset(it: Item, hit: Item): boolean {
+  const g = hit.card.meta.group_id;
+  return it.card.key === hit.card.key || (typeof g === 'string' && !!g && it.familyId === hit.familyId && it.card.meta.group_id === g);
+}
 
 /** The line a card is searched and shown by: "Name state". */
 const label = (c: Card, states: readonly Card[]) => `${c.name} ${stateName(c, states)}`;
