@@ -17,10 +17,10 @@
 
   // The viewer's "..." menu: a glass popover under the capsule (desktop) or bottom sheet (phone). No player = a still picture.
   // zoomIn / zoomOut: the next step each way, undefined at the limit (the button is disabled).
-  let { open, onClose, opener, player, zoomLabel, zoomIn, zoomOut, onZoom, onZoomToggle, backdrop, onBackdrop, link }: {
+  let { open, onClose, opener, player, zoomLabel, zoomIn, zoomOut, onZoom, onZoomToggle, backdrop, onBackdrop, link, onAddToFolder }: {
     open: boolean; onClose: () => void; opener?: HTMLElement; player: ReturnType<typeof createPlayer> | null;
     zoomLabel: string; zoomIn?: number; zoomOut?: number; onZoom: (z: number) => void; onZoomToggle: () => void;
-    backdrop: number; onBackdrop: (i: number) => void; link: string;
+    backdrop: number; onBackdrop: (i: number) => void; link: string; onAddToFolder: () => void;
   } = $props();
   let panel = $state<HTMLDivElement>();
   let readout = $state<HTMLButtonElement>();
@@ -108,6 +108,10 @@
       </div>
     </div>
     <hr class="glass-divider" />
+    <button type="button" class="glass-list__item glass-list__item--interactive open" onclick={() => (onClose(), onAddToFolder())}>
+      <span class="title">Add to folder…</span>
+      <span class="glass-list__trailing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" /><path d="M12 10.5v5M9.5 13h5" /></svg></span>
+    </button>
     <a class="glass-list__item glass-list__item--interactive open" href={link} target="_blank" rel="noopener noreferrer">
       <span class="title">Open in PixelLab ↗<span class="vt-sr">{NEW_TAB}</span></span>
     </a>
@@ -136,6 +140,9 @@
   .swatch i svg { width: 16px; height: 16px; stroke: #fff; stroke-width: 2.6; }
   .glass-divider { margin: 6px 0; }
   .open { min-height: 44px; padding-left: 0; padding-right: 0; text-decoration: none; color: inherit; cursor: pointer; }
+  button.open { justify-content: space-between; }
+  .menu .open:not(:last-child)::after { inset-inline: 0; } /* the divider spans the padded width, as the rows above (outranks GlassKit) */
+  .open svg { width: 19px; height: 19px; }
   .sq:focus-visible, .readbtn:focus-visible, .swatch:focus-visible, .open:focus-visible, .reset:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
   @media (max-width: 600px) {

@@ -26,7 +26,8 @@ async function newFolder(page: Page, name: string) {
 
 test('the New folder tile creates a folder and opens its empty overlay; Go to Library goes home', async ({ page }) => {
   const mock = await start(page);
-  const at = mock.hits.length; // from before the folder exists: creating and opening it asks PixelLab nothing
+  const api = () => mock.hits.filter((h) => h.host === 'api').length; // late pictures on a slow run are not API requests
+  const at = api(); // from before the folder exists: creating and opening it asks PixelLab nothing
   await newFolder(page, 'Hero party');
   await expect(page).toHaveURL(/#\/f\/[0-9a-f]{12}$/);
   const ov = overlay(page, 'Hero party');
@@ -42,7 +43,7 @@ test('the New folder tile creates a folder and opens its empty overlay; Go to Li
   await page.keyboard.press('/');
   await expect(page.getByRole('searchbox', { name: 'Search' })).toHaveCount(0);
   await settle(page, mock, 600);
-  expect(mock.hits.length).toBe(at);
+  expect(api()).toBe(at);
 
   await ov.getByRole('button', { name: 'Go to Library' }).click();
   await expect(page).toHaveURL(/#\/$/);

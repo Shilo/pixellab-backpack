@@ -22,7 +22,7 @@
   let opened = ''; // the key the menu opened for, kept for the focus return after `item` is gone
 
   const name = $derived(item ? item.card.name || 'Untitled' : '');
-  const keys = $derived(item ? library.states(item.card, item.familyId).map((c) => c.key) : []);
+  const keys = $derived(item ? library.groupKeys(item.card, item.familyId) : []); // R7, as the viewer's ♡ and the cell's heart
   const fav = $derived(isIn(org.favorites, keys));
   // side() in frames-g4.js: right of the cell, else left of it; kept inside the window.
   const at = $derived.by(() => {

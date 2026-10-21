@@ -390,8 +390,8 @@ In Group E, Task 8 owns App's root `CardMenu` and listeners; Task 9 owns only Ap
 - [x] Task 5: Build the card menu and folder dialog components
 - [x] Task 6: Ship the Favorites slice with `t13-favorites`
 - [x] Task 7: Ship the Folders slice with `t13-folders`
-- [ ] Task 8: Ship the card menu slice with `t13-menu`
-- [ ] Task 9: Ship the search Go to rows and failed-family hint
+- [x] Task 8: Ship the card menu slice with `t13-menu`
+- [x] Task 9: Ship the search Go to rows and failed-family hint
 - [ ] Task 10: Prove 0 requests, security, screenshots, headed check and accessibility; tick the plan
 - [ ] Task 10 (owner): Check long press and the search keyboard on a real iPhone and Android phone
 - [ ] Task 10 (controller): Run the headed live browser test with the debug sign-in (`npm run dev`, `?devkey`) and fix what it finds

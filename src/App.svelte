@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, tick } from 'svelte';
+  import { onMount, tick, untrack } from 'svelte';
   import { APP_NAME } from './lib/app';
   import { familiesOf, scopeLabel } from './lib/categories';
   import { library } from './lib/data/library.svelte';
@@ -8,6 +8,7 @@
   import { closeActivity, closeFolder, go, parseRoute, pathOf, router, scopeOf, screenOf } from './lib/router.svelte';
   import type { FamilyId, Item } from './lib/types';
   import Activity from './lib/ui/Activity.svelte';
+  import CardMenu from './lib/ui/CardMenu.svelte';
   import CategoryGrid from './lib/ui/CategoryGrid.svelte';
   import Dock from './lib/ui/Dock.svelte';
   import FolderOverlay from './lib/ui/FolderOverlay.svelte';
@@ -121,8 +122,60 @@
     closeActivity();
   };
 
+  // A card's menu (R9) on every cell (grids, the folder overlay, search results), from these window listeners only: right-click
+  // (and Android's long press), ContextMenu or Shift+F10 on a focused cell, and a 500 ms touch press (iOS fires no contextmenu).
+  let card = $state<{ item: Item; rect: DOMRect; href: string } | null>(null);
+  const cellOf = (t: EventTarget | null) => (t as Element | null)?.closest?.<HTMLAnchorElement>('a.cell[data-key]') ?? null;
+  /** Not while it or anything else is open on top, nor before the device's folders are read (a folder made then would be lost). */
+  function openMenu(cell: HTMLAnchorElement): boolean {
+    if (card || viewing || menu || settings || activity || router.activity || !org.ready) return false;
+    if (document.querySelector('dialog[open], [role="menu"]')) return false; // a dialog, or a popover such as the folder's "…"
+    const item = library.find(cell.dataset.key!);
+    if (item) card = { item, rect: cell.getBoundingClientRect(), href: cell.getAttribute('href') ?? '' };
+    return !!item;
+  }
+  // Back or Forward while it is open: the screen under it changed, so it closes (Android Back already cancels the dialog).
+  const path = $derived(pathOf(route));
+  $effect(() => {
+    void path;
+    untrack(() => (card = null));
+  });
+  // A second trigger while it is open is ignored, the browser's own menu too: also the one Windows sends on the key's release,
+  // aimed at the menu's focused item.
+  function oncontextmenu(e: MouseEvent) {
+    const cell = cellOf(e.target);
+    if ((cell && (card || openMenu(cell))) || (card && (e.target as Element).closest?.('dialog.cm'))) e.preventDefault();
+  }
+  // Long press: 10 px of slop; lifting, a cancel (the browser took over to scroll) or a scroll ends it. The click that may follow
+  // on that cell is swallowed, so the press never also opens the viewer.
+  let press: { x: number; y: number; t: ReturnType<typeof setTimeout> } | null = null;
+  let swallow: HTMLAnchorElement | null = null;
+  function endPress() {
+    if (press) clearTimeout(press.t);
+    press = null;
+  }
+  function onpointerdown(e: PointerEvent) {
+    endPress();
+    swallow = null;
+    const cell = e.pointerType === 'touch' ? cellOf(e.target) : null;
+    if (cell) press = { x: e.clientX, y: e.clientY, t: setTimeout(() => ((press = null), openMenu(cell) && (swallow = cell)), 500) };
+  }
+  const onpointermove = (e: PointerEvent) => press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10 && endPress();
+  function onclickcapture(e: MouseEvent) {
+    if (swallow && cellOf(e.target) === swallow) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    swallow = null;
+  }
+
   // "/" opens the search, unless typing in a field or something else is open on top. Esc closes it, wherever focus is.
   function onkeydown(e: KeyboardEvent) {
+    if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
+      const cell = cellOf(e.target);
+      if (cell && openMenu(cell)) e.preventDefault();
+      return;
+    }
     const top = viewing || menu || settings || activity || router.activity;
     if (e.key === 'Escape' && searching && !top && !e.defaultPrevented && !e.isComposing) { // an IME's Esc cancels its text
       e.preventDefault(); // a search field would clear itself first
@@ -185,7 +238,7 @@
   });
 </script>
 
-<svelte:window {onkeydown} {onpopstate} />
+<svelte:window {onkeydown} {onpopstate} {oncontextmenu} {onpointerdown} {onpointermove} onpointerup={endPress} onpointercancel={endPress} onscrollcapture={endPress} {onclickcapture} />
 
 <h1 class="vt-sr" tabindex="-1" bind:this={h1}>{grid ? title : inFolder ? (folder?.name ?? APP_NAME) : APP_NAME}</h1>
 
@@ -261,7 +314,7 @@
     <Notice text={notice.text} actionLabel={notice.action} onAction={notice.on} tone={notice.tone} />
   {/if}
   {#if searching}
-    <Search {screen} note={notice?.text ?? null} reveal={viewing ? null : lastShown} onClose={closeSearch} onGo={goFromSearch} bind:results />
+    <Search {screen} note={['slowed', 'paused', 'stopped', 'offline'].includes(library.status) ? (notice?.text ?? null) : null} reveal={viewing ? null : lastShown} onClose={closeSearch} onGo={goFromSearch} bind:results />
   {:else if inFolder}
     <!-- No dock under a folder: its overlay has its own controls. -->
   {:else if grid}
@@ -279,6 +332,8 @@
 <!-- Outside the key check: Forget key signs out while its confirm is still on screen. -->
 <Settings open={settings} onClose={() => (settings = false)} />
 <Activity open={activity || router.activity} onClose={closeAct} />
+<!-- Never under an inert wrapper; focus returns to the cell. -->
+<CardMenu item={card?.item ?? null} rect={card?.rect ?? null} href={card?.href ?? ''} start="menu" onClose={() => ((card = null), (swallow = null))} />
 <!-- The one live region (R10): outside every inert layer and closing dialog, so each change is read. -->
 <span class="vt-sr" role="status">{org.said}</span>
 

@@ -18,6 +18,7 @@
   import { chipLabel, chipVisible, defaultAnim, dirsFor, pickDir } from '../viewer';
   import AnimPicker from './AnimPicker.svelte';
   import { COSTLY_WAIT_MS } from './AssetCell.svelte';
+  import CardMenu from './CardMenu.svelte';
   import InfoPanel from './InfoPanel.svelte';
   import ViewerMenu, { BACKDROPS } from './ViewerMenu.svelte';
 
@@ -51,6 +52,7 @@
   let fit = $state<{ k: number; smooth: boolean; artW: number; artH: number } | null>(null);
   let titleOn = $state(true);
   let menu = $state(false);
+  let adding = $state(false); // Add to folder from the "…" (R10)
   let closing = false;
   /** F-14: the animation type and direction carry over to the next asset when it has them. */
   const want: { type: string | null; dir?: Dir } = { type: null };
@@ -367,7 +369,10 @@
       backdrop={session.backdrop}
       onBackdrop={(i) => (session.backdrop = i)}
       link={pixellabLink(familyId, card)}
+      onAddToFolder={() => org.ready && (adding = true)}
     />
+    <!-- Its row in the "…" is gone by now, and the "…" was inert while the dialog opened: focus goes back to the "…" itself. -->
+    <CardMenu item={adding ? hit : null} rect={null} href="" start="folders" onClose={() => ((adding = false), moreBtn?.focus())} />
 
     {#if session.info}
       <InfoPanel {card} {familyId} {detail} {detailState} checkedAt={library.families[familyId]?.checkedAt ?? null} onClose={toggleInfo} />
