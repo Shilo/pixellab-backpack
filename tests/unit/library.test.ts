@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FamilyId } from '../../src/lib/types';
+import type { Snap } from '../../src/lib/data/org.svelte';
 
 // Fake PixelLab lists, fake network module and fake device storage that outlive a "tab" (vi.resetModules).
 const h = vi.hoisted(() => {
@@ -80,7 +81,11 @@ vi.mock('../../src/lib/api/http', () => ({
   retry: h.retry,
   keepLoading: h.keepLoading,
 }));
-vi.mock('../../src/lib/data/store', () => ({
+// The real record checks (isObj, isCard) with fake storage.
+vi.mock('../../src/lib/data/store', async (actual) => ({
+  ...(await actual<typeof import('../../src/lib/data/store')>()),
+  loadOrg: async () => structuredClone(h.st.db.get('org')),
+  updateOrg: async (fn: (old: unknown) => unknown) => void h.st.db.set('org', structuredClone(fn(structuredClone(h.st.db.get('org'))))),
   loadFamilies: async () => structuredClone(Object.fromEntries(h.st.db)),
   saveFamily: h.saveFamily,
   loadMeta: async () => undefined,
@@ -109,6 +114,9 @@ async function tab() {
   vi.resetModules();
   return (await import('../../src/lib/data/library.svelte')).library;
 }
+
+/** The org store of the latest tab (call after tab()). */
+const orgOf = () => import('../../src/lib/data/org.svelte');
 
 const lists = () => h.apiGet.mock.calls.map(([p]) => p as string).filter((p) => p.includes('?'));
 const later = (ms: number) => vi.setSystemTime(Date.now() + ms);
@@ -629,5 +637,102 @@ describe('picture', () => {
     for (const url of ['https://api.pixellab.ai/v2/characters', 'http://backblaze.pixellab.ai/x.png', 'https://evil.example/x.png', 'not a url'])
       expect(await lib.picture(url, 'characters')).toBeNull();
     expect(h.publicGet).not.toHaveBeenCalled();
+  });
+});
+
+describe('favorites and folders', () => {
+  const SNAP = 'b00000000001'; // an objects card past the saved first page
+  const GONE = 'b00000000002'; // a ui card PixelLab no longer lists
+  const snap = (key: string, familyId: FamilyId) => ({ familyId, card: { key, id: 'x-' + key, name: 's', done: true, thumb: null, fp: 'f', meta: {} } });
+  const seed = (favorites: string[]) =>
+    h.st.db.set('org', { v: 1, favorites, folders: [], cards: Object.fromEntries(favorites.map((k) => [k, snap(k, k === SNAP ? 'objects' : 'ui')])) });
+
+  async function setup() {
+    h.st.lists.characters.rows[0].group_id = 'g';
+    h.st.lists.characters.rows[2].group_id = 'g';
+    h.st.lists.objects.total = 150; // only the first page is saved
+    seed([SNAP, GONE]);
+    const lib = await tab();
+    await lib.connect('key');
+    const { org } = await orgOf();
+    expect(org.ready).toBe(true); // the open check loaded it
+    h.apiGet.mockClear();
+    h.publicGet.mockClear();
+    return { lib, org, chars: lib.families.characters!.cards, ui: lib.families.ui!.cards };
+  }
+
+  it('pick: live cards, one cell per group, snapshots of unsaved rows, gone keys; in list order, 0 requests', async () => {
+    const { lib, chars, ui } = await setup();
+    const { items, gone } = lib.pick([ui[1].key, chars[2].key, GONE, SNAP, chars[0].key]);
+    expect(items.map((i) => [i.familyId, i.card.id])).toEqual([
+      ['ui', 'a-ui-1'],
+      ['characters', 'a-characters-0'], // another state's key gives the group's shown card, once
+      ['objects', 'x-' + SNAP],
+    ]);
+    expect(gone).toEqual([GONE]);
+    expect(h.apiGet).not.toHaveBeenCalled();
+    expect(h.publicGet).not.toHaveBeenCalled();
+  });
+
+  it("pick: a state's snapshot shows its live group, two states give one item, a live card wins over its own snapshot", async () => {
+    h.st.lists.characters.total = 150; // a state on an expired deep page is not gone
+    const { lib, org, chars, ui } = await setup();
+    const { setFavorite } = await orgOf();
+    const OLD = 'b00000000003';
+    const old = { key: OLD, id: 'x-old', name: 'old', done: true, thumb: null, fp: 'f', meta: { group_id: 'g' } };
+    await setFavorite({ card: old, familyId: 'characters' }, [OLD], true);
+    await setFavorite({ card: { ...ui[1], name: 'old' }, familyId: 'ui' }, [ui[1].key], true);
+    expect(org.cards[OLD]).toBeDefined();
+    const ids = (keys: string[]) => lib.pick(keys).items.map((i) => i.card.id);
+    expect(ids([OLD])).toEqual(['a-characters-0']); // the live sibling, not the snapshot
+    expect(ids([chars[2].key, OLD])).toEqual(['a-characters-0']);
+    expect(lib.pick([ui[1].key]).items[0].card.name).toBe('n1');
+    expect(lib.find(ui[1].key)?.card.name).toBe('n1');
+    expect(h.apiGet).not.toHaveBeenCalled();
+    expect(h.publicGet).not.toHaveBeenCalled();
+  });
+
+  it('find: a snapshot for an unsaved deep card, null for a gone one, 0 requests', async () => {
+    const { lib, chars } = await setup();
+    expect(lib.find(SNAP)).toMatchObject({ familyId: 'objects', card: { id: 'x-' + SNAP } });
+    expect(lib.find(GONE)).toBeNull();
+    expect(lib.find(chars[2].key)?.card.id).toBe('a-characters-2');
+    expect(h.apiGet).not.toHaveBeenCalled();
+    expect(h.publicGet).not.toHaveBeenCalled();
+  });
+
+  it('forget() and a signed-out message clear org memory, sending nothing', async () => {
+    let { lib, org } = await setup();
+    await lib.forget();
+    expect([org.favorites, org.ready]).toEqual([[], false]);
+    expect(h.st.db.has('org')).toBe(false);
+
+    seed([SNAP]);
+    ({ lib, org } = await setup());
+    expect(org.favorites).toEqual([SNAP, GONE]);
+    h.st.key = null; // another tab forgot
+    h.st.signedOutCb!();
+    expect([org.favorites, org.cards, org.ready]).toEqual([[], {}, false]);
+    expect(h.apiGet).not.toHaveBeenCalled();
+    expect(h.publicGet).not.toHaveBeenCalled();
+  });
+
+  it('an account switch clears org memory before the wipe, then loads the empty record', async () => {
+    const { lib, org } = await setup();
+    let held = -1;
+    h.wipe.mockImplementationOnce(async () => void ((held = org.favorites.length), h.st.db.clear()));
+    fill('b');
+    expect(await lib.connect('other-key')).toBe('ok');
+    expect(held).toBe(0);
+    expect([org.favorites, org.ready]).toEqual([[], true]);
+  });
+
+  it("a resolved costly link is written to the key's snapshot", async () => {
+    const { lib } = await setup();
+    const { setFavorite } = await orgOf();
+    const pro = lib.families['tiles-pro']!.cards[0];
+    await setFavorite({ card: pro, familyId: 'tiles-pro' }, [pro.key], true);
+    expect(await lib.art(pro, 'tiles-pro')).toBeInstanceOf(Blob);
+    await vi.waitFor(() => expect((h.st.db.get('org') as { cards: Record<string, Snap> }).cards[pro.key].card.thumb).toBe(h.img('a-tiles-pro-0')));
   });
 });

@@ -22,6 +22,7 @@ import {
 } from '../api/http';
 import type { Card, Detail, FamilyId, FamilyState, Item, Page } from '../types';
 import { applyCheck, DEEP_TTL_MS, dropExpiredDeep, isFresh, joinNextPage } from './check';
+import { clear as clearOrg, load as loadOrg, org, setThumb } from './org.svelte';
 import { loadDetail, loadFamilies, saveDetail, saveFamily, wipe } from './store';
 
 export type LibraryStatus = 'idle' | 'checking' | Status;
@@ -83,13 +84,36 @@ class Library {
   /** The flat list the grid shows, family after family. */
   items = (scope: Scope): Item[] => familiesOf(scope).flatMap((familyId) => this.shown(familyId).map((card) => ({ card, familyId })));
 
-  /** Any done card of any family by key, grouped states included (keys are unique across families). */
-  find = (key: string): Item | null => {
-    for (const familyId of familiesOf('all')) {
-      const card = this.done(familyId).find((c) => c.key === key);
-      if (card) return { card, familyId };
+  /** Any done card of any family by key, grouped states included (keys are unique across families); else a snapshot that is not gone. */
+  find = (key: string): Item | null => this.live.get(key) ?? this.snapped(key);
+
+  /** A favorite or folder list (R2, R3, R7), in list order: the group's shown card when any state is live, else a snapshot whose
+   * family is not fully saved, else the key is gone. One item per shown card. No request. */
+  pick = (keys: string[]): { items: Item[]; gone: string[] } => {
+    const items: Item[] = [];
+    const gone: string[] = [];
+    const seen = new Set<string>();
+    for (const key of keys) {
+      // A snapshot goes through its group too: a live state of the group shows instead (R7).
+      const hit = this.live.get(key) ?? this.snapped(key);
+      const it = hit && { card: this.states(hit.card, hit.familyId)[0], familyId: hit.familyId };
+      if (!it) gone.push(key);
+      else if (!seen.has(it.card.key)) {
+        seen.add(it.card.key);
+        items.push(it);
+      }
     }
-    return null;
+    return { items, gone };
+  };
+
+  /** Done cards of every family by key. */
+  private live = $derived(new Map(familiesOf('all').flatMap((familyId) => this.done(familyId).map((card) => [card.key, { card, familyId }] as const))));
+
+  /** The key's snapshot while its family is not fully saved (R3: in a fully saved family a missing card is gone). */
+  private snapped = (key: string): Item | null => {
+    const snap = org.cards[key];
+    const s = snap && this.families[snap.familyId];
+    return snap && !(s && s.cards.length >= s.total) ? { card: snap.card, familyId: snap.familyId } : null;
   };
 
   /** PixelLab's totals summed over the scope (the home tiles' numbers). */
@@ -144,7 +168,8 @@ class Library {
     // ponytail: an account with 0 saved Characters cannot be told apart, so it keeps the copy (fresh families up to 1 h)
     const keys = new Set(saved?.cards.map((c) => c.key));
     if (keys.size && !page.cards.some((c) => keys.has(c.key))) {
-      // Another account's saved copy: wipe it, then the check below runs for every family.
+      // Another account's saved copy: wipe it with its favorites and folders (R4), then the check below runs for every family.
+      clearOrg();
       await wipe().catch(() => {});
       this.families = {} as Record<FamilyId, FamilyState | undefined>;
       this.errors = {};
@@ -170,6 +195,7 @@ class Library {
     running = (async () => {
       await adopt(); // show the saved copy at once
       if (!getKey()) return;
+      await loadOrg(); // after connect's possible wipe
       ran = true;
       // One check across tabs: a tab that waited for the lock re-reads what the other tab saved.
       await locked(async () => {
@@ -300,6 +326,7 @@ function signedOut(): void {
   pictures.clear();
   details.clear();
   unchecked.clear();
+  clearOrg();
   ran = false;
   sync();
 }
@@ -360,6 +387,7 @@ async function loadArt(card: Card, familyId: FamilyId, signal?: AbortSignal): Pr
       if (res.ok) return await res.blob(); // otherwise the saved link went stale: resolve it again below
     }
     const { blob, thumb } = await f.art(card, signal);
+    if (f.artCostsApi && thumb) setThumb(card.key, thumb); // a favorite or folder snapshot keeps it too (R2)
     if (f.artCostsApi && thumb && thumb !== card.thumb) {
       // Save the link on the card WITHOUT touching fp, so applyCheck keeps it across checks.
       const saved = library.families[familyId]?.cards.find((c) => c.key === card.key && c.fp === card.fp);
