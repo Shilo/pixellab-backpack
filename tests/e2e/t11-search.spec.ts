@@ -401,7 +401,7 @@ test('Go to lists Favorites and folders; typing keeps only matching folders; a f
 
   await openSearch(page);
   const goto = panel(page).locator('.goto');
-  await expect(goto.filter({ hasText: 'Favorites' })).toContainText('1 assets');
+  await expect(goto.filter({ hasText: 'Favorites' }).locator('.glass-list__subtitle')).toHaveText('1 asset'); // singular (heavy test: it read "1 assets")
   await expect(goto.filter({ hasText: 'Favorites' }).locator('canvas, img')).not.toHaveCount(0);
   await expect(goto.filter({ hasText: 'Hero party' })).toContainText('Folder · 0');
 

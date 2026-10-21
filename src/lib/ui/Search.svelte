@@ -53,7 +53,7 @@
       .filter((c) => c.count > 0)
       .map((c) => ({ id: c.id, href: `#/c/${c.id}`, label: c.label, sub: `Type · ${c.count.toLocaleString()}`, it: c.mosaic[0] ?? null, folder: false }));
     const favs = library.pick(org.favorites).items;
-    if (favs.length) rows.push({ id: 'fav', href: '#/fav', label: 'Favorites', sub: `${favs.length.toLocaleString()} assets`, it: favs[0], folder: false });
+    if (favs.length) rows.push({ id: 'fav', href: '#/fav', label: 'Favorites', sub: `${favs.length.toLocaleString()} asset${favs.length === 1 ? '' : 's'}`, it: favs[0], folder: false });
     for (const f of org.folders) {
       const p = library.pick(f.items).items;
       rows.push({ id: `f/${f.id}`, href: `#/f/${f.id}`, label: f.name, sub: `Folder · ${p.length.toLocaleString()}`, it: p[0] ?? null, folder: true });

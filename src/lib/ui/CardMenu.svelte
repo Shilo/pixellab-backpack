@@ -89,9 +89,12 @@
   let down = false;
   const outside = (e: MouseEvent) => down && e.target === dlg && shut();
 
+  // Closes at once (a following Esc belongs to the screen). Unfavoriting in Favorites removes the focused cell once the write
+  // lands: focus then goes to the heading, not <body>.
   function favorite() {
-    if (item) setFavorite(item, keys, !fav).catch(() => {});
+    const write = item && setFavorite(item, keys, !fav).catch(() => {});
     shut();
+    write?.then(tick).then(() => document.activeElement === document.body && document.querySelector<HTMLElement>('h1')?.focus());
   }
 
   async function folders() {

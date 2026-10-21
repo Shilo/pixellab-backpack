@@ -62,16 +62,6 @@
     if (viewing) lastShown = viewing;
     else if (route.name === 'home' && !searching) lastShown = null;
   });
-  // A viewer closed with nothing to reveal (a deep link, home): focus the screen's heading, not <body>. After the grid's or
-  // the search's own reveal focus (they run one tick after closing).
-  let wasViewing = false;
-  $effect(() => {
-    if (viewing) wasViewing = true;
-    else if (wasViewing) {
-      wasViewing = false;
-      tick().then(tick).then(() => document.activeElement === document.body && h1?.focus());
-    }
-  });
 
   function openSearch() {
     if (searching) return;
@@ -95,11 +85,7 @@
     searching = false;
     searchEntry = 0;
     lastShown = null;
-    // After the heading's text changes (hashchange is a later task), so a screen reader reads the new screen.
-    // A folder's overlay focuses its own heading.
-    if (path.startsWith('#/f/')) return go(path);
-    if (location.hash === path) h1?.focus();
-    else addEventListener('hashchange', () => tick().then(() => h1?.focus()), { once: true });
+    if (location.hash === path) h1?.focus(); // the same screen: no route change to focus it
     go(path);
   }
   // Back (phone or browser) onto an entry without the search closes it. Opening a result (an entry with a key) does not.
@@ -108,9 +94,11 @@
     searchEntry = 0; // the browser already stepped Back
     closeSearch();
   }
+  // Signed out (Forget here or in another tab, a 401): nothing of the library stays on screen over the key screen.
   $effect(() => {
     if (library.hasKey) return;
     searching = false;
+    card = null; // the card menu lives at App root, outside the key check
     clearRecent();
   });
 
@@ -135,10 +123,22 @@
     return !!item;
   }
   // Back or Forward while it is open: the screen under it changed, so it closes (Android Back already cancels the dialog).
+  // The search closing on Back is such a change too (its entry has the same address, so the path stays).
   const path = $derived(pathOf(route));
   $effect(() => {
     void path;
+    void searching;
     untrack(() => (card = null));
+  });
+  // After any route change (a tile, the dock, Back, Go to, closing the viewer or a folder): focus the new screen's heading, so
+  // a screen reader reads it and Tab starts there, never <body>. Only when nothing took focus by then: the viewer's title, the
+  // grid's, the search's or the overlay's reveal, and the folder overlay's heading or tile all run within these two ticks.
+  // Never while a viewer is open: it keeps focus itself (←/→ swap the key; the page heading sits behind it).
+  let focusedPath = untrack(() => path);
+  $effect(() => {
+    if (path === focusedPath) return;
+    focusedPath = path;
+    tick().then(tick).then(() => !router.route.key && document.activeElement === document.body && h1?.focus());
   });
   // A second trigger while it is open is ignored, the browser's own menu too: also the one Windows sends on the key's release,
   // aimed at the menu's focused item.

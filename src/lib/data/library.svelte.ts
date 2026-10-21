@@ -147,12 +147,14 @@ class Library {
   };
 
   /** Every key of a card's group on this device (R7): its live states, plus snapshots of the same character group (a favorited
-   * deep state may be snapshot-only after its rows expired). The ♡ and the heart test these; removing drops them all. No request. */
+   * deep state may be snapshot-only after its rows expired), unless gone (R3: lists leave those out, so the heart must too).
+   * The ♡ and the heart test these; removing drops them all. No request. */
   groupKeys = (card: Card, familyId: FamilyId): string[] => {
     const keys = this.states(card, familyId).map((c) => c.key);
     const g = card.meta.group_id;
     if (familyId !== 'characters' || typeof g !== 'string' || !g.trim()) return keys;
-    for (const [k, s] of Object.entries(org.cards)) if (s.familyId === familyId && s.card.meta.group_id === g && !keys.includes(k)) keys.push(k);
+    for (const [k, s] of Object.entries(org.cards))
+      if (s.familyId === familyId && s.card.meta.group_id === g && !keys.includes(k) && this.snapped(k)) keys.push(k);
     return keys;
   };
 
