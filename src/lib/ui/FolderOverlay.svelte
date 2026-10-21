@@ -106,7 +106,6 @@
               <span class="glass-list__content"><span class="glass-list__title">Rename…</span></span>
               <span class="glass-list__trailing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 19.5l1-4L15.8 5.2a2 2 0 0 1 2.9 0l.1.1a2 2 0 0 1 0 2.9L8.5 18.5z" /><path d="M13.8 7.2l3 3" /></svg></span>
             </button>
-            <hr class="glass-divider" />
             <button type="button" role="menuitem" class="glass-list__item glass-list__item--interactive glass-list__item--danger" onclick={() => pick('delete')}>
               <span class="glass-list__content"><span class="glass-list__title">Delete folder…</span></span>
               <span class="glass-list__trailing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V5h5v2M6.5 7l1 12.5h9l1-12.5M10.2 10.5v6M13.8 10.5v6" /></svg></span>
@@ -198,7 +197,6 @@
   .menu .glass-list__item { cursor: pointer; }
   .glass-list__content { display: block; flex: 1; min-width: 0; }
   .glass-list__trailing svg { width: 19px; height: 19px; }
-  .glass-divider { margin: 6px 0; }
   .menu .glass-list__item:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
 
   @media (max-width: 600px) {
