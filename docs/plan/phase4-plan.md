@@ -1,6 +1,6 @@
 # Phase 4 plan: Favorites and folders
 
-Status: **Draft** 2026-10-20, revised after the plan challenge (12 Important, 10 Minor; applied as the controller ruled). Builds on Phase 3 on branch `main` ([Phase 3 plan](phase3-plan.md), [build log](phase3-build-log.md)). Where this plan and older design docs disagree, **this plan wins for Phase 4**; the MVP, Phase 2 and Phase 3 rulings and Global Constraints still bind.
+Status: **Done** 2026-10-21 ([build log](phase4-build-log.md)); revised after the plan challenge (12 Important, 10 Minor; applied as the controller ruled). Builds on Phase 3 on branch `main` ([Phase 3 plan](phase3-plan.md), [build log](phase3-build-log.md)). Where this plan and older design docs disagree, **this plan wins for Phase 4**; the MVP, Phase 2 and Phase 3 rulings and Global Constraints still bind.
 
 ## Goal
 
