@@ -308,9 +308,11 @@ test('a normal session under the production CSP causes no policy violation', asy
   await page.locator('[data-search]').click();
   await page.getByRole('searchbox', { name: 'Search' }).fill('object 1');
   await page.locator('.glass-popover.panel .res a[data-key]').filter({ hasText: 'Object 10' }).click();
-  await expect(page.getByRole('dialog', { name: 'Object 10', exact: true })).toBeVisible();
+  const obj = page.getByRole('dialog', { name: 'Object 10', exact: true });
+  await expect(obj).toBeVisible();
   await settle(page, mock, 600);
   await page.keyboard.press('Escape');
+  await expect(obj).toHaveCount(0); // the viewer closes on the browser's Back: an Esc sent before that lands on the closing viewer
   await page.keyboard.press('Escape');
 
   await page.getByRole('link', { name: 'Favorites, 1' }).click();

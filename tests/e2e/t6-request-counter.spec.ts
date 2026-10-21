@@ -6,10 +6,15 @@ const api = (hits: Hit[]) => hits.filter((h) => h.host === 'api');
 const lists = (hits: Hit[]) => hits.filter((h) => h.list);
 const ids = (url: string) => url.match(/\b[ab]-(?:characters|objects|ui|tilesets-side|tilesets|isometric|tiles-pro)-\d+/g) ?? [];
 
+/** The home's own requests end with its 16 pictures drawn. The tileset helpers among them are paced (2/s), so a quiet window
+ * alone can end before the last one under load, and a count that starts next would see it. */
+const homeDrawn = (page: Page) => expect(page.locator('.tile .mosaic canvas:not([style*="display: none"])')).toHaveCount(16);
+
 async function openFirst(page: Page): Promise<Mock> {
   const mock = await mockPixelLab(page);
   await page.goto('/');
   await connect(page);
+  await homeDrawn(page);
   await settle(page, mock);
   return mock;
 }
@@ -70,6 +75,7 @@ test('a key pasted in a new tab within the hour sends 1 API request', async ({ p
   const mock = await mockPixelLab(context);
   await page.goto('/');
   await connect(page);
+  await homeDrawn(page);
   await settle(page, mock);
   const at = mock.hits.length;
   const tab = await context.newPage();
@@ -719,8 +725,9 @@ test('organize: a deep tileset favorited before its picture resolved asks exactl
   await page.goto('/');
   await connect(page);
   await settle(page, mock);
-  // Hold the side tileset helpers' answers: the picture is asked, not yet resolved, when it is favorited.
-  const HELPERS = 'https://api.pixellab.ai/mcp/sidescroller-tilesets/**';
+  // Hold this tileset's helper answer: the picture is asked, not yet resolved, when it is favorited. Only this one: the app
+  // sends 2 requests at a time, so two held helpers of cells on screen would keep the next page from ever being sent.
+  const HELPERS = 'https://api.pixellab.ai/mcp/sidescroller-tilesets/a-tilesets-side-55/**';
   let release = () => {};
   const held = new Promise<void>((r) => (release = r));
   await page.route(HELPERS, async (route) => {

@@ -4,14 +4,16 @@
 import { expect, test, type Page } from '@playwright/test';
 import { connect, mockPixelLab, seedOrg, settle } from '../fixtures/pixellab-mock';
 
-/** Pictures that are not drawn at a whole device-pixel scale with hard pixel edges (expected: none). */
+/** Pictures that are not drawn at a whole device-pixel scale with hard pixel edges (expected: none). Measured after a rendering
+ * frame: a picture decoded since the last one is sized by that frame's ResizeObserver, before it is painted. */
 const blurry = (page: Page) =>
-  page.evaluate(() =>
-    [...document.querySelectorAll('canvas')]
+  page.evaluate(async () => {
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    return [...document.querySelectorAll('canvas')]
       .filter((c) => c.style.display !== 'none')
       .map((c) => ({ scale: (parseFloat(c.style.width) * devicePixelRatio) / c.width, rendering: getComputedStyle(c).imageRendering }))
-      .filter((x) => x.scale < 1 || Math.abs(x.scale - Math.round(x.scale)) > 0.01 || x.rendering !== 'pixelated'),
-  );
+      .filter((x) => x.scale < 1 || Math.abs(x.scale - Math.round(x.scale)) > 0.01 || x.rendering !== 'pixelated');
+  });
 const drawn = (page: Page) => page.evaluate(() => [...document.querySelectorAll('canvas')].filter((c) => c.style.display !== 'none').length);
 
 for (const dpr of [1, 1.5, 2.625]) {

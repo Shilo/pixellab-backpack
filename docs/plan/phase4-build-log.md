@@ -80,3 +80,31 @@ Written from the build ledger when Phase 4 finished (on `main`). Rulings are dec
   - on a real iPhone and Android phone, a long press opens the card menu with no system link preview, and a short tap opens the viewer;
   - sheets sit above the home indicator;
   - Phase 3's search keyboard check.
+
+## Leftovers sweep (after Phase 4)
+
+A review of every plan, build log and doc found 39 actionable leftovers, 10 owner-only items and 26 already resolved. The fixes ran as separate tasks on separate files, each reviewed:
+
+- **README:** rewritten to match the built app. It now links only committed files (it had 31 links into git-ignored mockups), and no longer claims features that aren't built.
+- **Search:** it now matches and shows the full name. Real names are long prompts, and words past the 60-character cut couldn't be found. The cut stays in place for the picture cache, so nothing is re-requested. Info's tag chips now use one trimmed list.
+- **Network and Activity:**
+  - A failed save while replacing a kept key no longer leaves the old key saved.
+  - Signing in waits for a check already running, then reloads favorites and folders; an older check stops if the key changed.
+  - Activity's hidden-request estimate counts each request once.
+  - Esc in Activity closes only Activity.
+  - The licence file now has the full Apache-2.0 text.
+  - The unused modulepreload polyfill is gone.
+- **Keyboard:** ↑/↓/Home/End work in the "…" menus, the arrow keys move around the direction rose, and the More menu's Esc stays contained.
+- **Tests:** the mock now uses real PixelLab shapes (B12): the `usage` key, failed and review rows, "Idle" and "base" state names, and newest-first lists, so the Recently added order is now tested. A new check confirms the production CSP never blocks the app. No request count changed.
+- **Plan docs:** the Phase 0 results are recorded in [research 13](../research/13-phase0-results.md), the T7 owner checklist is written, and stale statuses are fixed.
+- **Still open (owner-only):**
+  - real-phone checks;
+  - rotating the API key used in testing, and deleting the git-ignored `.env`;
+  - deciding repo visibility (the committed mockup assets include real art);
+  - the PixelLab questions Q1, Q4 and Q6, and the T7 counts.
+- **Final verification of the sweep:** `npm run check` 0 errors, 311 unit tests, build OK. The first full double run had 5 failures, all test timing races exposed by heavy machine load, not app bugs. In each case the test now waits for the requests it owns; no count was loosened.
+  - A count that started before the home's last paced picture request.
+  - A test that held both request slots.
+  - A second Esc that came before the viewer closed.
+  - A crispness probe that measured a canvas before it was sized.
+  - **Result:** after the fixes, the full suite run twice over passed 658, with 2 skipped (the phone-only test) and 0 failed.
