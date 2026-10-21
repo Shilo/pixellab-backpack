@@ -52,9 +52,11 @@ const family = (id: FamilyId, lists?: Record<string, unknown>) => {
 describe.each(Object.keys(CASES) as FamilyId[])('%s', (id) => {
   const [, path, pageSize, dones] = CASES[id];
 
-  test('maps a page to cards; unfinished are not done; malformed rows dropped', async () => {
+  test('maps a page to cards; unfinished are not done; malformed rows dropped; the top-level usage key is ignored', async () => {
     const { fam, log } = family(id);
+    expect(fixture(CASES[id][0])).toHaveProperty('usage'); // real list answers carry it
     const page = await fam.list(0);
+    expect(Object.keys(page).sort()).toEqual(['cards', 'total']);
     expect(fam.pageSize).toBe(pageSize);
     expect(page.cards).toHaveLength(dones.length);
     expect(page.cards.map((c) => c.done)).toEqual(dones);

@@ -101,7 +101,7 @@ test('direction rose: one tab stop, arrows move between the enabled directions o
   await page.getByRole('link', { name: /^Characters, / }).click();
   await page.getByRole('link', { name: 'Character 2', exact: true }).click(); // 4 directions: south, east, north, west
   const v = viewer(page, 'Character 2');
-  await expect(v.locator('.vt-chip')).toHaveText(/· South$/);
+  await expect(v.locator('.vt-chip')).toHaveText(/· South\s*$/); // the chip's text ends in whitespace
   await v.locator('.vt-chip').click();
   const pick = page.getByRole('dialog', { name: 'Animation, state and direction' });
   const dir = (name: string) => pick.getByRole('radio', { name, exact: true });
@@ -113,7 +113,7 @@ test('direction rose: one tab stop, arrows move between the enabled directions o
   await page.keyboard.press('ArrowRight'); // wraps past the end
   await expect(dir('North')).toBeFocused();
   await expect(dir('North')).toHaveAttribute('aria-checked', 'true');
-  await expect(v.locator('.vt-chip')).toHaveText(/· North$/);
+  await expect(v.locator('.vt-chip')).toHaveText(/· North\s*$/);
   await page.keyboard.press('ArrowDown'); // North-east is disabled and skipped
   await expect(dir('West')).toBeFocused();
   await expect(dir('West')).toHaveAttribute('aria-checked', 'true');

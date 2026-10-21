@@ -469,6 +469,19 @@ describe('states, items, find, count, coverage', () => {
     ]);
   });
 
+  it('states() gains a sibling state that a next page brings, and the grid still shows the group once', async () => {
+    fill('a', { characters: 150 });
+    h.st.lists.characters.rows[0].group_id = 'g';
+    h.st.lists.characters.rows[120].group_id = 'g';
+    const lib = await tab();
+    await lib.connect('key');
+    const first = lib.families.characters!.cards[0];
+    expect(lib.states(first, 'characters')).toEqual([first]);
+    await lib.loadMore('characters');
+    expect(lib.states(first, 'characters').map((c) => c.id)).toEqual(['a-characters-0', 'a-characters-120']);
+    expect(lib.items('characters')).toHaveLength(149);
+  });
+
   it('items(all) joins the four categories in home order; count(all) is their sum', async () => {
     const lib = await tab();
     await lib.connect('key');

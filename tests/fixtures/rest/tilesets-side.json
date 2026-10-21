@@ -29,5 +29,9 @@
       "status": "completed"
     }
   ],
-  "total": 2
+  "total": 2,
+  "usage": {
+    "type": "usd",
+    "usd": 0
+  }
 }

@@ -58,5 +58,9 @@
     },
     null
   ],
-  "total": 4
+  "total": 4,
+  "usage": {
+    "type": "usd",
+    "usd": 0
+  }
 }

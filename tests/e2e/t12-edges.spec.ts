@@ -97,7 +97,7 @@ test('after Refresh finds new assets, the search shows them', async ({ page }) =
 });
 
 test('odd names: emoji, accents, non-Latin, regex characters and very long names match, highlight and fit', async ({ page }) => {
-  const long = `Ancient banner ${'very '.repeat(40)}long`; // names are kept to 60 code points (families.ts)
+  const long = `Ancient banner ${'very '.repeat(40)}long`; // grid cells keep 60 code points (families.ts); search uses the whole name
   const names = ['🐉 Dragon egg', 'Café sign', 'Дракон', '龍の旗', 'a.b(c)*[d]', long];
   await page.route('https://api.pixellab.ai/v2/ui-assets?**', (r) =>
     r.request().method() === 'OPTIONS'
@@ -125,7 +125,8 @@ test('odd names: emoji, accents, non-Latin, regex characters and very long names
   await one('дРаК', 'Дракон', 'Драк');
   await one('龍', '龍の旗', '龍');
   await one('(c)*[', 'a.b(c)*[d]', '(c)*[');
-  await one('banner', long.slice(0, 60), 'banner');
+  await one('banner', long, 'banner');
+  await one('long', long, 'long'); // a word past the 60-character cut
   await field(page).fill('.*');
   await expect(panel(page).getByRole('heading', { name: 'No matches for ".*".' })).toBeVisible();
   await field(page).fill('very very');

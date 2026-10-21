@@ -275,3 +275,50 @@ test('folders and favorites stay private: never in the address, history, Activit
   }
   private_(consoleText.join('\n'), 'console');
 });
+
+// The production CSP (public/_headers, served by `vite preview`): a normal session breaks none of it. Report-only would hide a
+// break, so the page itself listens for `securitypolicyviolation` from before its first script.
+test('a normal session under the production CSP causes no policy violation', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.addInitScript(() => {
+    const w = window as unknown as { cspHits: string[] };
+    w.cspHits = [];
+    document.addEventListener('securitypolicyviolation', (e) => w.cspHits.push(`${e.effectiveDirective} ${e.blockedURI} ${e.sourceFile}:${e.lineNumber}`));
+  });
+  const hits = () => page.evaluate(() => (window as unknown as { cspHits: string[] }).cspHits);
+  const mock = await mockPixelLab(page);
+  const res = await page.goto('/');
+  expect(res!.headers()['content-security-policy']).toContain("default-src 'none'");
+  await connect(page);
+  await settle(page, mock, 600);
+
+  await page.getByRole('link', { name: /^Characters, / }).click();
+  await settle(page, mock, 600);
+  await page.getByRole('link', { name: 'Character 1', exact: true }).click();
+  const v = page.getByRole('dialog', { name: 'Character 1', exact: true });
+  await expect(v.locator('.vt-chip')).toHaveText('Breathing idle · South');
+  await v.getByRole('button', { name: 'Favorite', exact: true }).click();
+  await v.getByRole('button', { name: 'Info', exact: true }).click();
+  await v.getByRole('complementary', { name: 'Info' }).getByText('Technical details').click();
+  await v.getByRole('button', { name: 'Info', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await expect(v).toHaveCount(0);
+  await page.getByRole('button', { name: 'Library' }).click();
+
+  await page.locator('[data-search]').click();
+  await page.getByRole('searchbox', { name: 'Search' }).fill('object 1');
+  await page.locator('.glass-popover.panel .res a[data-key]').filter({ hasText: 'Object 10' }).click();
+  await expect(page.getByRole('dialog', { name: 'Object 10', exact: true })).toBeVisible();
+  await settle(page, mock, 600);
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('link', { name: 'Favorites, 1' }).click();
+  await expect(page.locator('main.grid a.cell')).toHaveCount(1);
+  await settle(page, mock, 600);
+  expect(await hits()).toEqual([]);
+
+  // The listener works: an inline style is a violation.
+  await page.evaluate(() => document.head.append(Object.assign(document.createElement('style'), { textContent: 'a{}' })));
+  await expect.poll(hits).toEqual([expect.stringMatching(/^style-src-elem inline/)]);
+});

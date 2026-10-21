@@ -20,8 +20,14 @@ const FAMS: Record<Fam, { path: string; rows: string; label: string; pic?: strin
 };
 export const DEFAULT_COUNTS: Record<Fam, number> = { characters: 250, objects: 12, ui: 6, tilesets: 5, 'tilesets-side': 3, isometric: 4, 'tiles-pro': 3 };
 
-/** Every 10th row (index 3, 13, ...) is still generating: it must stay hidden and never get a picture request. */
+/** Every 10th row (index 3, 13, ...) is unfinished: it must stay hidden and never get a picture request. As live: most are still
+ * generating, every other one failed (13, 33, ...), and object row 3 waits in review. */
 const unfinished = (i: number) => i % 10 === 3;
+const statusOf = (fam: Fam, i: number) => (!unfinished(i) ? 'completed' : fam === 'objects' && i === 3 ? 'review' : i % 20 === 13 ? 'failed' : 'processing');
+/** Each list comes newest first, one minute apart; Objects is the newest family, so "Recently added" (all families by date) is
+ * not the screen order (Characters first). */
+const NEWEST: Fam[] = ['objects', 'characters', 'ui', 'tilesets', 'tilesets-side', 'isometric', 'tiles-pro'];
+const createdAt = (fam: Fam, i: number) => new Date(Date.UTC(2026, 5, 1) - NEWEST.indexOf(fam) * 86_400_000 - i * 60_000).toISOString();
 const id = (acct: string, fam: Fam, i: number) => `${acct}-${fam}-${i}`;
 const IMG = 'https://backblaze.pixellab.ai/file';
 const D8 = ['south', 'south-east', 'east', 'north-east', 'north', 'north-west', 'west', 'south-west'];
@@ -29,7 +35,7 @@ const D4 = ['south', 'east', 'north', 'west'];
 /** Characters: even rows have 8 directions, odd rows 4; rows divisible by 3 have a walk and a breathing-idle animation. */
 const charDirs = (i: number) => (i % 2 ? D4 : D8);
 const charAnims = (i: number) => (i % 3 ? [] : ['walk', 'breathing-idle']);
-/** Object row 4 ("Object 5") has a state name but no sibling states, so its cell reads just "Object 5" (R6). */
+/** Objects carry the state name "base" as live; row 4 ("Object 5") has "open". Neither is shown in a cell or searched (R6). */
 const OPEN_OBJECT = 4;
 
 /** A tiny RGBA PNG: a w×w (16 by default) two-colour checker with a 1px border, colours from the seed (crispness is easy to see). */
@@ -80,7 +86,8 @@ export interface Mock {
   counts: Record<string, Record<Fam, number>>;
   /** Width and height of every image-host picture, in art pixels (16 by default). */
   size: number;
-  /** Character rows that are states of one character: the first is the base, the others "Armored". Rows 6 and 7 by default. */
+  /** Character rows that are states of one character: the first is the base (no state name), the others "Armored". Rows 6 and 7
+   * by default. Every other character is, as live, the lone state "Idle" of a group of its own. */
   groups: number[][];
 }
 
@@ -160,22 +167,22 @@ export async function mockPixelLab(target: Page | BrowserContext, counts: Partia
     const offset = Number(u.searchParams.get('offset'));
     const rows = [];
     for (let i = offset; i < Math.min(total, offset + limit); i++) rows.push(row(acct, listFam, i));
-    return json({ [f.rows]: rows, total });
+    return json({ [f.rows]: rows, total, usage: { type: 'usd', usd: 0 } }); // real list answers carry usage
   });
 
   /** One list row; detail answers spread it too. */
   function row(acct: string, fam: Fam, i: number): Record<string, unknown> {
     const rid = id(acct, fam, i);
-    const r: Record<string, unknown> = { id: rid, name: `${FAMS[fam].label} ${i + 1}`, status: unfinished(i) ? 'processing' : 'completed', created_at: '2026-01-01T00:00:00Z' };
+    const r: Record<string, unknown> = { id: rid, name: `${FAMS[fam].label} ${i + 1}`, status: statusOf(fam, i), created_at: createdAt(fam, i) };
     const pic = FAMS[fam].pic;
     if (pic) r[pic] = `${IMG}/${acct}/${rid}.png`; // even unfinished rows carry a link: the app must not use it
     if (fam === 'characters') {
-      Object.assign(r, { directions: charDirs(i).length, animation_count: charAnims(i).length, state_name: null, group_id: null, prompt: `synthetic courier ${i + 1}`, size: { width: 16, height: 16 } });
+      Object.assign(r, { directions: charDirs(i).length, animation_count: charAnims(i).length, state_name: 'Idle', group_id: `${acct}-solo-${i}`, prompt: `synthetic courier ${i + 1}`, size: { width: 16, height: 16 } });
       const g = mock.groups.findIndex((rows) => rows.includes(i));
       const base = mock.groups[g]?.[0];
       if (g >= 0) Object.assign(r, { name: `${FAMS[fam].label} ${base + 1}`, group_id: `${acct}-group-${g + 1}`, state_name: i === base ? null : 'Armored' });
     }
-    if (fam === 'objects') Object.assign(r, { directions: i === 0 ? 1 : 4, ...(i === OPEN_OBJECT && { state_name: 'open' }) });
+    if (fam === 'objects') Object.assign(r, { directions: i === 0 ? 1 : 4, state_name: i === OPEN_OBJECT ? 'open' : 'base' });
     return r;
   }
 

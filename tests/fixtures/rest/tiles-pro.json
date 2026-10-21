@@ -37,5 +37,9 @@
       "status": "completed"
     }
   ],
-  "total": 3
+  "total": 3,
+  "usage": {
+    "type": "usd",
+    "usd": 0
+  }
 }

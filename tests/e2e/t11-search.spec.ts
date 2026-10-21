@@ -96,6 +96,8 @@ test('empty field: Go to with counts, Recently added, Show all', async ({ page, 
   await expect(rows).toHaveText([/Characters\s*Type · 250/, /Objects\s*Type · 12/, /Tilesets & tiles\s*Type · 15/, /UI\s*Type · 6/]);
   await expect(panel(page).locator('.added a[data-key]')).toHaveCount(6);
   await expect(panel(page).locator('.added a[data-key]:visible')).toHaveCount(isMobile ? 3 : 6);
+  // Newest first across families (the mock's Objects are newer than its Characters, which come first on screen); Object 4 is in review.
+  await expect(panel(page).locator('.added a[data-key]')).toHaveText(['Object 1', 'Object 2', 'Object 3', 'Object 5', 'Object 6', 'Object 7']);
 
   // The heading takes focus after its text changes, so a screen reader reads the new screen.
   await page.evaluate(() => document.querySelector('h1')!.addEventListener('focus', (e) => ((window as unknown as { h1Said: string }).h1Said = (e.target as HTMLElement).textContent!), { once: true }));
@@ -138,9 +140,13 @@ test('typing: matching cells with the match in bold, accents ignored, cells keep
   await expect(results(page).locator('canvas')).toBeVisible();
   expect(await results(page).getAttribute('title')).toBe('Object 12');
 
-  // An object's state name is neither shown nor searched (R6, live data).
-  await field(page).fill('open');
-  await expect(panel(page).getByRole('heading', { name: 'No matches for "open".' })).toBeVisible();
+  // An object's state name, and a lone character's "Idle", are neither shown nor searched (R6, live data).
+  for (const q of ['open', 'base', 'idle']) {
+    await field(page).fill(q);
+    await expect(panel(page).getByRole('heading', { name: `No matches for "${q}".` })).toBeVisible();
+  }
+  await field(page).fill('character 1');
+  await expect(results(page).first()).toHaveText('Character 1');
   await field(page).fill('object 5');
   await expect(results(page)).toHaveText(['Object 5']);
 
