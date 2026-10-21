@@ -41,6 +41,17 @@ The owner gave an API key for testing. It was used only for read-only GET reques
   - Statuses seen: completed, failed, and review (objects). Everything not completed stays hidden, as designed.
 - **Ruling changed by live data (R6):** most characters carry the default state "Idle" in a group of their own, and objects carry "base" or automatic names. A state name is now shown and matched only for a character with sibling states on this device, and never for objects.
 
+## Live browser test (owner's key, real browser)
+
+The controller ran the app on the dev server with the dev-only debug sign-in. It shot every screen in a headed (visible) Edge window at 1440×900 and 390×844, compared each with the mockups, and clicked through the flows in the built-in browser. Search → result → Esc → Esc, Back and focus return all worked live. The fixes below went in with regression tests where meaningful, and the full suite was green afterwards (236 of 236).
+
+- **Native scrollbars:** real desktop browsers showed light native scrollbars that clashed with the dark glass: on the home page edge, the grid, inside the Settings sheet (outside its rounded corners), the Info panel and the search panel. Headless screenshots hide them. Now every scroller gets a thin dark bar kept inside rounded sheets. Home itself never needed to scroll: its bottom padding was 160 px too tall.
+- **Long names:** real PixelLab names are long prompts, so every search label was cut off before the matched words. Search results now show the part of the name around the first match ("…pixel-art **forest** ranger…"). Grid cells and screen-reader names are unchanged.
+- **Info footer:** the "Open in PixelLab" button didn't line up with the column above it.
+- **Keyboard scrolling:** after a click on blank panel space, the keys didn't scroll the results. The inner scroller now takes focus.
+- **Link text:** Svelte 5 drops a leading space, so six external links read "Fonts↗(opens in a new tab)". One shared suffix now has its space.
+- **Noted for Phase 4:** next pages wait behind costly picture requests in the shared queue. A jump to the bottom of a big family can take several jumps and about 15 s before "That's everything" shows.
+
 ## Rulings made during the build
 
 - **Commits:** builders didn't commit. The controller committed each task after its review, because parallel agents shared one working tree.
@@ -61,6 +72,4 @@ The owner gave an API key for testing. It was used only for read-only GET reques
   - no test for `states()` after a next page loads;
   - no test for a viewer opened from another screen.
 - Activity and the More menu close on Esc without `preventDefault`. Two things could close at once, but only by typing `#activity` in the address bar while searching.
-- Owner-run checks:
-  - on a real iPhone and Android phone, the search field and the first panel row stay visible with the keyboard open;
-  - the live browser test with the owner's key.
+- Owner-run check: on a real iPhone and Android phone, the search field and the first panel row stay visible with the keyboard open.
