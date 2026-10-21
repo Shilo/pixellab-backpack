@@ -132,7 +132,7 @@
       </div>
     </main>
   {:else if category}
-    <CategoryGrid categoryId={category.id} reveal={viewing ? null : lastShown} />
+    <CategoryGrid scope={category.id} reveal={viewing ? null : lastShown} />
   {:else}
     <LibraryHome />
   {/if}

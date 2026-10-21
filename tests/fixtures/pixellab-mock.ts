@@ -31,6 +31,8 @@ const charDirs = (i: number) => (i % 2 ? D4 : D8);
 const charAnims = (i: number) => (i % 3 ? [] : ['walk', 'breathing-idle']);
 /** Character rows 6 and 7 are two states of one character. */
 const GROUPED = [6, 7];
+/** Object row 4 ("Object 5") has a state name, so its cell reads "Object 5 · open". */
+const OPEN_OBJECT = 4;
 
 /** A tiny RGBA PNG: a w×w (16 by default) two-colour checker with a 1px border, colours from the seed (crispness is easy to see). */
 function png(seed: number, w = 16): Buffer {
@@ -170,7 +172,7 @@ export async function mockPixelLab(target: Page | BrowserContext, counts: Partia
       Object.assign(r, { directions: charDirs(i).length, animation_count: charAnims(i).length, state_name: null, group_id: null, prompt: `synthetic courier ${i + 1}`, size: { width: 16, height: 16 } });
       if (GROUPED.includes(i)) Object.assign(r, { name: `${FAMS[fam].label} ${GROUPED[0] + 1}`, group_id: `${acct}-group-1`, state_name: i === GROUPED[0] ? null : 'Armored' });
     }
-    if (fam === 'objects') r.directions = i === 0 ? 1 : 4;
+    if (fam === 'objects') Object.assign(r, { directions: i === 0 ? 1 : 4, ...(i === OPEN_OBJECT && { state_name: 'open' }) });
     return r;
   }
 

@@ -53,9 +53,32 @@ test('home -> category -> more pages -> back home by ‹ Library and by browser 
 
   await page.getByRole('link', { name: 'Objects, 12' }).click();
   await expect(page.getByTitle('Object 1', { exact: true })).toBeVisible();
+  // A card with a state name shows it after the name ("Name · state"); the link is named by that whole line.
+  const open = page.getByRole('link', { name: 'Object 5 · open', exact: true });
+  await expect(open).toHaveAttribute('title', 'Object 5 · open');
+  await expect(open.locator('small')).toHaveText('· open');
   await page.goBack();
   await expect(page.getByRole('link', { name: 'Objects, 12' })).toBeVisible();
   await expect(page).toHaveURL(/#\/$/);
+});
+
+test('jumping straight to the bottom of a multi-family grid asks the next page of each family scrolled past, once', async ({ page }) => {
+  const mock = await mockPixelLab(page, { a: { tilesets: 150, isometric: 80, 'tiles-pro': 50 } }); // 100 tilesets saved; ~120 fully saved cells below them
+  await page.goto('/');
+  await connect(page);
+  await page.getByRole('link', { name: /^Tilesets & tiles, / }).click();
+  await expect(page.getByTitle('Tileset 1', { exact: true })).toBeVisible();
+  await settle(page, mock, 600);
+  const pages = () => mock.hits.filter((h) => h.url.includes('/v2/tilesets?') && !h.url.endsWith('offset=0')).length;
+  expect(pages()).toBe(0);
+
+  // The End key or a scrollbar drag lands past the tilesets' saved end without passing through it.
+  await expect.poll(async () => (await toBottom(page), pages()), { timeout: 15_000 }).toBe(1);
+  await settle(page, mock, 600);
+  await toBottom(page);
+  await settle(page, mock, 600);
+  expect(pages()).toBe(1); // the family is now fully saved: no second ask
+  expect(mock.hits.filter((h) => h.list && !h.url.endsWith('offset=0') && !h.url.includes('/v2/tilesets?'))).toEqual([]); // the others were already full
 });
 
 test('the keyboard reaches every working control; inert controls cause no request and no navigation', async ({ page }) => {

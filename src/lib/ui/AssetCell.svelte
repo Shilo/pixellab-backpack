@@ -7,13 +7,16 @@
 
 <script lang="ts">
   import { untrack } from 'svelte';
-  import type { CategoryId } from '../categories';
   import { library } from '../data/library.svelte';
   import PixelArt from '../render/PixelArt.svelte';
-  import { pathOf } from '../router.svelte';
+  import { highlight } from '../search';
   import type { Card, FamilyId } from '../types';
 
-  let { card, familyId, costly, categoryId }: { card: Card; familyId: FamilyId; costly: boolean; categoryId: CategoryId } = $props();
+  let { card, familyId, costly, href, terms = [] }: { card: Card; familyId: FamilyId; costly: boolean; href: string; terms?: string[] } = $props();
+
+  // "Name · state" (R6): the state name of the card this cell opens, when it has one.
+  const name = $derived(card.name || 'Untitled');
+  const stateName = $derived(typeof card.meta.state_name === 'string' ? card.meta.state_name.trim() : '');
 
   let box: HTMLAnchorElement | undefined = $state();
   let onScreen = $state(false);
@@ -46,17 +49,33 @@
   });
 </script>
 
-<!-- The link's name is the visible name; the picture is decoration here. -->
-<a class="cell" bind:this={box} href={pathOf({ name: 'category', id: categoryId, key: card.key })} title={card.name} data-key={card.key}>
+{#snippet runs(text: string)}{#each highlight(text, terms) as r, i (i)}{#if r.mark}<mark>{r.text}</mark>{:else}{r.text}{/if}{/each}{/snippet}
+
+<!-- The link's name is the visible text; the picture is decoration here. -->
+<a class="cell" bind:this={box} {href} title={stateName ? `${name} · ${stateName}` : name} data-key={card.key}>
   <div class="sq">
-    <div class="art" aria-hidden="true">{#if blob}<PixelArt {blob} alt={card.name || 'Untitled'} fill />{/if}</div>
+    <div class="art" aria-hidden="true">{#if blob}<PixelArt {blob} alt={name} fill />{/if}</div>
   </div>
-  <span class="nm">{card.name || 'Untitled'}</span>
+  <span class="nm">{@render runs(name)}{#if stateName}{' '}<small>· {@render runs(stateName)}</small>{/if}</span>
 </a>
 
 <style>
   .art {
     position: absolute;
     inset: 9%;
+  }
+  mark {
+    background: none;
+    color: var(--gl-color-text);
+    font-weight: 650;
+  }
+  small {
+    color: var(--vt-text-3);
+    font-size: 13px;
+  }
+  @media (max-width: 600px) {
+    small {
+      font-size: 12px;
+    }
   }
 </style>

@@ -1,9 +1,9 @@
 <script lang="ts" module>
-  import type { CategoryId } from '../categories';
+  import type { Scope } from '../categories';
   import type { FamilyId } from '../types';
 
-  // Scroll position per category, kept while the screen is closed (going back to the same grid lands where you were).
-  const savedScroll = new Map<CategoryId, number>();
+  // Scroll position per scope, kept while the screen is closed (going back to the same grid lands where you were).
+  const savedScroll = new Map<Scope, number>();
 
   export interface Metrics {
     cols: number;
@@ -33,21 +33,24 @@
 
 <script lang="ts">
   import { tick } from 'svelte';
-  import { CATEGORIES } from '../categories';
+  import { familiesOf } from '../categories';
   import { library } from '../data/library.svelte';
+  import { OTHER_CONTENT, OTHER_TEXT, OTHER_TITLE } from '../info';
+  import { pathOf, type Route } from '../router.svelte';
   import AssetCell from './AssetCell.svelte';
 
-  let { categoryId, reveal = null }: { categoryId: CategoryId; reveal?: string | null } = $props();
+  let { scope, reveal = null }: { scope: Scope; reveal?: string | null } = $props();
+  const screen = $derived<Route>(scope === 'all' ? { name: 'all' } : { name: 'category', id: scope });
 
   let el: HTMLElement | undefined = $state();
   let m = $state<Metrics | null>(null);
   let scrollTop = $state(0);
 
-  // Shown cards of the category, family after family (unfinished, failed and duplicate assets are hidden).
-  const items = $derived(library.items(categoryId));
+  // Shown cards of the scope, family after family (unfinished, failed and duplicate assets are hidden).
+  const items = $derived(library.items(scope));
   const segs = $derived.by(() => {
     let end = 0;
-    return CATEGORIES.find((c) => c.id === categoryId)!.families.map((id) => ({ id, end: (end += items.filter((it) => it.familyId === id).length) }));
+    return familiesOf(scope).map((id) => ({ id, end: (end += items.filter((it) => it.familyId === id).length) }));
   });
 
   // Fixed-size cells: the rows in the page follow from the scroll position alone.
@@ -79,15 +82,15 @@
 
   function onscroll() {
     scrollTop = el!.scrollTop;
-    savedScroll.set(categoryId, scrollTop);
+    savedScroll.set(scope, scrollTop);
   }
 
   // Back to a grid: return to where it was left, once its height is known.
-  let restored: CategoryId | null = null;
+  let restored: Scope | null = null;
   $effect(() => {
-    if (!el || !m || !items.length || restored === categoryId) return;
-    restored = categoryId;
-    const y = savedScroll.get(categoryId) ?? 0;
+    if (!el || !m || !items.length || restored === scope) return;
+    restored = scope;
+    const y = savedScroll.get(scope) ?? 0;
     tick().then(() => {
       if (el) el.scrollTop = y;
     });
@@ -116,7 +119,9 @@
   const asked = new Map<FamilyId, { cards: unknown; len: number; stalls: number }>();
   $effect(() => {
     if (!m) return;
-    for (const id of dueFamilies(segs, range[0] * m.cols, range[1] * m.cols, m.cols)) {
+    // ponytail: at the bottom, every family scrolled past is due (End key, scrollbar drag, restore); a fling through the middle still asks nothing.
+    const due = range[1] >= rows ? segs.map((s) => s.id) : dueFamilies(segs, range[0] * m.cols, range[1] * m.cols, m.cols);
+    for (const id of due) {
       const s = library.families[id];
       if (!s || library.loading[id] || s.cards.length >= s.total) continue;
       const prev = asked.get(id);
@@ -135,14 +140,90 @@
   {:else}
     {#if range[0] > 0}<div class="pad" style:height="{spacer(range[0], m)}px"></div>{/if}
     {#each shown as it (it.card.key)}
-      <AssetCell card={it.card} familyId={it.familyId} {categoryId} costly={library.family(it.familyId).artCostsApi} />
+      <AssetCell card={it.card} familyId={it.familyId} href={pathOf({ ...screen, key: it.card.key })} costly={library.family(it.familyId).artCostsApi} />
     {/each}
     {#if rows > range[1]}<div class="pad" style:height="{spacer(rows - range[1], m)}px"></div>{/if}
+    {#if scope === 'all' && library.coverage('all') === 'full'}
+      <div class="end">
+        <p>That's everything</p>
+        <div class="glass-card note">
+          <b>{OTHER_TITLE}</b>
+          <p>{OTHER_TEXT}</p>
+          <div class="links">
+            <span>Find them in PixelLab:</span>
+            {#each OTHER_CONTENT as [label, url] (label)}
+              <a class="glass-btn glass-btn--tertiary glass-btn--sm glass-btn--auto" href={url} target="_blank" rel="noopener noreferrer"
+                >{label}<span aria-hidden="true">&nbsp;↗</span><span class="vt-sr">{' '}(opens PixelLab in a new tab)</span></a
+              >
+            {/each}
+          </div>
+        </div>
+      </div>
+    {/if}
   {/if}
 </main>
 
 <style>
   .pad {
     grid-column: 1 / -1;
+  }
+  /* All assets end block (mockup frames-g2.css .g2-end, .g2-note, .g2-links). */
+  .end {
+    grid-column: 1 / -1;
+    display: grid;
+    justify-items: center;
+    gap: 22px;
+    padding-top: 18px;
+  }
+  .end > p {
+    font-size: 14px;
+    color: var(--vt-text-2);
+  }
+  .note {
+    width: min(640px, 100%);
+    box-sizing: border-box;
+    padding: 24px 26px 22px;
+    display: grid;
+    gap: 8px;
+    text-align: left;
+  }
+  .note b {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .note p {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--vt-text-2);
+  }
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .links > span {
+    flex-basis: 100%;
+    font-size: 13px;
+    color: var(--vt-text-2);
+  }
+  .links .glass-btn {
+    gap: 0; /* one space before the arrow, as in the mockup */
+    padding: 0 14px;
+    text-decoration: none;
+    color: var(--gl-color-text);
+  }
+  @media (max-width: 600px) {
+    .end {
+      gap: 16px;
+    }
+    .note {
+      width: 100%;
+      padding: 20px 18px 18px;
+    }
+    .links .glass-btn {
+      height: 44px;
+    }
   }
 </style>

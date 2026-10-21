@@ -3,17 +3,12 @@
   // The two confirms are GlassKit alert modals in a second dialog stacked above it.
   import { APP_NAME, APP_SHORT } from '../app';
   import { library } from '../data/library.svelte';
+  import { OTHER_CONTENT, OTHER_TEXT, OTHER_TITLE } from '../info';
 
   let { open, onClose }: { open: boolean; onClose: () => void } = $props();
 
   const PIXELLAB = 'https://www.pixellab.ai';
-  // Every library page per R4. ponytail: no Source-code row until a public repo exists.
-  const OTHER = [
-    ['Fonts', '/create'],
-    ['Effects', '/create-vfx'],
-    ['Portraits', '/create-character'],
-    ['Talking animations', '/create-character'],
-  ] as const;
+  // ponytail: no Source-code row in About until a public repo exists.
 
   let sheet = $state<HTMLDialogElement>();
   let alert = $state<HTMLDialogElement>();
@@ -121,9 +116,9 @@
       <p>No analytics, no tracking, no servers. {APP_NAME} talks only to PixelLab's API and image host.</p>
     </div>
     <div class="row prose">
-      <p><b>Other PixelLab content isn't in the public API yet.</b> Fonts, effects, portraits and talking animations can't be read through PixelLab's public API, so {APP_NAME} can't show them. Find them in PixelLab:</p>
+      <p><b>{OTHER_TITLE}</b> {OTHER_TEXT} Find them in PixelLab:</p>
       <ul class="links">
-        {#each OTHER as [label, path] (label)}<li>{@render ext(PIXELLAB + path, label)}</li>{/each}
+        {#each OTHER_CONTENT as [label, url] (label)}<li>{@render ext(url, label)}</li>{/each}
       </ul>
     </div>
     <div class="row prose">{@render ext('/licenses.txt', 'Licences')}</div>

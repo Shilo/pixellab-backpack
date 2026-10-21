@@ -1,5 +1,6 @@
 // Info panel content, pure: what to say about one asset from its list row (`card.meta`) and, for characters and objects, its one detail.
 // Never returns an id or a picture link; the only id shown anywhere is maskId() in the panel's Technical details.
+import { APP_NAME } from './app';
 import type { Card, Detail, Dir, FamilyId } from './types';
 
 export interface InfoRow {
@@ -10,6 +11,16 @@ export interface InfoRow {
 
 export const PLAYBACK_NOTE = "PixelLab doesn't say how fast animations play. 8 fps matches PixelLab's character and Creator players.";
 export const UI_NOTE = "PixelLab doesn't share the individual UI pieces.";
+
+/** PixelLab content the public API can't read, each with its PixelLab library page (Phase 2 R4); shown in Settings' About and at the end of All assets. */
+export const OTHER_TITLE = "Other PixelLab content isn't in the public API yet.";
+export const OTHER_TEXT = `Fonts, effects, portraits and talking animations can't be read through PixelLab's public API, so ${APP_NAME} can't show them.`;
+export const OTHER_CONTENT = [
+  ['Fonts', 'https://www.pixellab.ai/create'],
+  ['Effects', 'https://www.pixellab.ai/create-vfx'],
+  ['Portraits', 'https://www.pixellab.ai/create-character'],
+  ['Talking animations', 'https://www.pixellab.ai/create-character'],
+] as const satisfies readonly (readonly [label: string, url: string])[];
 
 type Meta = Record<string, unknown>;
 const text = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
