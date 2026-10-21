@@ -460,7 +460,7 @@ About 1 hour in desktop Chrome, using the console helper in [plan 06 §2.2](../d
 - [x] Viewer for one asset: player for characters and objects, still views for the rest, Info; groups character states into one card. **Done in [Phase 2](phase2-plan.md).**
 - [ ] Full refresh in "…": re-read every saved page, never pictures; 60-second cooldown
 - [x] Search over the saved list, and "All assets" through the search panel. **Done in [Phase 3](phase3-plan.md).**
-- [ ] Favorites and folders, with a local card snapshot so a folder opens with 0 requests (R6 §4.3); needs the final name first
+- [ ] Favorites and folders, with a local card snapshot so a folder opens with 0 requests (R6 §4.3); needs the final name first. **Planned in [Phase 4](phase4-plan.md).**
 - [ ] Select mode and downloads (single asset first, then multi-asset ZIP)
 - [ ] Backup file export and import (the cross-device answer, concern 3)
 - [ ] Images (after Phase 0 P0-9 and approval A1) and Maps, with the MCP client and their own rate caps (R6 §4.2)
