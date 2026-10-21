@@ -86,6 +86,18 @@ describe('favorites', () => {
     expect(Object.keys(stored().cards)).toEqual([K2]);
   });
 
+  it('the same message twice still changes said, so the live region reads it again (R10)', async () => {
+    const m = await tab();
+    await m.load();
+    await m.setFavorite(item(K1), [K1], true);
+    const first = m.org.said;
+    await m.setFavorite(item(K2), [K2], true);
+    expect(m.org.said).not.toBe(first);
+    expect(m.org.said.trim()).toBe('Added to Favorites.');
+    await m.setFavorite(item(K3), [K3], true);
+    expect(m.org.said).toBe(first); // alternates
+  });
+
   it('a character group: any state counts, removing all group keys clears it and drops the unused snapshot', async () => {
     const m = await tab();
     await m.load();

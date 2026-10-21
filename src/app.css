@@ -33,7 +33,7 @@ body { font-size: 14px; line-height: 1.35; }
 :root { scrollbar-color: rgba(255, 255, 255, .24) transparent; }
 button { font: inherit; color: inherit; }
 svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
-svg.dots { fill: currentColor; stroke: none; }
+svg.dots, svg.solid { fill: currentColor; stroke: none; }
 .vt-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .vt-text-2 { color: var(--vt-text-2); }
 
@@ -45,6 +45,10 @@ svg.dots { fill: currentColor; stroke: none; }
 .mosaic { position: relative; aspect-ratio: 4 / 2.9; border-radius: 28px; padding: 9px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 7px;
   background: rgba(16, 18, 26, .55); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08), 0 12px 30px rgba(0, 0, 0, .25); }
 .mosaic > i { background: rgba(255, 255, 255, .055); border-radius: 18px; }
+/* "Favorites and folders": the section heading, and yours as GlassKit's glow card with darker cells (types stay a dark app tile). */
+.sec { grid-column: 1 / -1; font-size: 13px; font-weight: 600; color: var(--vt-text-2); padding: 6px 8px 0; margin-bottom: -14px; }
+.mosaic.glass-card { padding: 9px; border-radius: var(--gl-radius-card); }
+.folder .mosaic > i { background: rgba(0, 0, 0, .18); }
 .tlabel { display: flex; justify-content: space-between; align-items: baseline; padding: 11px 8px 0; }
 .tlabel b { font-weight: 600; font-size: 16px; }
 .tlabel span { color: var(--vt-text-2); font-variant-numeric: tabular-nums; }
@@ -102,7 +106,8 @@ mark { background: none; color: var(--gl-color-text); font-weight: 650; }
 @media (max-width: 600px) {
   :root { --vt-m: 12px; --vt-top: max(16px, env(safe-area-inset-top)); --vt-bot: max(12px, env(safe-area-inset-bottom)); }
   .library { padding: var(--vt-top) var(--vt-m) 120px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; }
-  .mosaic { aspect-ratio: 1; border-radius: 24px; padding: 7px; gap: 6px; }
+  .sec { padding: 6px 4px 0; margin-bottom: -8px; }
+  .mosaic, .mosaic.glass-card { aspect-ratio: 1; border-radius: 24px; padding: 7px; gap: 6px; }
   .mosaic > i { border-radius: 16px; }
   .tlabel { padding: 8px 6px 0; }
   .tlabel b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

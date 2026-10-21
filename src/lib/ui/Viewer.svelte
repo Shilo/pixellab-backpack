@@ -7,6 +7,7 @@
   import { tick, untrack } from 'svelte';
   import type { Scope } from '../categories';
   import { library } from '../data/library.svelte';
+  import { isIn, org, setFavorite } from '../data/org.svelte';
   import { kicker, pixellabLink } from '../info';
   import PixelArt from '../render/PixelArt.svelte';
   import { zoomLabel, zoomScale, zoomStep } from '../render/fit';
@@ -24,7 +25,9 @@
   // The key is found in every family; `results` (a search's shown matches) or the scope's items only order prev/next (R8).
   let { scope, assetKey, results = null }: { scope: Scope; assetKey: string; results?: Item[] | null } = $props();
 
-  const hit = $derived(library.find(assetKey));
+  // R11: the last found item stays for the same key, so unfavoriting a snapshot-only card (its snapshot dropped) never closes the viewer.
+  let last: Item | null = null;
+  const hit = $derived.by(() => (last = library.find(assetKey) ?? (last?.card.key === assetKey ? last : null)));
   const cur = $derived(hit?.card.key ?? null); // a string: effects keyed on it re-run only when the asset changes
   // ponytail: 'slowed' counts as still checking (retries in flight); a key still unknown after the check closes the viewer.
   const waiting = $derived(library.status === 'idle' || library.status === 'checking' || library.status === 'slowed');
@@ -152,6 +155,11 @@
   }
 
   const states = $derived(hit ? library.states(hit.card, hit.familyId) : []);
+  // ♡ (R7, R11): on when any state of the group is a favorite; adding stores this card's key, removing every state's key.
+  const keys = $derived(hit ? library.groupKeys(hit.card, hit.familyId) : []);
+  const fav = $derived(isIn(org.favorites, keys));
+  // ponytail: a failed device write leaves the ♡ as it was and says nothing; add an error line if writes ever fail in practice.
+  const toggleFav = () => hit && setFavorite(hit, keys, !fav).catch(() => {});
   const stateLabel = (c: { meta: Record<string, unknown> }) => (typeof c.meta.state_name === 'string' && c.meta.state_name.trim()) || 'Base';
   const allDirs = $derived(detail ? [...new Set([-1, ...detail.animations.keys()].flatMap((a) => dirsFor(detail!, a)))] : []);
   const showChip = $derived(detail ? chipVisible(detail, states.length) : detailState === 'loading');
@@ -222,7 +230,10 @@
     if (router.activity || e.defaultPrevented) return;
     const t = e.target as HTMLElement;
     if (t.closest?.('[role="dialog"]:not(.viewer)')) return;
-    if (e.key === 'Escape') session.info ? toggleInfo() : close();
+    if (e.key === 'Escape') {
+      e.preventDefault(); // handled: a layer under the viewer (the folder overlay) ignores it
+      session.info ? toggleInfo() : close();
+    }
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
       void nav(e.key === 'ArrowRight' ? 1 : -1);
@@ -271,7 +282,8 @@
 
 <svelte:window {onkeydown} />
 
-<div class="viewer" class:info={session.info && !!hit} role="dialog" aria-modal="true" aria-labelledby={hit ? 'vw-title' : undefined} aria-label={hit ? undefined : 'Loading'}>
+<!-- No aria-modal: the screen under it is already inert, and a modal would hide App's live region (R10) from some screen readers. -->
+<div class="viewer" class:info={session.info && !!hit} role="dialog" aria-labelledby={hit ? 'vw-title' : undefined} aria-label={hit ? undefined : 'Loading'}>
   <div class="stage" style:background={session.backdrop ? BACKDROPS[session.backdrop].css : null}></div>
   <button type="button" class="glass-pill vt-scrim close" aria-label="Close" onclick={close}>
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
@@ -295,6 +307,9 @@
     </div>
 
     <nav class="glass-tab-bar glass-tab-bar--floating vt-caps vt-scrim caps" aria-label="Asset actions">
+      <button type="button" class="glass-tab-bar__item vt-icon" aria-label="Favorite" aria-pressed={fav} onclick={toggleFav}>
+        <span class="glass-tab-bar__icon"><svg viewBox="0 0 24 24" class:solid={fav} aria-hidden="true"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.3a4.3 4.3 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20z" /></svg></span>
+      </button>
       <button type="button" class="glass-tab-bar__item vt-icon" class:is-active={session.info} aria-label="Info" aria-pressed={session.info} bind:this={infoBtn} onclick={toggleInfo}>
         <span class="glass-tab-bar__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 11v5.5M12 7.6v.1" /></svg></span>
       </button>

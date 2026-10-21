@@ -3,7 +3,9 @@
   import { APP_NAME } from './lib/app';
   import { familiesOf, scopeLabel } from './lib/categories';
   import { library } from './lib/data/library.svelte';
-  import { closeActivity, go, parseRoute, router, scopeOf, screenOf } from './lib/router.svelte';
+  import { org } from './lib/data/org.svelte';
+  import PixelArt from './lib/render/PixelArt.svelte';
+  import { closeActivity, go, parseRoute, pathOf, router, scopeOf, screenOf } from './lib/router.svelte';
   import type { FamilyId, Item } from './lib/types';
   import Activity from './lib/ui/Activity.svelte';
   import CategoryGrid from './lib/ui/CategoryGrid.svelte';
@@ -22,7 +24,11 @@
   const route = $derived(router.route);
   const screen = $derived(screenOf(route));
   const scope = $derived(scopeOf(route));
-  const grid = $derived(route.name !== 'home'); // a category or All assets
+  const fav = $derived(route.name === 'fav');
+  const grid = $derived(route.name === 'category' || route.name === 'all' || fav);
+  // Favorites from this device only (R2, R3, R7): no request, gone items left out.
+  const favs = $derived(fav ? library.pick(org.favorites).items : []);
+  const title = $derived(fav ? 'Favorites' : scopeLabel(scope));
   const viewing = $derived(route.key ?? null);
   let h1 = $state<HTMLElement>();
 
@@ -114,10 +120,11 @@
   const failed = $derived(Object.keys(library.errors) as FamilyId[]);
   const failedHere = $derived(failed.filter((id) => familiesOf(scope).includes(id)));
   // Every family of the screen failed and nothing is saved: an error card instead of a blank screen.
-  const errorCard = $derived(failedHere.length > 0 && library.status !== 'checking' && familiesOf(scope).every((id) => !library.families[id]));
+  const errorCard = $derived(!fav && failedHere.length > 0 && library.status !== 'checking' && familiesOf(scope).every((id) => !library.families[id]));
   // A grid whose families are fully loaded and hold no finished asset.
   const emptyGrid = $derived(
     grid &&
+      !fav &&
       familiesOf(scope).every((id) => {
         const s = library.families[id];
         return s && s.cards.length >= s.total && !s.cards.some((c) => c.done);
@@ -154,14 +161,14 @@
       case 'offline':
         return { text: "You're offline. Showing your saved library." };
     }
-    if (!failedHere.length) return null;
+    if (!failedHere.length || fav) return null;
     return { text: grid ? "Couldn't load more" : "Some assets didn't load", action: 'Try again', on: tryAgain, tone: 'warn' };
   });
 </script>
 
 <svelte:window {onkeydown} {onpopstate} />
 
-<h1 class="vt-sr" tabindex="-1" bind:this={h1}>{grid ? scopeLabel(scope) : APP_NAME}</h1>
+<h1 class="vt-sr" tabindex="-1" bind:this={h1}>{grid ? title : APP_NAME}</h1>
 
 {#snippet retryButton()}
   <div class="glass-empty__action">
@@ -207,9 +214,22 @@
         <p class="glass-empty__text">Create something in PixelLab and it'll show up here.</p>
       </div>
     </main>
+  {:else if fav && !org.ready}
+    <!-- A direct load: nothing until the device's favorites are read (no empty grid or "0" flash). -->
+  {:else if fav && !favs.length}
+    {@const idle = library.categories.find((c) => c.mosaic.length)?.mosaic[0]}
+    <main class="vt-page">
+      <div class="glass-empty">
+        <span class="idle" aria-hidden="true">
+          {#if idle}{#await library.art(idle.card, idle.familyId) then blob}<PixelArt {blob} alt="" trim fill />{/await}{/if}
+        </span>
+        <h2 class="glass-empty__title">No favorites yet.</h2>
+        <p class="glass-empty__text">Use the heart on any asset to keep it here.</p>
+      </div>
+    </main>
   {:else if grid}
-    <!-- Keyed: each scope mounts a fresh grid (as from home), so no scroll position or asked pages carry over (Go to). -->
-    {#key scope}<CategoryGrid {scope} reveal={viewing || searching ? null : lastShown} />{/key}
+    <!-- Keyed: each screen mounts a fresh grid (as from home), so no scroll position or asked pages carry over (Go to). -->
+    {#key pathOf(screen)}<CategoryGrid {screen} items={fav ? favs : library.items(scope)} reveal={viewing || searching ? null : lastShown} />{/key}
   {:else}
     <LibraryHome />
   {/if}
@@ -221,17 +241,32 @@
   {#if searching}
     <Search {screen} note={notice?.text ?? null} reveal={viewing ? null : lastShown} onClose={closeSearch} onGo={goFromSearch} bind:results />
   {:else if grid}
-    <Dock mode="category" title={scopeLabel(scope)} count={library.count(scope)} onBack={() => go('#/')} onSearch={openSearch} onMore={() => (menu = true)} />
+    <Dock mode="category" {title} count={fav ? (org.ready ? favs.length : undefined) : library.count(scope)} onBack={() => go('#/')} onSearch={openSearch} onMore={() => (menu = true)} />
   {:else}
     <Dock mode="home" onSearch={openSearch} onMore={() => (menu = true)} />
   {/if}
   <MoreMenu open={menu} onClose={() => (menu = false)} onActivity={() => (activity = true)} onSettings={() => (settings = true)} />
   </div>
   {#if viewing}
-    <Viewer {scope} assetKey={viewing} results={searching && results.length ? results : null} />
+    <Viewer {scope} assetKey={viewing} results={searching && results.length ? results : fav ? favs : null} />
   {/if}
 {/if}
 
 <!-- Outside the key check: Forget key signs out while its confirm is still on screen. -->
 <Settings open={settings} onClose={() => (settings = false)} />
 <Activity open={activity || router.activity} onClose={closeAct} />
+<!-- The one live region (R10): outside every inert layer and closing dialog, so each change is read. -->
+<span class="vt-sr" role="status">{org.said}</span>
+
+<style>
+  /* Favorites' empty screen (mockup frames-g2.css .g2-page, .g2-empty, .g2-idle): no card, a crisp idle sprite. */
+  .vt-page { position: fixed; inset: 0; display: grid; place-items: center; padding-bottom: 110px; }
+  .idle { position: relative; display: block; width: 128px; height: 128px; margin-bottom: 4px; }
+  .vt-page .glass-empty__title { font-size: 20px; letter-spacing: -.01em; }
+  .vt-page .glass-empty__text { font-size: 15px; color: var(--vt-text-2); }
+  @media (max-width: 600px) {
+    .vt-page { padding: var(--vt-top) 20px 100px; }
+    .idle { width: 96px; height: 96px; }
+    .vt-page .glass-empty__title { font-size: 18px; }
+  }
+</style>

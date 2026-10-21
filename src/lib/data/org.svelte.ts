@@ -81,7 +81,8 @@ async function change(apply: (r: Rec) => string | void): Promise<void> {
   });
   if (!enabled) return; // cleared while writing
   show(next);
-  if (said) org.said = said;
+  // A repeat alternates a trailing no-break space, so the live region's text changes and is read again (R10).
+  if (said) org.said = said === org.said ? said + '\u00a0' : said;
 }
 
 /** Puts the card's key first (once) and keeps its snapshot (R2). */

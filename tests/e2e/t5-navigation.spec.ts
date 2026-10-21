@@ -128,6 +128,16 @@ test('the keyboard reaches every working control; inert controls cause no reques
   await page.getByRole('button', { name: 'Library' }).focus();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/#\/$/);
+
+  // Favorites: opening it asks nothing, and its Select is inert too.
+  await settle(page, mock);
+  const atHome = mock.hits.length;
+  await page.getByRole('link', { name: 'Favorites, 0' }).click();
+  await expect(page).toHaveURL(/#\/fav$/);
+  await page.getByRole('button', { name: 'Select, coming soon', exact: true }).click({ force: true });
+  await page.waitForTimeout(600);
+  await expect(page).toHaveURL(/#\/fav$/);
+  expect(mock.hits.length).toBe(atHome);
 });
 
 test('failed lists show a notice with Try again, which asks again once', async ({ page }) => {

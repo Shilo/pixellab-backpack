@@ -1,6 +1,7 @@
 <script lang="ts">
   import { NEW_TAB } from '../app';
   import { library } from '../data/library.svelte';
+  import { org } from '../data/org.svelte';
   import CategoryTile from './CategoryTile.svelte';
 
   // Home: one tile per category that has assets (empty ones are hidden), skeleton tiles while the first check runs,
@@ -11,6 +12,8 @@
   const allLoaded = $derived(library.categories.every((c) => c.families.every((id) => library.families[id])));
   // A skeleton stands in for a category with no data yet; with nothing at all, every category waits.
   const pending = (c: (typeof library.categories)[number]) => waiting && c.count === 0 && (none || c.families.some((id) => !library.families[id]));
+  // Favorites from this device only (0 requests): live cards, else snapshots; gone ones are left out.
+  const favs = $derived(library.pick(org.favorites).items);
 </script>
 
 {#if none && allLoaded && !waiting}
@@ -29,7 +32,7 @@
   <main class="library" aria-busy={library.status === 'checking'}>
     {#each library.categories as c (c.id)}
       {#if c.count > 0}
-        <CategoryTile category={c} count={c.count} cards={c.mosaic} />
+        <CategoryTile href="#/c/{c.id}" label={c.label} count={c.count} cards={c.mosaic} />
       {:else if pending(c)}
         <div class="tile" aria-hidden="true">
           <div class="mosaic"><i class="sk"></i><i class="sk"></i><i class="sk"></i><i class="sk"></i></div>
@@ -37,6 +40,10 @@
         </div>
       {/if}
     {/each}
+    {#if org.ready}
+      <h2 class="sec">Favorites and folders</h2>
+      <CategoryTile href="#/fav" label="Favorites" count={favs.length} cards={favs.slice(0, 4)} glow />
+    {/if}
   </main>
 {/if}
 

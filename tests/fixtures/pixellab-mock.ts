@@ -29,8 +29,6 @@ const D4 = ['south', 'east', 'north', 'west'];
 /** Characters: even rows have 8 directions, odd rows 4; rows divisible by 3 have a walk and a breathing-idle animation. */
 const charDirs = (i: number) => (i % 2 ? D4 : D8);
 const charAnims = (i: number) => (i % 3 ? [] : ['walk', 'breathing-idle']);
-/** Character rows 6 and 7 are two states of one character. */
-const GROUPED = [6, 7];
 /** Object row 4 ("Object 5") has a state name but no sibling states, so its cell reads just "Object 5" (R6). */
 const OPEN_OBJECT = 4;
 
@@ -82,6 +80,8 @@ export interface Mock {
   counts: Record<string, Record<Fam, number>>;
   /** Width and height of every image-host picture, in art pixels (16 by default). */
   size: number;
+  /** Character rows that are states of one character: the first is the base, the others "Armored". Rows 6 and 7 by default. */
+  groups: number[][];
 }
 
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization', 'access-control-allow-methods': 'GET' };
@@ -95,6 +95,7 @@ export async function mockPixelLab(target: Page | BrowserContext, counts: Partia
     fail: [],
     counts: { a: { ...DEFAULT_COUNTS, ...counts.a }, b: { ...DEFAULT_COUNTS, characters: 3, ...counts.b } },
     size: 16,
+    groups: [[6, 7]],
   };
   for (const [acct, c] of Object.entries(mock.counts))
     for (const fam of Object.keys(c) as Fam[]) for (let i = 0; i < c[fam]; i++) if (unfinished(i)) mock.unfinishedIds.push(id(acct, fam, i));
@@ -170,7 +171,9 @@ export async function mockPixelLab(target: Page | BrowserContext, counts: Partia
     if (pic) r[pic] = `${IMG}/${acct}/${rid}.png`; // even unfinished rows carry a link: the app must not use it
     if (fam === 'characters') {
       Object.assign(r, { directions: charDirs(i).length, animation_count: charAnims(i).length, state_name: null, group_id: null, prompt: `synthetic courier ${i + 1}`, size: { width: 16, height: 16 } });
-      if (GROUPED.includes(i)) Object.assign(r, { name: `${FAMS[fam].label} ${GROUPED[0] + 1}`, group_id: `${acct}-group-1`, state_name: i === GROUPED[0] ? null : 'Armored' });
+      const g = mock.groups.findIndex((rows) => rows.includes(i));
+      const base = mock.groups[g]?.[0];
+      if (g >= 0) Object.assign(r, { name: `${FAMS[fam].label} ${base + 1}`, group_id: `${acct}-group-${g + 1}`, state_name: i === base ? null : 'Armored' });
     }
     if (fam === 'objects') Object.assign(r, { directions: i === 0 ? 1 : 4, ...(i === OPEN_OBJECT && { state_name: 'open' }) });
     return r;
@@ -238,4 +241,29 @@ export function deviceStorage(page: Page): Promise<string> {
     }
     return JSON.stringify(out);
   });
+}
+
+/** Rewrites the saved `family:<fam>` in IndexedDB: checkedAt and deepLoadedAt (when set) moved this many ms into the past. Reload after. */
+export function ageSaved(page: Page, fam: Fam, o: { checkedMs?: number; deepMs?: number }): Promise<void> {
+  return page.evaluate(
+    ({ key, checkedMs = 0, deepMs = 0 }) =>
+      new Promise<void>((done, fail) => {
+        const r = indexedDB.open('pixellab-backpack');
+        r.onerror = () => fail(r.error);
+        r.onsuccess = () => {
+          const kv = r.result.transaction('kv', 'readwrite').objectStore('kv');
+          const get = kv.get(key);
+          get.onsuccess = () => {
+            const s = get.result;
+            if (!s) return fail(new Error(`${key} is not saved`));
+            s.checkedAt -= checkedMs;
+            if (s.deepLoadedAt !== null) s.deepLoadedAt -= deepMs;
+            kv.put(s, key);
+          };
+          kv.transaction.oncomplete = () => (r.result.close(), done());
+          kv.transaction.onerror = () => fail(kv.transaction.error);
+        };
+      }),
+    { key: `family:${fam}`, ...o },
+  );
 }

@@ -1,9 +1,8 @@
 <script lang="ts" module>
-  import type { Scope } from '../categories';
   import type { FamilyId } from '../types';
 
-  // Scroll position per scope, kept while the screen is closed (going back to the same grid lands where you were).
-  const savedScroll = new Map<Scope, number>();
+  // Scroll position per screen path, kept while the screen is closed (going back to the same grid lands where you were).
+  const savedScroll = new Map<string, number>();
 
   export interface Metrics {
     cols: number;
@@ -37,19 +36,23 @@
   import { familiesOf } from '../categories';
   import { library } from '../data/library.svelte';
   import { OTHER_CONTENT, OTHER_TEXT, OTHER_TITLE } from '../info';
-  import { pathOf, type Route } from '../router.svelte';
+  import { pathOf, scopeOf, type Route } from '../router.svelte';
   import { sameAsset } from '../search';
+  import type { Item } from '../types';
   import AssetCell from './AssetCell.svelte';
 
-  let { scope, reveal = null }: { scope: Scope; reveal?: string | null } = $props();
-  const screen = $derived<Route>(scope === 'all' ? { name: 'all' } : { name: 'category', id: scope });
+  // A category, All assets or Favorites over the given shown cards (unfinished, failed and duplicate assets are hidden).
+  // Next pages only for a category and All assets; Favorites is a fixed list (R16).
+  let { screen, items, reveal = null }: { screen: Route; items: Item[]; reveal?: string | null } = $props();
+  const scope = $derived(scopeOf(screen));
+  const path = $derived(pathOf(screen));
+  const paged = $derived(screen.name === 'category' || screen.name === 'all');
 
   let el: HTMLElement | undefined = $state();
   let m = $state<Metrics | null>(null);
   let scrollTop = $state(0);
 
-  // Shown cards of the scope, family after family (unfinished, failed and duplicate assets are hidden).
-  const items = $derived(library.items(scope));
+  // Family after family (a category or All assets).
   const segs = $derived.by(() => {
     let end = 0;
     return familiesOf(scope).map((id) => ({ id, end: (end += items.filter((it) => it.familyId === id).length) }));
@@ -84,15 +87,15 @@
 
   function onscroll() {
     scrollTop = el!.scrollTop;
-    savedScroll.set(scope, scrollTop);
+    savedScroll.set(path, scrollTop);
   }
 
   // Back to a grid: return to where it was left, once its height is known.
-  let restored: Scope | null = null;
+  let restored: string | null = null;
   $effect(() => {
-    if (!el || !m || !items.length || restored === scope) return;
-    restored = scope;
-    const y = savedScroll.get(scope) ?? 0;
+    if (!el || !m || !items.length || restored === path) return;
+    restored = path;
+    const y = savedScroll.get(path) ?? 0;
     tick().then(() => {
       if (el) el.scrollTop = y;
     });
@@ -119,7 +122,7 @@
   // (e.g. a shifted list that reloads), so an empty or failed answer never turns into a request loop.
   const asked = new Map<FamilyId, { cards: unknown; len: number; stalls: number }>();
   $effect(() => {
-    if (!m) return;
+    if (!m || !paged) return;
     // ponytail: at the bottom, every family scrolled past is due (End key, scrollbar drag, restore); a fling through the middle still asks nothing.
     const due = range[1] >= rows ? segs.map((s) => s.id) : dueFamilies(segs, range[0] * m.cols, range[1] * m.cols, m.cols);
     for (const id of due) {
@@ -144,7 +147,7 @@
       <AssetCell card={it.card} familyId={it.familyId} href={pathOf({ ...screen, key: it.card.key })} costly={library.family(it.familyId).artCostsApi} />
     {/each}
     {#if rows > range[1]}<div class="pad" style:height="{spacer(rows - range[1], m)}px"></div>{/if}
-    {#if scope === 'all' && library.coverage('all') === 'full'}
+    {#if screen.name === 'all' && library.coverage('all') === 'full'}
       <div class="end">
         <p>That's everything</p>
         <div class="glass-card note">

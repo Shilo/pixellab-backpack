@@ -692,6 +692,20 @@ describe('favorites and folders', () => {
     expect(h.publicGet).not.toHaveBeenCalled();
   });
 
+  it('groupKeys: live states plus snapshot-only states of the same character group, 0 requests', async () => {
+    h.st.lists.characters.total = 150; // the favorited state sits on an expired deep page
+    const { lib, chars, ui } = await setup();
+    const { setFavorite } = await orgOf();
+    const OLD = 'b00000000003';
+    const old = { key: OLD, id: 'x-old', name: 'old', done: true, thumb: null, fp: 'f', meta: { group_id: 'g' } };
+    await setFavorite({ card: old, familyId: 'characters' }, [OLD], true);
+    expect(lib.groupKeys(chars[0], 'characters').sort()).toEqual([chars[0].key, chars[2].key, OLD].sort());
+    expect(lib.groupKeys(chars[1], 'characters')).toEqual([chars[1].key]); // ungrouped
+    expect(lib.groupKeys(ui[0], 'ui')).toEqual([ui[0].key]);
+    expect(h.apiGet).not.toHaveBeenCalled();
+    expect(h.publicGet).not.toHaveBeenCalled();
+  });
+
   it('find: a snapshot for an unsaved deep card, null for a gone one, 0 requests', async () => {
     const { lib, chars } = await setup();
     expect(lib.find(SNAP)).toMatchObject({ familyId: 'objects', card: { id: 'x-' + SNAP } });
