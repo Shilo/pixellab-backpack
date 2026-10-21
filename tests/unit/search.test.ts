@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fold, highlight, matches, newestFirst, remember, sameAsset, search, snippetFrom, stateName, terms } from '../../src/lib/search';
+import { fold, fullName, highlight, matches, newestFirst, remember, sameAsset, search, snippetFrom, stateName, terms } from '../../src/lib/search';
 import type { Card, FamilyId, Item } from '../../src/lib/types';
 
 const card = (name: string, meta: Record<string, unknown> = {}, key = name): Card => ({ key, id: `id-${key}`, name, done: true, thumb: null, fp: 'f', meta });
@@ -88,6 +88,32 @@ describe('search', () => {
   });
   it('is accent-insensitive', () => {
     expect(search([item(card('Crème'))], 'creme', solo)).toHaveLength(1);
+  });
+
+  describe('full name (S1: card.name is cut to 60 code points, meta.name keeps it)', () => {
+    const full = 'A front-facing pixel-art forest ranger with a hooded green cloak and a longbow made of yew';
+    const ranger = card([...full].slice(0, 60).join(''), { name: full });
+    it('finds a word past character 60, ignoring accents and case', () => {
+      expect(search([item(ranger)], 'LÔNGBOW yew', solo)).toEqual([item(ranger)]);
+    });
+    it('the snippet of the full name shows the late match', () => {
+      const name = fullName(ranger);
+      expect(name.slice(snippetFrom(name, terms('longbow')))).toBe('and a longbow made of yew');
+    });
+    it('falls back to card.name when meta.name is missing, blank or not a string', () => {
+      expect(fullName(card('Slime'))).toBe('Slime');
+      expect(fullName(card('Slime', { name: '  ' }))).toBe('Slime');
+      expect(fullName(card('Slime', { name: 7 }))).toBe('Slime');
+    });
+    it('a nameless card uses its fallback field like toCard (tileset: lower_description)', () => {
+      const lower = 'Lush green meadow grass with small scattered wildflowers and a few pebbles near the river bank';
+      const tileset = card([...lower].slice(0, 60).join(''), { lower_description: lower, upper_description: 'river water' });
+      expect(fullName(tileset)).toBe(lower);
+      expect(search([item(tileset)], 'river bank', solo)).toEqual([item(tileset)]);
+    });
+    it('still ignores a lone state name (R6)', () => {
+      expect(search([item(card('Orb', { name: 'Orb mage', state_name: 'Idle' }))], 'idle', solo)).toEqual([]);
+    });
   });
 
   describe('groups', () => {

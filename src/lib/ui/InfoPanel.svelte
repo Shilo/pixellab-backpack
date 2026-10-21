@@ -1,7 +1,7 @@
 <script lang="ts">
   // The viewer's Info panel: a side panel in wide landscape windows, otherwise a bottom sheet. Content comes from the pure info.ts.
   import { NEW_TAB } from '../app';
-  import { infoRows, kicker, maskId, needsTierHint, pixellabLink, PLAYBACK_NOTE, technicalRows, textBlock, UI_NOTE } from '../info';
+  import { infoRows, kicker, maskId, needsTierHint, pixellabLink, PLAYBACK_NOTE, tagsOf, technicalRows, textBlock, UI_NOTE } from '../info';
   import type { Card, Detail, FamilyId } from '../types';
 
   let { card, familyId, detail, detailState, checkedAt, onClose }: {
@@ -26,7 +26,7 @@
   });
   const block = $derived(textBlock(familyId, card));
   const tech = $derived(technicalRows(card, detail, checkedAt));
-  const tags = $derived(Array.isArray(card.meta.tags) ? (card.meta.tags as unknown[]).filter((t): t is string => typeof t === 'string' && !!t.trim()) : []);
+  const tags = $derived(tagsOf(card));
 
   let copied = $state<'text' | 'id' | null>(null);
   let timer: ReturnType<typeof setTimeout> | undefined;

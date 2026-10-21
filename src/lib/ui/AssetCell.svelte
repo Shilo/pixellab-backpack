@@ -10,13 +10,14 @@
   import { library } from '../data/library.svelte';
   import { isIn, org } from '../data/org.svelte';
   import PixelArt from '../render/PixelArt.svelte';
-  import { highlight, snippetFrom, stateName as stateOf } from '../search';
+  import { fullName, highlight, snippetFrom, stateName as stateOf } from '../search';
   import type { Card, FamilyId } from '../types';
 
   let { card, familyId, costly, href, terms = [] }: { card: Card; familyId: FamilyId; costly: boolean; href: string; terms?: string[] } = $props();
 
   // "Name · state" (R6): the state name of the card this cell opens, only when it has sibling states on this device.
-  const name = $derived(card.name || 'Untitled');
+  // Search results show the whole name, so a match past the 60-character cut is visible; grid cells keep card.name.
+  const name = $derived((terms.length ? fullName(card) : card.name) || 'Untitled');
   const states = $derived(library.states(card, familyId));
   const stateName = $derived(stateOf(card, states));
   // R13: a small filled heart when any state of the group is a favorite.

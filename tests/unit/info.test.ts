@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { infoRows, kicker, maskId, pixellabLink, technicalRows, textBlock } from '../../src/lib/info';
+import { infoRows, kicker, maskId, pixellabLink, tagsOf, technicalRows, textBlock } from '../../src/lib/info';
 import type { Card, Detail, FamilyId } from '../../src/lib/types';
 
 const ID = 'c0000000-0000-4000-8000-000000000001';
@@ -94,6 +94,15 @@ describe('infoRows', () => {
     const u = card({ prompt: 'a panel', size: { width: 688, height: 384 }, created_at: '2026-01-01T00:00:00Z' });
     expect(get(infoRows('ui', u, null, TZ), 'Size')).toBe('688 × 384 px');
     expect(textBlock('ui', u)).toEqual({ label: 'Prompt', text: 'a panel' });
+  });
+});
+
+describe('tagsOf', () => {
+  it('trims tags and drops blank or non-string ones; the Tags row uses the same list', () => {
+    const c = card({ tags: [' hero ', '', '  ', 3, 'tank'] });
+    expect(tagsOf(c)).toEqual(['hero', 'tank']);
+    expect(get(infoRows('characters', c, null, TZ), 'Tags')).toBe('hero, tank');
+    expect(tagsOf(card({ tags: 'hero' }))).toEqual([]);
   });
 });
 

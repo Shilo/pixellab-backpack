@@ -84,17 +84,19 @@ function styleRows(detail: Detail | null): (InfoRow | null)[] {
   return [row('Outline', sentence(s.outline)), row('Shading', sentence(s.shading)), row('Detail', sentence(s.detail))];
 }
 
+/** The card's tags, trimmed, blank ones dropped: the Tags row and the panel's chips. */
+export const tagsOf = (card: Card): string[] => (Array.isArray(card.meta.tags) ? card.meta.tags.map(text).filter((t): t is string => t !== null) : []);
+
 export function infoRows(familyId: FamilyId, card: Card, detail: Detail | null, timeZone?: string): InfoRow[] {
   const m = card.meta;
   const created = formatDate(m.created_at, timeZone);
   const updated = formatDate(m.updated_at, timeZone);
   const same = text(m.created_at) && Date.parse(String(m.created_at)) === Date.parse(String(m.updated_at));
-  const tags = Array.isArray(m.tags) ? m.tags.map(text).filter((t): t is string => t !== null) : [];
   const count = num(m.animation_count);
   const animations: (InfoRow | null)[] = detail ? animationRows(detail) : [row('Animations', count ? String(count) : null, true)];
   const hasAnimations = detail ? detail.animations.length > 0 : !!count;
   const playback = hasAnimations ? row('Playback', '8 fps (default)') : null;
-  const tagRow = row('Tags', tags.join(', '));
+  const tagRow = row('Tags', tagsOf(card).join(', '));
   const fixed = detail?.extra ?? {};
 
   let rows: (InfoRow | null)[];

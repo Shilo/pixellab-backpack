@@ -79,8 +79,19 @@ export function sameAsset(it: Item, hit: Item): boolean {
   return it.card.key === hit.card.key || (typeof g === 'string' && !!g && it.familyId === hit.familyId && it.card.meta.group_id === g);
 }
 
-/** The line a card is searched and shown by: "Name state". */
-const label = (c: Card, states: readonly Card[]) => `${c.name} ${stateName(c, states)}`;
+/** The whole name a card is searched and shown by in results: `card.name` is cut to 60 code points at load (kept, as it is
+ * part of the picture cache key), so it is read again from meta in toCard's order: `name`, then the family's fallback.
+ * Each family keeps only its own fallback key in meta (families.ts), so one fixed key order matches every family. */
+export function fullName(c: Card): string {
+  for (const k of ['name', 'prompt', 'lower_description', 'description']) {
+    const v = c.meta[k];
+    if (typeof v === 'string' && v.trim()) return v;
+  }
+  return c.name;
+}
+
+/** The line a card is searched by: "Name state". */
+const label = (c: Card, states: readonly Card[]) => `${fullName(c)} ${stateName(c, states)}`;
 
 // ponytail: folds every label on every call (no index); fine for a few thousand cards, cache folded labels per fp if search gets slow.
 /**
