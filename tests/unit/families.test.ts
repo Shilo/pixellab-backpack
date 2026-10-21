@@ -19,11 +19,12 @@ const CASES: Record<FamilyId, [string, string, number, boolean[]]> = {
 
 /** Fake transport: counts API-counted calls (apiGet, or publicGet with api:true) and image-host calls. */
 function fake(lists: Record<string, unknown> = {}) {
-  const log = { api: [] as string[], image: [] as string[], labels: [] as (string | undefined)[] };
+  const log = { api: [] as string[], image: [] as string[], labels: [] as (string | undefined)[], users: [] as (boolean | undefined)[] };
   const t: Transport = {
-    async apiGet<T>(path: string, o?: { label?: string }) {
+    async apiGet<T>(path: string, o?: { label?: string; user?: boolean }) {
       log.api.push(path);
       log.labels.push(o?.label);
+      log.users.push(o?.user);
       const base = path.split('?')[0];
       if (base.startsWith('/tiles-pro/')) return fixture('tiles-pro-detail') as T;
       if (base.startsWith('/characters/')) return fixture('character-detail') as T;
@@ -163,6 +164,24 @@ describe('list details', () => {
     const card = (await fam.list(0)).cards[0];
     await fam.art(card);
     expect(log.labels.at(-1)).toBe('Characters · picture');
+  });
+
+  // R14: next pages go ahead of pictures; first-page checks, Tiles Pro pictures and details keep their place.
+  test('request priority: next pages and details are user requests; first page and Tiles Pro picture are not', async () => {
+    const { fam, log } = family('characters');
+    await fam.list(0);
+    await fam.list(99);
+    expect(log.users.map(Boolean)).toEqual([false, true]);
+    const card = (await fam.list(0)).cards[0];
+    log.users.length = 0;
+    await fam.detail!(card);
+    expect(log.users).toEqual([true]);
+
+    const tp = family('tiles-pro');
+    const tile = (await tp.fam.list(0)).cards[0];
+    tp.log.users.length = 0;
+    await tp.fam.art(tile);
+    expect(tp.log.users.map(Boolean)).toEqual([false]);
   });
 
   test('an answer without a row list or total throws', async () => {

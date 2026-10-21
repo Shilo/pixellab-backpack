@@ -168,11 +168,7 @@ const SPECS: Spec[] = [
     meta: 'name description tile_type tile_size n_tiles tile_view created_at',
     // One detail GET for the picture link, then the picture from the image host (not an API request).
     costly: async (t, card, signal) => {
-      const d = await t.apiGet<{ storage_urls?: Record<string, unknown> }>(`/tiles-pro/${encodeURIComponent(card.id)}`, {
-        user: true,
-        signal,
-        label: 'Tiles Pro · picture',
-      });
+      const d = await t.apiGet<{ storage_urls?: Record<string, unknown> }>(`/tiles-pro/${encodeURIComponent(card.id)}`, { signal, label: 'Tiles Pro · picture' });
       const urls = d?.storage_urls ?? {};
       const thumb = str(urls.tile_0) ?? Object.values(urls).map(str).find(Boolean) ?? null;
       if (!thumb) throw new HttpError('http');
@@ -205,7 +201,7 @@ function make(t: Transport, s: Spec): Family {
     artCostsApi: !!s.costly,
     async list(offset, signal) {
       const page = Math.round(offset / s.pageSize) + 1; // a one-row overlap start still counts as that page
-      const body = await t.apiGet<Row>(`${s.path}?limit=${s.pageSize}&offset=${offset}`, { signal, label: `${s.label} · ${offset ? `page ${page}` : 'first page'}` });
+      const body = await t.apiGet<Row>(`${s.path}?limit=${s.pageSize}&offset=${offset}`, { user: offset > 0, signal, label: `${s.label} · ${offset ? `page ${page}` : 'first page'}` });
       const rows = body?.[s.rows];
       if (!Array.isArray(rows) || typeof body.total !== 'number') throw new Error(`${s.label}: unexpected list answer`);
       const cards = (await Promise.all(rows.map((r) => toCard(s, r)))).filter((c): c is Card => c !== null);
