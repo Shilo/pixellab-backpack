@@ -21,7 +21,9 @@ export default defineConfig(({ command, mode }) => ({
     // TEMPORARY debug (remove after Phase 3 testing): the dev server only; `vite build` always gets ''.
     __DEV_API_KEY__: JSON.stringify(command === 'serve' ? (loadEnv(mode, process.cwd(), '').API_KEY_OVERRIDE ?? '') : ''),
   },
-  build: { assetsInlineLimit: 0 },
+  // ponytail: no CSS minify — Vite 8's Lightning CSS minifier merges GlassKit's `backdrop-filter` into its `-webkit-` twin, which
+  // Chromium ignores (no glass blur). ~69 KB more raw CSS; re-enable when the minifier keeps both.
+  build: { assetsInlineLimit: 0, cssMinify: false },
   preview: { headers },
   test: { include: ['tests/unit/**/*.test.ts'] },
 }));
