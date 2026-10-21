@@ -383,3 +383,66 @@ test('deep links: #/all/a/<key> and #/a/<key> open the viewer; an unknown key cl
   await expect(page).toHaveURL(/#\/all$/);
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
+
+test('Go to lists Favorites and folders; typing keeps only matching folders; a folder row opens its overlay', async ({ page }) => {
+  await start(page);
+  // A favorite and an empty folder (made through the home tiles).
+  await page.getByRole('link', { name: 'Objects, 12' }).click();
+  await page.getByRole('link', { name: 'Object 2', exact: true }).click();
+  await page.getByRole('button', { name: 'Favorite', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Library' }).click();
+  await page.getByRole('button', { name: 'New folder' }).click();
+  const dlg = page.getByRole('dialog', { name: 'New folder' });
+  await dlg.getByRole('textbox', { name: 'Folder name' }).fill('Hero party');
+  await dlg.getByRole('button', { name: 'Create' }).click();
+  await page.getByRole('dialog', { name: 'Hero party', exact: true }).getByRole('button', { name: 'Go to Library' }).click();
+  await expect(page).toHaveURL(/#\/$/);
+
+  await openSearch(page);
+  const goto = panel(page).locator('.goto');
+  await expect(goto.filter({ hasText: 'Favorites' })).toContainText('1 assets');
+  await expect(goto.filter({ hasText: 'Favorites' }).locator('canvas, img')).not.toHaveCount(0);
+  await expect(goto.filter({ hasText: 'Hero party' })).toContainText('Folder · 0');
+
+  await field(page).fill('fav');
+  await expect(goto).toHaveCount(1);
+  await expect(goto.locator('mark')).toHaveText('Fav');
+
+  await field(page).fill('hero');
+  await expect(goto).toHaveCount(1);
+  await expect(goto.locator('mark')).toHaveText('Hero');
+  await expect(results(page)).toHaveCount(0);
+
+  await goto.getByRole('link', { name: /Hero party/ }).click();
+  await expect(page).toHaveURL(/#\/f\/[0-9a-f]{12}$/);
+  await expect(field(page)).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: 'Hero party', exact: true }).getByRole('heading', { name: 'Hero party', level: 2 })).toBeFocused();
+});
+
+test('a failed family shows the hint in the idle panel and in a typed panel after Search all types', async ({ page }) => {
+  const mock = await mockPixelLab(page);
+  mock.fail = ['/v2/tilesets?'];
+  await page.goto('/');
+  await connect(page);
+  await settle(page, mock, 600);
+  const hint = panel(page).getByText("Some assets didn't load, so they can't be searched.");
+  await openSearch(page);
+  await expect(hint).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('link', { name: 'Characters, 250' }).click();
+  await openSearch(page);
+  await expect(hint).toHaveCount(0); // tilesets are not in this scope
+  await field(page).fill('zzzz');
+  await page.getByRole('button', { name: 'Search all types' }).click();
+  await expect(hint).toBeVisible();
+});
+
+test('from Favorites the search covers everything and its leading button reads "Back to Favorites"', async ({ page }) => {
+  await start(page);
+  await page.getByRole('link', { name: 'Favorites, 0' }).click();
+  await openSearch(page);
+  await expect(page.getByRole('button', { name: 'Back to Favorites' })).toBeVisible();
+  await expect(panel(page).locator('.goto').first()).toBeVisible(); // Go to shows: the scope is all
+});

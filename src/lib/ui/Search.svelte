@@ -13,8 +13,9 @@
 
 <script lang="ts">
   import { tick, untrack } from 'svelte';
-  import { scopeLabel, type Scope } from '../categories';
+  import { familiesOf, scopeLabel, type Scope } from '../categories';
   import { library } from '../data/library.svelte';
+  import { org } from '../data/org.svelte';
   import PixelArt from '../render/PixelArt.svelte';
   import { pathOf, scopeOf, type Route } from '../router.svelte';
   import { highlight, matches, MAX_RESULTS, newestFirst, sameAsset, search, terms } from '../search';
@@ -43,7 +44,22 @@
   const label = $derived(scopeLabel(scope));
   const coverage = $derived(library.coverage(scope));
 
-  const gotos = $derived(all ? library.categories.filter((c) => c.count > 0 && (idle || matches(c.label, ts))) : []);
+  type GoRow = { id: string; href: string; label: string; sub: string; it: Item | null; folder: boolean };
+  // Go to (R6): types, then Favorites (when it has items), then every folder A–Z; typing matches type, Favorites and folder names.
+  // A folder's items are newest first, so its first is the newest.
+  const gotos = $derived.by(() => {
+    if (!all) return [];
+    const rows: GoRow[] = library.categories
+      .filter((c) => c.count > 0)
+      .map((c) => ({ id: c.id, href: `#/c/${c.id}`, label: c.label, sub: `Type · ${c.count.toLocaleString()}`, it: c.mosaic[0] ?? null, folder: false }));
+    const favs = library.pick(org.favorites).items;
+    if (favs.length) rows.push({ id: 'fav', href: '#/fav', label: 'Favorites', sub: `${favs.length.toLocaleString()} assets`, it: favs[0], folder: false });
+    for (const f of org.folders) {
+      const p = library.pick(f.items).items;
+      rows.push({ id: `f/${f.id}`, href: `#/f/${f.id}`, label: f.name, sub: `Folder · ${p.length.toLocaleString()}`, it: p[0] ?? null, folder: true });
+    }
+    return rows.filter((r) => idle || matches(r.label, ts));
+  });
   const added = $derived(all && idle ? newestFirst(library.items('all'), 6) : []);
   const showAll = $derived(all && idle && screen.name !== 'all');
   // ponytail: no debounce (R5); every keystroke searches every saved card. Debounce if typing lags on very large libraries.
@@ -57,10 +73,12 @@
   // As the viewer's wait: a 429 pause ('slowed') is still the check running (its retries are queued).
   const checking = $derived(['idle', 'checking', 'slowed'].includes(library.status) && coverage === 'missing');
   const idleSprite = $derived(library.categories.find((c) => c.mosaic.length)?.mosaic[0] ?? null);
-  const hasPanel = $derived(!idle || recent.length > 0 || gotos.length > 0 || added.length > 0 || showAll);
+  // R15: a status note (slowed, paused, stopped, offline) wins; else a failed family in scope. Idle and typed.
+  const hint = $derived(note ?? (familiesOf(scope).some((id) => library.errors[id]) ? "Some assets didn't load, so they can't be searched." : null));
+  const hasPanel = $derived(!idle || recent.length > 0 || gotos.length > 0 || added.length > 0 || showAll || !!hint);
   const plural = (n: number) => `${n.toLocaleString()} result${n === 1 ? '' : 's'}`;
 
-  const leadName = $derived(screen.name === 'home' ? 'Library' : `Back to ${scopeLabel(scopeOf(screen))}`);
+  const leadName = $derived(screen.name === 'home' ? 'Library' : `Back to ${screen.name === 'fav' ? 'Favorites' : scopeLabel(scopeOf(screen))}`);
 
   // Focus starts in the field.
   $effect(() => {
@@ -83,7 +101,7 @@
   let said = $state('');
   $effect(() => {
     const base = idle ? '' : found.length ? plural(found.length) : checking ? 'Checking for new assets…' : 'No matches';
-    const text = base && note ? `${base}. ${note}` : base; // the failure or pause shown in the panel is announced too
+    const text = base && hint ? `${base}. ${hint}` : base; // the failure or pause shown in the panel is announced too
     const t = setTimeout(() => (said = text), 500);
     return () => clearTimeout(t);
   });
@@ -130,7 +148,7 @@
     <div class="glass-tab-bar glass-tab-bar--floating vt-dock vt-scrim">
       <button type="button" class="glass-tab-bar__item vt-icon" aria-label={leadName} onclick={onClose}>
         <span class="glass-tab-bar__icon">
-          {#if screen.name === 'category'}
+          {#if screen.name === 'category' || screen.name === 'fav'}
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5" /></svg>
           {:else}
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2" /><rect x="13" y="4" width="7" height="7" rx="2" /><rect x="4" y="13" width="7" height="7" rx="2" /><rect x="13" y="13" width="7" height="7" rx="2" /></svg>
@@ -188,11 +206,15 @@
           <div class="gotos">
             {#each gotos as c (c.id)}
               <div class="glass-list goto">
-                <a class="glass-list__item glass-list__item--interactive" href="#/c/{c.id}" onclick={(e) => go(e, `#/c/${c.id}`)}>
-                  <span class="glass-list__leading glass-list__leading--lg" aria-hidden="true"><i>{@render art(c.mosaic[0] ?? null)}</i></span>
+                <a class="glass-list__item glass-list__item--interactive" href={c.href} onclick={(e) => go(e, c.href)}>
+                  <span class="glass-list__leading glass-list__leading--lg" aria-hidden="true">
+                    <i>
+                      {#if c.it}{@render art(c.it)}{:else if c.folder}<svg viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" /></svg>{/if}
+                    </i>
+                  </span>
                   <span class="glass-list__content">
                     <span class="glass-list__title">{@render runs(c.label)}</span>
-                    <span class="glass-list__subtitle">Type · {c.count.toLocaleString()}</span>
+                    <span class="glass-list__subtitle">{c.sub}</span>
                   </span>
                 </a>
               </div>
@@ -242,12 +264,12 @@
             <hr class="glass-divider" />
             <p class="hint">Looking for fonts or effects? They aren't in PixelLab's public API yet.</p>
           {/if}
-          <!-- The screen's notice (a failure, a pause, offline) speaks here, as the saved-only advice cannot come true then (R1, R9). -->
-          {#if note}
-            <p class="hint">{note}</p>
-          {:else if coverage === 'partial'}
-            <p class="hint">Only assets saved on this device are searched. Scroll through {label} to load the rest.</p>
-          {/if}
+        {/if}
+        <!-- A status note or a failed family speaks here, as the saved-only advice cannot come true then (R1, R9, R15). -->
+        {#if hint}
+          <p class="hint">{hint}</p>
+        {:else if !idle && coverage === 'partial'}
+          <p class="hint">Only assets saved on this device are searched. Scroll through {label} to load the rest.</p>
         {/if}
       </div>
     </div>
@@ -291,7 +313,8 @@
   .gotos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding-bottom: 16px; }
   .goto { --gl-space-lg: 8px; --gl-list-item-min-height: 56px; --gl-list-item-padding-y: 7px; }
   .goto .glass-list__item { text-decoration: none; color: inherit; gap: 10px; }
-  .goto i { position: relative; display: block; width: 40px; height: 40px; background: rgba(0, 0, 0, .22); }
+  .goto i { position: relative; display: grid; place-items: center; width: 40px; height: 40px; background: rgba(0, 0, 0, .22); color: var(--vt-text-2); }
+  .goto i svg { width: 24px; height: 24px; stroke-width: 1.5; }
   .glass-list__content { display: block; flex: 1; min-width: 0; }
   .glass-list__title, .glass-list__subtitle { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .glass-list__subtitle { font-size: 12.5px; }
