@@ -1,7 +1,7 @@
 // The only module that touches device storage (IndexedDB). Never stores the API key.
-import { clear, createStore, get, getMany, set } from 'idb-keyval';
+import { clear, createStore, get, getMany, set, update } from 'idb-keyval';
 import { APP_ID } from '../app';
-import type { FamilyId, FamilyState, SavedDetail } from '../types';
+import type { Card, FamilyId, FamilyState, SavedDetail } from '../types';
 
 /** Saved-copy shape version (R10). A device holding another version is wiped once. */
 export const SCHEMA = 2;
@@ -10,8 +10,8 @@ let db: ReturnType<typeof createStore> | undefined;
 const store = () => (db ??= createStore(APP_ID, 'kv')); // lazy: no IndexedDB access at import time
 
 // Saved records are checked on load: an older tab or a foreign record must never reach the screens. A bad one reads as missing.
-const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
-const isCard = (c: unknown) => isObj(c) && typeof c.key === 'string' && typeof c.fp === 'string' && typeof c.done === 'boolean' && isObj(c.meta);
+export const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+export const isCard = (c: unknown): c is Card => isObj(c) && typeof c.key === 'string' && typeof c.fp === 'string' && typeof c.done === 'boolean' && isObj(c.meta);
 const isFamily = (s: unknown): s is FamilyState =>
   isObj(s) && Array.isArray(s.cards) && typeof s.total === 'number' && typeof s.checkedAt === 'number' && s.cards.every(isCard);
 
@@ -35,6 +35,10 @@ export async function loadDetail(key: string): Promise<SavedDetail | undefined> 
 export const saveDetail = (key: string, v: SavedDetail) => set('detail:' + key, v, store());
 export const loadMeta = <T>(k: string) => get<T>('meta:' + k, store());
 export const saveMeta = (k: string, v: unknown) => set('meta:' + k, v, store());
+/** Favorites and folders (org.svelte.ts checks the shape). */
+export const loadOrg = () => get<unknown>('org', store());
+/** One read-modify-write in one transaction, so two tabs never overwrite each other. */
+export const updateOrg = (fn: (old: unknown) => unknown) => update<unknown>('org', fn, store());
 /** Clears everything, then stamps the schema so the next load does not wipe again. */
 export const wipe = async () => {
   await clear(store());

@@ -7,10 +7,11 @@ vi.mock('idb-keyval', () => ({
   getMany: async (ks: string[]) => ks.map((k) => db.get(k)),
   set: async (k: string, v: unknown) => void db.set(k, v),
   clear: async () => db.clear(),
+  update: async (k: string, fn: (old: unknown) => unknown) => void db.set(k, fn(db.get(k))),
 }));
 
 import { createStore } from 'idb-keyval';
-import { loadDetail, loadFamilies, loadMeta, SCHEMA, saveDetail, saveFamily, saveMeta, wipe } from '../../src/lib/data/store';
+import { loadDetail, loadFamilies, loadMeta, loadOrg, SCHEMA, saveDetail, saveFamily, saveMeta, updateOrg, wipe } from '../../src/lib/data/store';
 import type { FamilyState, SavedDetail } from '../../src/lib/types';
 
 const fam: FamilyState = { total: 1, cards: [{ key: 'k', id: 'i', name: 'n', done: true, thumb: null, fp: 'f', meta: {} }], checkedAt: 5, deepLoadedAt: null };
@@ -90,6 +91,16 @@ describe('store', () => {
     }
     await saveDetail('k', detail);
     expect(await loadDetail('k')).toEqual(detail);
+  });
+
+  it('updateOrg passes the stored value to the updater and saves its answer; wipe clears org', async () => {
+    const seen: unknown[] = [];
+    await updateOrg((old) => (seen.push(old), { v: 1, n: 1 }));
+    await updateOrg((old) => (seen.push(old), { v: 1, n: 2 }));
+    expect(seen).toEqual([undefined, { v: 1, n: 1 }]);
+    expect(await loadOrg()).toEqual({ v: 1, n: 2 });
+    await wipe();
+    expect(await loadOrg()).toBeUndefined();
   });
 
   it('uses a database named from APP_ID', async () => {
