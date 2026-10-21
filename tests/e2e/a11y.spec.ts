@@ -1,4 +1,4 @@
-// Accessibility smoke (mocked PixelLab): on the key screen, home, a grid, the viewer (with its menu, picker and Info) and Settings,
+// Accessibility smoke (mocked PixelLab): on the key screen, home, a grid, the viewer (with its menu, picker and Info), Settings, the search panel and All assets,
 // Tab reaches every visible control, each shows a focus ring, and on phone every control is at least 44 × 44 px.
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { connect, mockPixelLab, settle } from '../fixtures/pixellab-mock';
@@ -135,4 +135,47 @@ test('keyboard reaches every control with a visible focus ring; phone targets ar
   await page.getByRole('menuitem', { name: /Settings/ }).click();
   await opened(page.getByRole('dialog', { name: 'Settings' }));
   await check(page, phone, 'settings', 'dialog[open]');
+});
+
+test('search panel, no-results panel and All assets end: Tab reaches every control with a ring; phone targets at least 44 px', async ({ page }, info) => {
+  test.setTimeout(90_000);
+  const phone = info.project.name === 'phone';
+  const mock = await mockPixelLab(page);
+  await page.goto('/');
+  await connect(page);
+  await settle(page, mock);
+  const field = page.getByRole('searchbox', { name: 'Search' });
+  const panel = page.locator('.glass-popover.panel');
+
+  // Empty field, with a Recent chip and its Clear seeded here (R12: chips and every glass-btn--sm).
+  await page.locator('[data-search]').click();
+  await field.fill('object');
+  await field.press('Enter');
+  await field.fill('');
+  await expect(panel.locator('.recent button')).toHaveCount(1);
+  await check(page, phone, 'search panel (empty)');
+
+  await field.fill('object');
+  await expect(panel.locator('.res a[data-key]')).toHaveCount(11);
+  await expect(page.getByRole('button', { name: 'Clear search' })).toBeVisible(); // the field's ✕
+  await check(page, phone, 'search panel (results)');
+  await page.keyboard.press('Escape');
+
+  // No results in a category: Clear search and Search all types.
+  await page.getByRole('link', { name: /^Characters, / }).click();
+  await page.locator('[data-search]').click();
+  await field.fill('slime');
+  await expect(panel.getByRole('button', { name: 'Search all types' })).toBeVisible();
+  await check(page, phone, 'no-results panel');
+  await page.keyboard.press('Escape');
+
+  // All assets at its end. Tab starts after the last cell, so it reaches the note's links before any cell scrolls the grid.
+  await page.evaluate(() => (location.hash = '#/all'));
+  const grid = page.locator('main.grid');
+  const end = page.getByText("That's everything");
+  await expect.poll(async () => (await grid.evaluate((el) => el.scrollTo(0, el.scrollHeight)), await end.count()), { timeout: 30_000 }).toBe(1);
+  await grid.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+  await settle(page, mock, 600);
+  await grid.locator('a[data-key]').last().focus();
+  await check(page, phone, 'All assets end', '.end');
 });

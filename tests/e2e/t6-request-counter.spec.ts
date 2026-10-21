@@ -313,3 +313,217 @@ test('viewer: Activity lists each detail as "Characters · details" / "Objects �
   for (const id of new Set(mock.hits.flatMap((h) => ids(h.url)))) await expect(panel).not.toContainText(id);
   cleanHits(mock);
 });
+
+// ---- Search and All assets (Phase 3): the counts are exact. Each test seeds what it needs. ----
+const field = (page: Page) => page.getByRole('searchbox', { name: 'Search' });
+const panel = (page: Page) => page.locator('.glass-popover.panel');
+const results = (page: Page) => panel(page).locator('.res a[data-key]');
+/** Path of each list request (next pages start one row early, to catch a shifted list). */
+const listPaths = (hits: Hit[]) => lists(hits).map((h) => new URL(h.url).pathname);
+
+/** Opens the search from the dock (the home pill or a grid's Search icon). */
+async function openSearch(page: Page) {
+  await page.locator('[data-search]').click();
+  await expect(field(page)).toBeFocused();
+}
+
+test('search: five queries, Recent, Clear search, Search all types and closing send 0 API requests', async ({ page }) => {
+  const mock = await openFirst(page);
+  for (const name of [/^Characters, /, /^Objects, /, /^Tilesets & tiles, /, /^UI, /]) {
+    await page.getByRole('link', { name }).click();
+    await settle(page, mock, 600);
+    await page.getByRole('button', { name: 'Library' }).click();
+  }
+  await page.getByRole('link', { name: /^Characters, / }).click();
+  await settle(page, mock, 600);
+  const at = mock.hits.length;
+
+  await openSearch(page);
+  for (const q of ['character 1', 'character 2', 'armored']) {
+    await field(page).fill(q);
+    await expect(results(page).first()).toBeVisible();
+    await field(page).press('Enter'); // remembered in Recent
+  }
+  await field(page).fill('slime');
+  await expect(panel(page).getByRole('heading', { name: 'No matches for "slime" in Characters.' })).toBeVisible();
+  await panel(page).getByRole('button', { name: 'Search all types' }).click();
+  await expect(panel(page).getByRole('heading', { name: 'No matches for "slime".' })).toBeVisible();
+  await panel(page).getByRole('button', { name: 'Clear search' }).click();
+  await expect(field(page)).toHaveValue('');
+  await field(page).fill('object');
+  await expect(results(page)).toHaveCount(11);
+  await page.getByRole('button', { name: 'Clear search' }).click(); // the field's ✕
+  await panel(page).getByRole('button', { name: 'armored' }).click(); // a Recent chip
+  await expect(field(page)).toHaveValue('armored');
+  await field(page).fill('');
+  await panel(page).getByRole('button', { name: 'Clear', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await expect(field(page)).toHaveCount(0);
+  await settle(page, mock);
+  expect(api(mock.hits.slice(at))).toEqual([]);
+});
+
+test('search: "t", "ti", "til" typed within 0.3 s and cleared send 0 API requests', async ({ page }) => {
+  const mock = await openFirst(page);
+  await openSearch(page);
+  const at = mock.hits.length;
+  // In the page, so the timing holds on a loaded machine: tileset cells are on screen for well under 0.3 s.
+  const tiles = await field(page).evaluate(async (el: HTMLInputElement) => {
+    const type = (v: string) => ((el.value = v), el.dispatchEvent(new Event('input', { bubbles: true })));
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    type('t');
+    await wait(40);
+    type('ti');
+    await wait(40);
+    type('til');
+    await new Promise(requestAnimationFrame);
+    const n = document.querySelectorAll('.res a[data-key][title*="ile"]').length;
+    type('');
+    return n;
+  });
+  expect(tiles).toBeGreaterThan(0); // the costly cells really were on screen
+  await expect(field(page)).toHaveValue('');
+  await settle(page, mock);
+  expect(api(mock.hits.slice(at))).toEqual([]);
+});
+
+test('search: "tileset" results ask at most one costly picture per visible tileset cell; repeating the search asks 0', async ({ page }) => {
+  const mock = await openFirst(page);
+  await openSearch(page);
+  let at = mock.hits.length;
+  await field(page).fill('tileset');
+  await expect(results(page)).toHaveText(['Tileset 1', 'Tileset 2', 'Tileset 3', 'Tileset 5', 'Side tileset 1', 'Side tileset 2', 'Side tileset 3']);
+  await settle(page, mock);
+  const visible = await results(page).evaluateAll((els) => {
+    const p = els[0].closest('.panel')!.getBoundingClientRect();
+    return els.filter((e) => e.getBoundingClientRect().bottom > p.top && e.getBoundingClientRect().top < p.bottom).map((e) => e.getAttribute('title')!);
+  });
+  const visibleIds = visible.map((t) => {
+    const [, fam, n] = /^(Side tileset|Tileset) (\d+)$/.exec(t)!;
+    return `a-${fam === 'Tileset' ? 'tilesets' : 'tilesets-side'}-${Number(n) - 1}`;
+  });
+  const costly = api(mock.hits.slice(at));
+  const asked = costly.flatMap((h) => ids(h.url));
+  expect(asked).toHaveLength(costly.length); // each request names one asset
+  expect(new Set(asked).size).toBe(asked.length); // at most one per cell
+  expect(asked.filter((id) => !visibleIds.includes(id))).toEqual([]); // only cells on screen
+
+  await page.keyboard.press('Escape');
+  await expect(field(page)).toHaveCount(0);
+  at = mock.hits.length;
+  await openSearch(page);
+  await field(page).fill('tileset');
+  await expect(results(page)).toHaveCount(7);
+  await settle(page, mock);
+  expect(api(mock.hits.slice(at))).toEqual([]);
+});
+
+test('All assets: Show all sends 0 API requests at the top of the grid; a reload on #/all within the hour sends 0', async ({ page }) => {
+  const mock = await openFirst(page);
+  await openSearch(page);
+  let at = mock.hits.length;
+  await panel(page).getByRole('link', { name: 'Show all 283 assets' }).click();
+  await expect(page).toHaveURL(/#\/all$/);
+  await expect(page.getByTitle('Character 1', { exact: true })).toBeVisible();
+  await settle(page, mock);
+  expect(lists(mock.hits.slice(at))).toEqual([]);
+  expect(api(mock.hits.slice(at))).toEqual([]);
+
+  at = mock.hits.length;
+  await page.reload();
+  await expect(page.locator('.crumb')).toHaveText('All assets283');
+  await expect(page.getByTitle('Character 1', { exact: true })).toBeVisible();
+  await settle(page, mock);
+  expect(api(mock.hits.slice(at))).toEqual([]);
+});
+
+test('All assets: scrolling to the end in steps asks exactly the next pages the counts imply, none while idle', async ({ page }) => {
+  test.setTimeout(90_000);
+  const mock = await openFirst(page);
+  await page.evaluate(() => (location.hash = '#/all'));
+  const grid = page.locator('main.grid');
+  await expect(page.getByTitle('Character 1', { exact: true })).toBeVisible();
+  await settle(page, mock);
+  const at = mock.hits.length;
+  await page.waitForTimeout(2000); // idle at the top
+  expect(lists(mock.hits.slice(at))).toEqual([]);
+
+  for (let i = 0; ; i++) {
+    expect(i, 'steps to reach the end').toBeLessThan(400);
+    const done = await grid.evaluate((el) => {
+      el.scrollBy(0, el.clientHeight * 0.8);
+      return el.scrollTop + el.clientHeight >= el.scrollHeight - 1 && !!el.querySelector('.end');
+    });
+    if (done) break;
+    await page.waitForTimeout(150);
+  }
+  await expect(page.getByText("That's everything")).toBeVisible();
+  await settle(page, mock);
+  // Characters: 250 at 100 per page, 100 saved by the first open: 2 next pages. Every other family is fully saved: 0.
+  expect(listPaths(mock.hits.slice(at))).toEqual(['/v2/characters', '/v2/characters']);
+  const n = mock.hits.length;
+  await page.waitForTimeout(2000); // idle at the bottom
+  expect(lists(mock.hits.slice(n))).toEqual([]);
+});
+
+test('All assets: → at the last saved character sends exactly 1 list request and moves to the next card', async ({ page }) => {
+  // Characters only: with other families saved after it, the last saved character would not be the last card of All
+  // assets (R4: family after family), and → would move to the next family's first card instead.
+  const mock = await mockPixelLab(page, { a: { objects: 0, ui: 0, tilesets: 0, 'tilesets-side': 0, isometric: 0, 'tiles-pro': 0 } });
+  await page.goto('/');
+  await connect(page);
+  await settle(page, mock);
+  await openSearch(page);
+  await field(page).fill('character 100');
+  await expect(results(page)).toHaveText(['Character 100']); // index 99: the last of the 100 saved
+  const key = await results(page).getAttribute('data-key');
+  await page.keyboard.press('Escape');
+  await expect(field(page)).toHaveCount(0);
+
+  await page.evaluate((k) => (location.hash = `#/all/a/${k}`), key);
+  await expect(dialog(page, 'Character 100')).toBeVisible();
+  await settle(page, mock, 600);
+  const at = mock.hits.length;
+  await page.keyboard.press('ArrowRight');
+  await expect(dialog(page, 'Character 101')).toBeVisible();
+  await settle(page, mock, 600);
+  expect(listPaths(mock.hits.slice(at))).toEqual(['/v2/characters']);
+  cleanAddress(page);
+  cleanHits(mock);
+});
+
+test('viewer from a result: first open sends 1 detail request, reopen 0; → through results never asks for a list page', async ({ page }) => {
+  const mock = await openFirst(page);
+  await openSearch(page);
+  await field(page).fill('character 10');
+  await expect(results(page)).toHaveText(['Character 10', 'Character 100']);
+  let at = mock.hits.length;
+  await results(page).first().click();
+  await expect(dialog(page, 'Character 10')).toBeVisible();
+  await settle(page, mock, 600);
+  const sent = api(mock.hits.slice(at));
+  expect(sent).toHaveLength(1);
+  expect(sent[0]).toMatchObject({ method: 'GET', detail: true });
+  expect(new URL(sent[0].url).pathname).toBe('/v2/characters/a-characters-9');
+
+  await page.keyboard.press('Escape');
+  await expect(dialog(page, 'Character 10')).toHaveCount(0);
+  await expect(results(page).first()).toBeFocused();
+  at = mock.hits.length;
+  await results(page).first().click();
+  await expect(dialog(page, 'Character 10')).toBeVisible();
+  await settle(page, mock, 600);
+  expect(api(mock.hits.slice(at))).toEqual([]);
+
+  // → to the last result (also the last saved character: from a grid, → there would load a page), then → again.
+  at = mock.hits.length;
+  await page.keyboard.press('ArrowRight');
+  await expect(dialog(page, 'Character 100')).toBeVisible();
+  await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(500);
+  await expect(dialog(page, 'Character 100')).toBeVisible();
+  await settle(page, mock, 600);
+  expect(lists(mock.hits.slice(at))).toEqual([]);
+  cleanAddress(page);
+  cleanHits(mock);
+});

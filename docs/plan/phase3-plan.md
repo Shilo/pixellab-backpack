@@ -1,6 +1,6 @@
 # Phase 3 plan: Search and All assets
 
-Status: **Planned** 2026-10-20 (revised after the plan challenge). Builds on Phase 2 on branch `main` ([Phase 2 plan](phase2-plan.md), [build log](phase2-build-log.md)). Where this plan and older design docs disagree, **this plan wins for Phase 3**; the MVP and Phase 2 rulings and Global Constraints still bind.
+Status: **Done** 2026-10-20 (Tasks 1–7 built; [build log](phase3-build-log.md)). Builds on Phase 2 on branch `main` ([Phase 2 plan](phase2-plan.md), [build log](phase2-build-log.md)). Where this plan and older design docs disagree, **this plan wins for Phase 3**; the MVP and Phase 2 rulings and Global Constraints still bind.
 
 ## Goal
 
