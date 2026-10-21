@@ -135,7 +135,7 @@
     {:else if confirm === 'forget'}
       <div class="glass-modal__header"><h2 class="glass-modal__title" id="st-confirm-title">Forget your API key?</h2></div>
       <div class="glass-modal__body">
-        <p>{APP_SHORT} will disconnect on this device and delete its saved copy of your library. Your PixelLab account isn't affected.</p>
+        <p>{APP_SHORT} will disconnect on this device and delete its saved copy of your library, folders and favorites. Your PixelLab account isn't affected.</p>
         <p class="cache"><em>Your browser may still keep some images in its own cache. Clear your browsing data to remove them.</em></p>
         {#if failed}<p class="err" role="alert">Your key was removed, but the saved library couldn't be cleared. Try again or clear this site's data in your browser.</p>{/if}
       </div>

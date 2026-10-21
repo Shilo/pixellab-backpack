@@ -1,7 +1,7 @@
 // T7 Settings (mocked PixelLab): menu, key hint, Keep me signed in, Forget key, About, no sideways scroll, keyboard.
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
-import { GOOD_KEY, connect, deviceStorage, mockPixelLab, settle, type Hit } from '../fixtures/pixellab-mock';
+import { GOOD_KEY, OTHER_KEY, connect, deviceStorage, mockPixelLab, settle, type Hit } from '../fixtures/pixellab-mock';
 
 const api = (hits: Hit[]) => hits.filter((h) => h.host === 'api');
 const keptKey = (page: Page) => page.evaluate(() => localStorage.getItem('pixellab-backpack:key-kept'));
@@ -12,6 +12,15 @@ async function open(page: Page) {
   const dialog = page.getByRole('dialog', { name: 'Settings' });
   await expect(dialog).toBeVisible();
   return dialog;
+}
+
+/** Makes a folder from home's New folder tile and goes back home. */
+async function addFolder(page: Page, name: string) {
+  await page.getByRole('button', { name: 'New folder' }).click();
+  await page.getByRole('textbox', { name: 'Folder name' }).fill(name);
+  await page.getByRole('button', { name: 'Create' }).click();
+  await page.getByRole('button', { name: 'Close folder' }).click();
+  await expect(page.getByRole('link', { name: `${name}, 0` })).toBeVisible();
 }
 
 async function start(page: Page) {
@@ -95,14 +104,16 @@ test('Keep me signed in: on survives a new tab with 0 requests; off asks first; 
   expect(api(mock.hits.slice(before))).toEqual([]);
 });
 
-test('Forget key: Cancel does nothing; confirm shows the key screen, wipes the copy and sends no request', async ({ page }) => {
+test('Forget key: Cancel does nothing; confirm shows the key screen, wipes the copy, folders included, and sends no request', async ({ page }) => {
   const mock = await start(page);
+  await addFolder(page, 'Hero party');
+  expect(await deviceStorage(page)).toContain('"org"');
   const dialog = await open(page);
   await dialog.getByRole('button', { name: 'Forget key' }).click();
   const confirm = page.getByRole('dialog', { name: 'Forget your API key?' });
-  await expect(confirm).toContainText("Backpack will disconnect on this device and delete its saved copy of your library. Your PixelLab account isn't affected.");
+  await expect(confirm).toContainText("Backpack will disconnect on this device and delete its saved copy of your library, folders and favorites. Your PixelLab account isn't affected.");
   await expect(confirm).toContainText('Your browser may still keep some images in its own cache.');
-  await expect(confirm).not.toContainText('folders');
+  await expect(confirm.getByRole('checkbox')).toHaveCount(0); // no "Also delete my folders and favorites" (R4)
   await confirm.getByRole('button', { name: 'Cancel' }).click();
   await expect(confirm).toBeHidden();
   await expect(dialog).toBeVisible();
@@ -117,6 +128,8 @@ test('Forget key: Cancel does nothing; confirm shows the key screen, wipes the c
   const stored = await deviceStorage(page);
   expect(stored).not.toContain('family:');
   expect(stored).not.toContain('detail:');
+  expect(stored).not.toContain('"org"');
+  expect(stored).not.toContain('Hero party');
   expect(stored).not.toContain(GOOD_KEY);
   expect(await page.evaluate(() => sessionStorage.length)).toBe(0);
   await settle(page, mock);
@@ -246,11 +259,13 @@ test('Forget key in one tab signs out a second kept tab, which sends nothing wit
   await page.goto('/');
   await connect(page);
   await settle(page, mock);
+  await addFolder(page, 'Hero party');
   const dialog = await open(page);
   await dialog.getByRole('switch', { name: 'Keep me signed in' }).check();
   const tab = await context.newPage();
   await tab.goto('/');
   await expect(tab.getByRole('link', { name: 'Characters, 250' })).toBeVisible();
+  await expect(tab.getByRole('link', { name: 'Hero party, 0' })).toBeVisible();
   await settle(tab, mock);
 
   // Each tab is brought to the front before it is used: a background tab throttles its frames, so actions wait.
@@ -268,6 +283,10 @@ test('Forget key in one tab signs out a second kept tab, which sends nothing wit
   await settle(tab, mock);
   expect(mock.hits.slice(at).filter((h) => h.host === 'api')).toEqual([]);
   expect(await deviceStorage(tab)).not.toContain(GOOD_KEY);
+  // Its folders went with the key: connecting again in that tab shows none (they would if its memory or the device kept them).
+  await connect(tab);
+  await expect(tab.getByRole('link', { name: 'Favorites, 0' })).toBeVisible();
+  await expect(tab.getByRole('link', { name: /^Hero party/ })).toHaveCount(0);
 });
 
 test('Forget key in one tab signs out a second "this tab only" tab, which then writes nothing back', async ({ page, context }) => {
@@ -301,4 +320,23 @@ test('Forget key in one tab signs out a second "this tab only" tab, which then w
   const stored = await deviceStorage(tab);
   expect(stored).not.toContain('family:');
   expect(stored).not.toContain(GOOD_KEY);
+});
+
+test("another account's key in a fresh connect wipes the folders too", async ({ page, context }) => {
+  const mock = await mockPixelLab(context);
+  await page.goto('/');
+  await connect(page);
+  await settle(page, mock);
+  await addFolder(page, 'Hero party');
+  expect(await deviceStorage(page)).toContain('Hero party');
+  const tab = await context.newPage();
+  await tab.goto('/');
+  await connect(tab, OTHER_KEY);
+  await expect(tab.getByRole('link', { name: 'Characters, 3' })).toBeVisible();
+  await settle(tab, mock);
+  await expect(tab.getByRole('link', { name: 'Favorites, 0' })).toBeVisible();
+  await expect(tab.getByRole('link', { name: /^Hero party/ })).toHaveCount(0);
+  const saved = await deviceStorage(tab);
+  expect(saved).not.toContain('"org"');
+  expect(saved).not.toContain('Hero party');
 });

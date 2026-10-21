@@ -388,8 +388,8 @@ In Group E, Task 8 owns App's root `CardMenu` and listeners; Task 9 owns only Ap
 - [x] Task 3: Send next pages ahead of costly pictures
 - [x] Task 4: Teach the library `pick`, snapshot-aware `find` and org wiping
 - [x] Task 5: Build the card menu and folder dialog components
-- [ ] Task 6: Ship the Favorites slice with `t13-favorites`
-- [ ] Task 7: Ship the Folders slice with `t13-folders`
+- [x] Task 6: Ship the Favorites slice with `t13-favorites`
+- [x] Task 7: Ship the Folders slice with `t13-folders`
 - [ ] Task 8: Ship the card menu slice with `t13-menu`
 - [ ] Task 9: Ship the search Go to rows and failed-family hint
 - [ ] Task 10: Prove 0 requests, security, screenshots, headed check and accessibility; tick the plan

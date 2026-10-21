@@ -5,11 +5,12 @@
   import { library } from './lib/data/library.svelte';
   import { org } from './lib/data/org.svelte';
   import PixelArt from './lib/render/PixelArt.svelte';
-  import { closeActivity, go, parseRoute, pathOf, router, scopeOf, screenOf } from './lib/router.svelte';
+  import { closeActivity, closeFolder, go, parseRoute, pathOf, router, scopeOf, screenOf } from './lib/router.svelte';
   import type { FamilyId, Item } from './lib/types';
   import Activity from './lib/ui/Activity.svelte';
   import CategoryGrid from './lib/ui/CategoryGrid.svelte';
   import Dock from './lib/ui/Dock.svelte';
+  import FolderOverlay from './lib/ui/FolderOverlay.svelte';
   import KeyScreen from './lib/ui/KeyScreen.svelte';
   import LibraryHome from './lib/ui/LibraryHome.svelte';
   import MoreMenu from './lib/ui/MoreMenu.svelte';
@@ -29,6 +30,22 @@
   // Favorites from this device only (R2, R3, R7): no request, gone items left out.
   const favs = $derived(fav ? library.pick(org.favorites).items : []);
   const title = $derived(fav ? 'Favorites' : scopeLabel(scope));
+  // A folder: an overlay over home (R5), drawn from this device only.
+  const folder = $derived(route.name === 'folder' ? org.folders.find((f) => f.id === route.id) : undefined);
+  const inFolder = $derived(route.name === 'folder');
+  const folderItems = $derived(folder ? library.pick(folder.items).items : []);
+  // closeFolder() may step Back, and a delete closes twice (the dialog, then this check): once per visit.
+  let leaving = false;
+  function leaveFolder() {
+    if (leaving || router.route.name !== 'folder') return;
+    leaving = true;
+    closeFolder();
+  }
+  $effect(() => {
+    if (!inFolder) leaving = false;
+    // An unknown or deleted folder; under an open viewer only once it closes (closeFolder: close any viewer first).
+    else if (org.ready && !folder && !viewing) leaveFolder();
+  });
   const viewing = $derived(route.key ?? null);
   let h1 = $state<HTMLElement>();
 
@@ -78,6 +95,8 @@
     searchEntry = 0;
     lastShown = null;
     // After the heading's text changes (hashchange is a later task), so a screen reader reads the new screen.
+    // A folder's overlay focuses its own heading.
+    if (path.startsWith('#/f/')) return go(path);
     if (location.hash === path) h1?.focus();
     else addEventListener('hashchange', () => tick().then(() => h1?.focus()), { once: true });
     go(path);
@@ -112,7 +131,7 @@
     if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
     const t = e.target as HTMLElement;
     if (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
-    if (!library.hasKey || searching || top) return;
+    if (!library.hasKey || searching || top || inFolder) return;
     e.preventDefault(); // else the "/" lands in the field that just took focus
     openSearch();
   }
@@ -120,7 +139,7 @@
   const failed = $derived(Object.keys(library.errors) as FamilyId[]);
   const failedHere = $derived(failed.filter((id) => familiesOf(scope).includes(id)));
   // Every family of the screen failed and nothing is saved: an error card instead of a blank screen.
-  const errorCard = $derived(!fav && failedHere.length > 0 && library.status !== 'checking' && familiesOf(scope).every((id) => !library.families[id]));
+  const errorCard = $derived(!fav && !inFolder && failedHere.length > 0 && library.status !== 'checking' && familiesOf(scope).every((id) => !library.families[id]));
   // A grid whose families are fully loaded and hold no finished asset.
   const emptyGrid = $derived(
     grid &&
@@ -168,7 +187,7 @@
 
 <svelte:window {onkeydown} {onpopstate} />
 
-<h1 class="vt-sr" tabindex="-1" bind:this={h1}>{grid ? title : APP_NAME}</h1>
+<h1 class="vt-sr" tabindex="-1" bind:this={h1}>{grid ? title : inFolder ? (folder?.name ?? APP_NAME) : APP_NAME}</h1>
 
 {#snippet retryButton()}
   <div class="glass-empty__action">
@@ -184,7 +203,7 @@
   <!-- The viewer is a modal over the screen: what is under it stays mounted (the grid keeps its scroll) but inert.
        The search is a layer too: the screen under it is inert while it is open. -->
   <div inert={!!viewing}>
-  <div inert={searching}>
+  <div inert={searching || inFolder}>
   {#if library.status === 'blocked'}
     <main class="vt-state">
       <div class="glass-empty vt-scrim">
@@ -234,12 +253,17 @@
     <LibraryHome />
   {/if}
   </div>
+  {#if folder}
+    <FolderOverlay folderId={folder.id} reveal={viewing ? null : lastShown} onClose={leaveFolder} />
+  {/if}
 
-  {#if notice && !errorCard && !searching && library.status !== 'blocked'}
+  {#if notice && !errorCard && !searching && !inFolder && library.status !== 'blocked'}
     <Notice text={notice.text} actionLabel={notice.action} onAction={notice.on} tone={notice.tone} />
   {/if}
   {#if searching}
     <Search {screen} note={notice?.text ?? null} reveal={viewing ? null : lastShown} onClose={closeSearch} onGo={goFromSearch} bind:results />
+  {:else if inFolder}
+    <!-- No dock under a folder: its overlay has its own controls. -->
   {:else if grid}
     <Dock mode="category" {title} count={fav ? (org.ready ? favs.length : undefined) : library.count(scope)} onBack={() => go('#/')} onSearch={openSearch} onMore={() => (menu = true)} />
   {:else}
@@ -248,7 +272,7 @@
   <MoreMenu open={menu} onClose={() => (menu = false)} onActivity={() => (activity = true)} onSettings={() => (settings = true)} />
   </div>
   {#if viewing}
-    <Viewer {scope} assetKey={viewing} results={searching && results.length ? results : fav ? favs : null} />
+    <Viewer {scope} assetKey={viewing} results={searching && results.length ? results : fav ? favs : inFolder ? folderItems : null} />
   {/if}
 {/if}
 
