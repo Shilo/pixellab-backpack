@@ -24,20 +24,40 @@
     onClose();
   }
 
-  // Focus moves into the menu and returns to the dock button on close.
+  // ↑/↓/Home/End move between the items (as CardMenu).
+  function onkeydown(e: KeyboardEvent & { currentTarget: HTMLElement }) {
+    const items = [...e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+    const i = items.indexOf(document.activeElement as HTMLElement);
+    const n = items.length;
+    const next = { ArrowDown: (i + 1) % n, ArrowUp: i < 0 ? n - 1 : (i - 1 + n) % n, Home: 0, End: n - 1 }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    items[next].focus();
+  }
+
+  // Focus moves into the menu and returns to the dock button on close; Esc closes only this layer (capture phase keeps it from the rest).
   $effect(() => {
     if (!open) return;
     const back = document.activeElement as HTMLElement | null;
     first?.focus();
-    return () => back?.focus?.();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      onClose();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      back?.focus?.();
+    };
   });
 </script>
 
-<svelte:window onkeydown={(e) => open && e.key === 'Escape' && onClose()} />
-
 {#if open}
   <button type="button" class="backdrop" tabindex="-1" aria-label="Close menu" onclick={onClose}></button>
-  <div class="glass-popover is-open vt-scrim menu vt-grip" role="menu" aria-label="More">
+  <!-- svelte-ignore a11y_interactive_supports_focus (the items inside hold the focus) -->
+  <div class="glass-popover is-open vt-scrim menu vt-grip" role="menu" aria-label="More" {onkeydown}>
     <button type="button" role="menuitem" class="glass-list__item glass-list__item--interactive" aria-disabled={cooling} bind:this={first} onclick={refresh}>
       <span class="glass-list__content">
         <span class="glass-list__title">Refresh</span>

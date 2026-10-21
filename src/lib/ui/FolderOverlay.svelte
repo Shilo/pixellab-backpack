@@ -73,6 +73,17 @@
     dialog = { kind, folder };
   }
 
+  // ↑/↓/Home/End move between the items (as CardMenu).
+  function menuKeys(e: KeyboardEvent & { currentTarget: HTMLElement }) {
+    const items = [...e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+    const i = items.indexOf(document.activeElement as HTMLElement);
+    const n = items.length;
+    const next = { ArrowDown: (i + 1) % n, ArrowUp: i < 0 ? n - 1 : (i - 1 + n) % n, Home: 0, End: n - 1 }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    items[next].focus();
+  }
+
   // Esc: the menu first; the overlay only when nothing above it handled it (the viewer, a menu or a dialog).
   function onkeydown(e: KeyboardEvent) {
     if (e.key !== 'Escape' || e.defaultPrevented || e.isComposing) return;
@@ -101,7 +112,7 @@
         </button>
         {#if menu}
           <button type="button" class="backdrop" tabindex="-1" aria-label="Close menu" onclick={closeMenu}></button>
-          <div class="glass-popover is-open vt-scrim menu vt-grip" role="menu" aria-label="Folder actions">
+          <div class="glass-popover is-open vt-scrim menu vt-grip" role="menu" aria-label="Folder actions" onkeydown={menuKeys}>
             <button type="button" role="menuitem" class="glass-list__item glass-list__item--interactive" bind:this={first} onclick={() => pick('rename')}>
               <span class="glass-list__content"><span class="glass-list__title">Rename…</span></span>
               <span class="glass-list__trailing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 19.5l1-4L15.8 5.2a2 2 0 0 1 2.9 0l.1.1a2 2 0 0 1 0 2.9L8.5 18.5z" /><path d="M13.8 7.2l3 3" /></svg></span>

@@ -18,7 +18,7 @@
   // The viewer's "..." menu: a glass popover under the capsule (desktop) or bottom sheet (phone). No player = a still picture.
   // zoomIn / zoomOut: the next step each way, undefined at the limit (the button is disabled).
   let { open, onClose, opener, player, zoomLabel, zoomIn, zoomOut, onZoom, onZoomToggle, backdrop, onBackdrop, link, onAddToFolder }: {
-    open: boolean; onClose: () => void; opener?: HTMLElement; player: ReturnType<typeof createPlayer> | null;
+    open: boolean; onClose: () => void; opener: HTMLElement | undefined; player: ReturnType<typeof createPlayer> | null;
     zoomLabel: string; zoomIn?: number; zoomOut?: number; onZoom: (z: number) => void; onZoomToggle: () => void;
     backdrop: number; onBackdrop: (i: number) => void; link: string; onAddToFolder: () => void;
   } = $props();
@@ -34,10 +34,21 @@
     if (btn.disabled) readout?.focus();
   }
 
+  // ↑/↓/Home/End move between the menu's controls (as CardMenu).
+  function onkeydown(e: KeyboardEvent) {
+    const items = [...(panel?.querySelectorAll<HTMLElement>('button:not(:disabled), a, input') ?? [])];
+    const i = items.indexOf(document.activeElement as HTMLElement);
+    const n = items.length;
+    const next = { ArrowDown: (i + 1) % n, ArrowUp: i < 0 ? n - 1 : (i - 1 + n) % n, Home: 0, End: n - 1 }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    items[next].focus();
+  }
+
   // Focus moves in and returns to the opener on close; Esc closes only this layer (capture phase keeps it from the viewer).
   $effect(() => {
     if (!open) return;
-    const back = opener ?? (document.activeElement as HTMLElement | null); // Safari does not focus a clicked button
+    const back = opener; // passed in: Safari does not focus a clicked button
     panel?.querySelector<HTMLElement>('button:not(:disabled), a')?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
@@ -60,7 +71,8 @@
 
 {#if open}
   <button type="button" class="backdrop" tabindex="-1" aria-label="Close menu" onclick={onClose}></button>
-  <div class="glass-popover is-open vt-scrim menu vt-grip" role="dialog" aria-label="Viewer options" bind:this={panel}>
+  <!-- svelte-ignore a11y_interactive_supports_focus (the controls inside hold the focus) -->
+  <div class="glass-popover is-open vt-scrim menu vt-grip" role="dialog" aria-label="Viewer options" bind:this={panel} {onkeydown}>
     {#if player}
       <div class="row">
         <span class="title">Playback</span>

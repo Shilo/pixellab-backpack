@@ -18,6 +18,19 @@
     open = false;
   }
 
+  // The rose is a radio group: one tab stop (the selected direction); arrows move to the next enabled direction, which is selected too.
+  function roseKey(e: KeyboardEvent) {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    if (!step) return;
+    const radios = [...(e.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>('[role="radio"]:not(:disabled)')];
+    const i = radios.indexOf(document.activeElement as HTMLButtonElement);
+    if (i < 0) return;
+    e.preventDefault();
+    const to = radios[(i + step + radios.length) % radios.length];
+    to.click(); // onDir selects it
+    to.focus();
+  }
+
   // Focus moves into the popover and returns to the chip on close; Esc closes only this layer.
   $effect(() => {
     if (!open) return;
@@ -73,10 +86,11 @@
       <hr class="glass-divider" />
       <p class="head">Direction</p>
       <div class="pad">
-        <div class="rose" role="radiogroup" aria-label="Direction">
+        <!-- svelte-ignore a11y_interactive_supports_focus (the radios inside hold the focus) -->
+        <div class="rose" role="radiogroup" aria-label="Direction" onkeydown={roseKey}>
           {#each COMPASS as d, i (i)}
             {#if d}
-              <button type="button" class="dir" class:on={d === dir} role="radio" aria-checked={d === dir} aria-label={dirLabel(d)} disabled={!dirs.includes(d)} style="--r:{ANGLE[d]}deg" onclick={() => onDir(d)}>
+              <button type="button" class="dir" class:on={d === dir} role="radio" aria-checked={d === dir} aria-label={dirLabel(d)} tabindex={d === dir ? 0 : -1} disabled={!dirs.includes(d)} style="--r:{ANGLE[d]}deg" onclick={() => onDir(d)}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
               </button>
             {:else}
