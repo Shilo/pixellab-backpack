@@ -91,6 +91,8 @@
 
   // Closes at once (a following Esc belongs to the screen). Unfavoriting in Favorites removes the focused cell once the write
   // lands: focus then goes to the heading, not <body>.
+  // ponytail: a failed device write here and in toggle() says nothing (the heart and the box show what was saved); add an error
+  // line if writes ever fail in practice, as the viewer's ♡.
   function favorite() {
     const write = item && setFavorite(item, keys, !fav).catch(() => {});
     shut();
@@ -126,7 +128,7 @@
         <span class="nm">{name}</span>
       </div>
     {/if}
-    <div class="glass-popover is-open vt-scrim panel" class:at={rect} class:atf={view === 'folders'} style={at} bind:this={panel} bind:offsetWidth={pw} bind:offsetHeight={ph}>
+    <div class="glass-popover is-open vt-scrim panel vt-grip" class:at={rect} class:atf={view === 'folders'} style={at} bind:this={panel} bind:offsetWidth={pw} bind:offsetHeight={ph}>
       {#if view === 'menu'}
         <div class="glass-list glass-list--bare" role="menu">
           <a class="glass-list__item glass-list__item--interactive" role="menuitem" data-nav {href} onclick={shut}>
@@ -153,12 +155,12 @@
             <span class="glass-list__content"><span class="glass-list__title">New folder</span></span>
           </button>
           {#each org.folders as f (f.id)}
-            {@const shown = library.pick(f.items).items}<!-- as the overlay: gone items left out, one per character group (R3, R7) -->
+            {@const rows = library.pick(f.items).items}<!-- as the overlay: gone items left out, one per character group (R3, R7) -->
             <label class="glass-list__item glass-list__item--interactive">
               <span class="glass-list__leading glass-list__leading--lg th" aria-hidden="true">
-                {#if shown[0]}<i>{@render art(shown[0], true)}</i>{:else}<svg viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" /></svg>{/if}
+                {#if rows[0]}<i>{@render art(rows[0], true)}</i>{:else}<svg viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" /></svg>{/if}
               </span>
-              <span class="glass-list__content"><span class="glass-list__title">{f.name}</span><span class="glass-list__subtitle">{assets(shown.length)}</span></span>
+              <span class="glass-list__content"><span class="glass-list__title">{f.name}</span><span class="glass-list__subtitle">{assets(rows.length)}</span></span>
               <span class="glass-list__trailing glass-checkbox cb">
                 <input class="glass-checkbox__input" type="checkbox" data-nav checked={isIn(f.items, keys)} onchange={(e) => toggle(f.id, e.currentTarget)} />
                 <span class="glass-checkbox__box"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg></span>
@@ -220,7 +222,6 @@
     .panel, .panel.at, .panel.atf { left: 8px; right: 8px; top: auto; bottom: var(--vt-bot, 12px); width: auto; padding: 18px 0 8px; border-radius: 30px;
       --gl-list-item-min-height: 50px; }
     .panel.atf { padding-top: 14px; --gl-list-item-min-height: 56px; }
-    .panel::before { content: ''; position: absolute; top: 7px; left: 50%; width: 36px; height: 5px; margin-left: -18px; border-radius: 3px; background: var(--gl-border-strong); }
     .glass-list__subtitle { font-size: 13px; }
     .ph { padding: 8px 12px 8px 22px; --gl-btn-height-sm: 44px; }
     .fl, .panel:not(.at) .fl { max-height: min(380px, calc(100dvh - 180px)); }

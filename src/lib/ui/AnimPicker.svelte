@@ -43,7 +43,7 @@
 
 {#if open}
   <button type="button" class="backdrop" tabindex="-1" aria-label="Close menu" onclick={close}></button>
-  <div class="glass-popover is-open vt-scrim pick" role="dialog" aria-label="Animation, state and direction" bind:this={panel}>
+  <div class="glass-popover is-open vt-scrim pick vt-grip" role="dialog" aria-label="Animation, state and direction" bind:this={panel}>
     <p class="head">Animation</p>
     <ul class="glass-list glass-list--bare">
       {#each [-1, ...anims.keys()] as i (i)}
@@ -117,7 +117,6 @@
   @media (max-width: 600px) {
     .backdrop { background: rgba(8, 10, 16, .45); }
     .pick { left: 8px; right: 8px; bottom: var(--vt-bot, 12px); width: auto; padding: 18px 0 14px; border-radius: 30px; --gl-list-item-min-height: 50px; }
-    .pick::before { content: ''; position: absolute; top: 7px; left: 50%; width: 36px; height: 5px; margin-left: -18px; border-radius: 3px; background: var(--gl-border-strong); }
     .glass-list__subtitle { font-size: 13px; }
     .rose { grid-template-columns: repeat(3, 52px); grid-auto-rows: 52px; gap: 10px; }
     .dir { width: 52px; height: 52px; }

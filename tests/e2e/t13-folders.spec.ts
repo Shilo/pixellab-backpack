@@ -97,6 +97,7 @@ test('Rename… updates the tile; Delete folder… asks first, and deleting goes
   await ren.getByRole('textbox', { name: 'Folder name' }).fill('Hero party');
   await ren.getByRole('button', { name: 'Save' }).click();
   await expect(ren).toBeHidden();
+  await expect(said(page, 'Renamed to Hero party.')).toBeAttached(); // R10's one live region
   const ov = overlay(page, 'Hero party');
   await expect(ov.getByRole('heading', { name: 'Hero party' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Folder actions' })).toBeFocused();
@@ -115,7 +116,8 @@ test('Rename… updates the tile; Delete folder… asks first, and deleting goes
   await page.getByRole('button', { name: 'Folder actions' }).click();
   await page.getByRole('menuitem', { name: 'Delete folder…' }).click();
   const del = page.getByRole('alertdialog', { name: 'Delete "Hero party"?' });
-  await expect(del).toContainText('The 0 assets in it stay in your library. Only the folder goes away.');
+  await expect(del).toContainText('Only the folder goes away.');
+  await expect(del).not.toContainText('0 assets'); // an empty folder: no "The 0 assets…" (challenge C4)
   await del.getByRole('button', { name: 'Cancel' }).click();
   await expect(del).toBeHidden();
   await expect(ov).toBeVisible();

@@ -60,7 +60,7 @@
 
 {#if open}
   <button type="button" class="backdrop" tabindex="-1" aria-label="Close menu" onclick={onClose}></button>
-  <div class="glass-popover is-open vt-scrim menu" role="dialog" aria-label="Viewer options" bind:this={panel}>
+  <div class="glass-popover is-open vt-scrim menu vt-grip" role="dialog" aria-label="Viewer options" bind:this={panel}>
     {#if player}
       <div class="row">
         <span class="title">Playback</span>
@@ -148,7 +148,6 @@
   @media (max-width: 600px) {
     .backdrop { background: rgba(8, 10, 16, .45); }
     .menu { left: 8px; right: 8px; top: auto; bottom: var(--vt-bot, 12px); width: auto; padding: 18px 20px 8px; border-radius: 30px; }
-    .menu::before { content: ''; position: absolute; top: 7px; left: 50%; width: 36px; height: 5px; margin-left: -18px; border-radius: 3px; background: var(--gl-border-strong); }
     .swatch { width: 60px; font-size: 12.5px; }
     .swatch i { width: 34px; height: 34px; }
   }

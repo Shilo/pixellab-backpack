@@ -118,7 +118,7 @@ describe('folders', () => {
     const zeta = await m.createFolder('  Zeta ');
     expect(zeta).toMatch(/^[0-9a-f]{12}$/);
     const alpha = await m.createFolder('alpha');
-    const beta = await m.createFolder('Beta', { it: item(K1), keys: [K1] });
+    const beta = await m.createFolder('Beta', item(K1));
     expect(m.org.said).toBe('Added to Beta.');
     expect(m.org.folders.map((f) => f.name)).toEqual(['alpha', 'Beta', 'Zeta']); // A–Z, ignoring case
     expect(m.org.folders.find((f) => f.id === beta)!.items).toEqual([K1]);
@@ -174,8 +174,8 @@ describe('device', () => {
     const b = await tab();
     await a.load();
     await b.load();
-    const work = await a.createFolder('Work', { it: item(K1), keys: [K1] });
-    expect(await b.createFolder('work', { it: item(K2), keys: [K2] })).toBe(''); // b's memory never saw "Work"
+    const work = await a.createFolder('Work', item(K1));
+    expect(await b.createFolder('work', item(K2))).toBe(''); // b's memory never saw "Work"
     const other = await b.createFolder('Other');
     await a.renameFolder(work, 'OTHER'); // a's memory never saw "Other"
     expect(stored().folders).toEqual([
@@ -220,7 +220,7 @@ describe('device', () => {
     expect(m.org).toMatchObject({ favorites: [], folders: [], cards: {}, ready: false });
     h.db.clear(); // Forget's wipe
     await m.setFavorite(item(K2), [K2], true);
-    expect(await m.createFolder('A', { it: item(K2), keys: [K2] })).toBe('');
+    expect(await m.createFolder('A', item(K2))).toBe('');
     expect(h.db.has('org')).toBe(false);
   });
 
@@ -237,5 +237,47 @@ describe('device', () => {
     expect(h.writes).toBe(n + 1);
     expect(m.org.said).toBe('Added to Favorites.'); // not an announcement
     expect((stored().cards[K1] as { card: Card }).card.thumb).toBe('https://x/1.png');
+  });
+});
+
+describe('challenge fixes', () => {
+  it('C1: a saved record of another version is never rewritten by a write', async () => {
+    const future = { v: 2, everything: ['kept'] };
+    h.db.set('org', future);
+    const m = await tab();
+    await m.load();
+    await m.setFavorite(item(K1), [K1], true);
+    expect(await m.createFolder('A')).toBe('');
+    expect(h.db.get('org')).toEqual(future);
+  });
+
+  it('C6: a folder without its unused `at` is kept (at 0), not dropped', () => {
+    return tab().then((m) => {
+      const r = m.check({ v: 1, favorites: [], folders: [{ id: F1, name: 'Alpha', items: [K1] }], cards: { [K1]: snap(K1) } });
+      expect(r.folders).toEqual([{ id: F1, name: 'Alpha', at: 0, items: [K1] }]);
+    });
+  });
+
+  it('a rename announces "Renamed to {name}." (repeat-safe), and nothing when refused', async () => {
+    const m = await tab();
+    await m.load();
+    const a = await m.createFolder('Alpha');
+    await m.createFolder('Beta');
+    await m.renameFolder(a, ' Gamma ');
+    expect(m.org.said).toBe('Renamed to Gamma.');
+    await m.renameFolder(a, 'Delta');
+    await m.renameFolder(a, 'Gamma');
+    expect(m.org.said).toBe('Renamed to Gamma.');
+    await m.renameFolder(a, 'beta'); // refused: taken
+    expect(m.org.said).toBe('Renamed to Gamma.');
+  });
+
+  it('C3: say() repeats are read again (alternating no-break space)', async () => {
+    const m = await tab();
+    m.say("Couldn't save. Try again.");
+    m.say("Couldn't save. Try again.");
+    expect(m.org.said).toBe("Couldn't save. Try again. ");
+    m.say("Couldn't save. Try again.");
+    expect(m.org.said).toBe("Couldn't save. Try again.");
   });
 });

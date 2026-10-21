@@ -135,3 +135,50 @@ test('a 401 keeps favorites and folders on the device; reconnecting the same key
   await expect(page.getByRole('link', { name: 'Hero party, 1' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Favorites, 1' })).toBeVisible();
 });
+
+test('C10: a category dock keeps Select while its first check runs; only empty Favorites drops it', async ({ page }) => {
+  const mock = await mockPixelLab(page);
+  let release!: () => void;
+  const held = new Promise<void>((r) => (release = r));
+  await page.route('https://api.pixellab.ai/v2/ui-assets?**', async (route) => {
+    await held; // the UI family's first page answers only when released: its count is 0 until then
+    await route.fallback();
+  });
+  await page.goto('/');
+  await connect(page);
+  await page.goto('/#/c/ui');
+  await expect(page.locator('.crumb')).toContainText('UI');
+  await expect(page.getByRole('button', { name: 'Select, coming soon' })).toBeVisible();
+  release();
+  await expect(page.locator('.crumb')).toHaveText('UI6');
+  await expect(page.getByRole('button', { name: 'Select, coming soon' })).toBeVisible();
+  await page.getByRole('button', { name: 'Library' }).click();
+  await settle(page, mock, 600);
+  await page.getByRole('link', { name: 'Favorites, 0' }).click();
+  await expect(page.getByText('No favorites yet.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Select, coming soon' })).toHaveCount(0);
+});
+
+test('C4: deleting an empty folder (or one with only gone items) never says "The 0 assets…"', async ({ page }) => {
+  await start(page);
+  await seedOrg(page, { favorites: [], folders: [{ name: 'Empty shelf', items: [] }, { name: 'Lost', items: ['gone'] }] });
+  await page.reload();
+  for (const name of ['Empty shelf', 'Lost']) {
+    await page.getByRole('link', { name: new RegExp(`^${name}, 0$`) }).click();
+    await page.getByRole('button', { name: 'Folder actions' }).click();
+    await page.getByRole('menuitem', { name: 'Delete folder…' }).click();
+    const confirm = page.getByRole('alertdialog', { name: `Delete "${name}"?` });
+    await expect(confirm.locator('.glass-modal__body p')).toHaveText('Only the folder goes away.');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Close folder' }).click();
+  }
+});
+
+test('a library of one asset: the search reads "Show all 1 asset", not "1 assets"', async ({ page }) => {
+  const mock = await mockPixelLab(page, { a: { characters: 1, objects: 0, ui: 0, tilesets: 0, 'tilesets-side': 0, isometric: 0, 'tiles-pro': 0 } });
+  await page.goto('/');
+  await connect(page);
+  await settle(page, mock, 600);
+  await page.locator('[data-search]').click();
+  await expect(page.getByRole('link', { name: 'Show all 1 asset', exact: true })).toBeVisible();
+});

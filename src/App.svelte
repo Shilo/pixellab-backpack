@@ -307,7 +307,7 @@
   {/if}
   </div>
   {#if folder}
-    <FolderOverlay folderId={folder.id} reveal={viewing ? null : lastShown} onClose={leaveFolder} />
+    <FolderOverlay {folder} reveal={viewing ? null : lastShown} onClose={leaveFolder} />
   {/if}
 
   {#if notice && !errorCard && !searching && !inFolder && library.status !== 'blocked'}
@@ -318,7 +318,7 @@
   {:else if inFolder}
     <!-- No dock under a folder: its overlay has its own controls. -->
   {:else if grid}
-    <Dock mode="category" {title} count={fav ? (org.ready ? favs.length : undefined) : library.count(scope)} onBack={() => go('#/')} onSearch={openSearch} onMore={() => (menu = true)} />
+    <Dock mode="category" {title} count={fav ? (org.ready ? favs.length : undefined) : library.count(scope)} select={!fav || favs.length > 0} onBack={() => go('#/')} onSearch={openSearch} onMore={() => (menu = true)} />
   {:else}
     <Dock mode="home" onSearch={openSearch} onMore={() => (menu = true)} />
   {/if}

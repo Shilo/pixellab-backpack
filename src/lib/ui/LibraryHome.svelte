@@ -46,7 +46,8 @@
     {#if org.ready}
       <h2 class="sec">Favorites and folders</h2>
       <CategoryTile href="#/fav" label="Favorites" count={favs.length} cards={favs.slice(0, 4)} glow />
-      <!-- Folders A–Z (org keeps them sorted); counts and mosaics leave gone items out (R3). -->
+      <!-- Folders A–Z (org keeps them sorted); counts and mosaics leave gone items out (R3).
+           ponytail: every folder gets a tile (R8, no cap); add a filter or a "Show all" if people make hundreds. -->
       {#each org.folders as f (f.id)}
         {@const p = library.pick(f.items).items}
         <CategoryTile href="#/f/{f.id}" label={f.name} count={p.length} cards={p.slice(0, 4)} glow />

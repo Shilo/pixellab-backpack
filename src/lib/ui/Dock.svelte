@@ -1,16 +1,17 @@
 <script lang="ts">
   // The floating glass dock. Search opens the search (onSearch); its controls carry data-search so focus can return to them.
-  // Select stays visible but inert (a real button, aria-disabled, "Coming soon" for screen readers, no handler), and is left out
-  // when the screen holds nothing (count 0).
+  // Select stays visible but inert (a real button, aria-disabled, "Coming soon" for screen readers, no handler); `select` false
+  // leaves it out (empty Favorites: nothing to select, mockup g2-favorites-empty).
   // "…" calls onMore when given (B14), else it is inert too.
   let {
     mode,
     title,
     count,
+    select = true,
     onBack,
     onSearch,
     onMore,
-  }: { mode: 'home' | 'category'; title?: string; count?: number; onBack?: () => void; onSearch: () => void; onMore?: () => void } = $props();
+  }: { mode: 'home' | 'category'; title?: string; count?: number; select?: boolean; onBack?: () => void; onSearch: () => void; onMore?: () => void } = $props();
 </script>
 
 {#snippet soon(name: string)}<span class="vt-sr">{name}, coming soon</span>{/snippet}
@@ -37,7 +38,7 @@
       <button type="button" class="glass-tab-bar__item vt-icon" data-search aria-label="Search" onclick={onSearch}>
         <span class="glass-tab-bar__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></svg></span>
       </button>
-      {#if count !== 0}<!-- nothing to select: no Select (mockup g2-favorites-empty) -->
+      {#if select}
         <button type="button" class="glass-tab-bar__item" aria-disabled="true">
           <span class="glass-tab-bar__label" aria-hidden="true">Select</span>
           {@render soon('Select')}

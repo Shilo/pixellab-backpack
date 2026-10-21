@@ -741,6 +741,16 @@ describe('favorites and folders', () => {
     expect([org.favorites, org.ready]).toEqual([[], true]);
   });
 
+  it('C2: an account switch while an open check is already running still leaves org loaded (never stranded disabled)', async () => {
+    const { lib, org } = await setup();
+    later(HOUR + 1); // the next open check asks again, so it is still running when the other key connects
+    const running = lib.openCheck();
+    fill('b');
+    expect(await lib.connect('other-key')).toBe('ok');
+    await running;
+    expect([org.favorites, org.ready]).toEqual([[], true]);
+  });
+
   it("a resolved costly link is written to the key's snapshot", async () => {
     const { lib } = await setup();
     const { setFavorite } = await orgOf();

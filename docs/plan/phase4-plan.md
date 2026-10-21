@@ -112,7 +112,7 @@ export function clear(): void;           // memory only, disables writes (wipe()
 export const isIn: (list: string[], keys: string[]) => boolean;   // any of the group's keys (R7)
 export function setFavorite(it: Item, keys: string[], on: boolean): Promise<void>;
 export function setInFolder(id: string, it: Item, keys: string[], on: boolean): Promise<void>;
-export function createFolder(name: string, add?: { it: Item; keys: string[] }): Promise<string>;   // the new id
+export function createFolder(name: string, add?: Item): Promise<string>;   // the new id
 export function renameFolder(id: string, name: string): Promise<void>;
 export function deleteFolder(id: string): Promise<void>;
 export function removeKeys(id: string, keys: string[]): Promise<void>;   // "Remove them" (R3)
@@ -390,6 +390,7 @@ In Group E, Task 8 owns App's root `CardMenu` and listeners; Task 9 owns only Ap
 - **Shift+F10 in automation:** Chromium may not turn a synthetic Shift+F10 into `contextmenu`; the explicit `keydown` handler covers it.
 - **Snapshot staleness (R2, R3):** a renamed or deleted deep asset can show its old snapshot until its family is saved again or scrolled to the end.
 - **Large folders (R8):** no virtual rows in the overlay; fine for tens or a few hundred items.
+- **Stale tab after an account switch (R4, challenge C7):** when another tab connects a different account (a kept key replaced, or two tab-only tabs), a tab still showing account 1 keeps its favorites and folders in memory until it is shown again (its visibility re-read then loads the wiped record). If the user favorites or files something in that visibly stale tab first, a fresh account-1 snapshot is saved into account 2's store. It needs a user action in a stale tab; the owner accepts it. The fix would be signing such tabs out on `key-changed`, which changes Phase 2's kept-tab behaviour.
 
 ## To-do list
 

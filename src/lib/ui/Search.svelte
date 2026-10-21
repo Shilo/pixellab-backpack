@@ -231,7 +231,7 @@
           <hr class="glass-divider" />
           <div class="glass-list glass-list--bare showall">
             <a class="glass-list__item glass-list__item--interactive" href="#/all" onclick={(e) => go(e, '#/all')}>
-              <span class="glass-list__content"><span class="glass-list__title">Show all {library.count('all').toLocaleString()} assets</span></span>
+              <span class="glass-list__content"><span class="glass-list__title">Show all {library.count('all').toLocaleString()} asset{library.count('all') === 1 ? '' : 's'}</span></span>
               <span class="glass-list__trailing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg></span>
             </a>
           </div>

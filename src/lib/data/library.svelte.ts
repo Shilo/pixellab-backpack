@@ -109,7 +109,9 @@ class Library {
   /** Done cards of every family by key. */
   private live = $derived(new Map(familiesOf('all').flatMap((familyId) => this.done(familyId).map((card) => [card.key, { card, familyId }] as const))));
 
-  /** The key's snapshot while its family is not fully saved (R3: in a fully saved family a missing card is gone). */
+  /** The key's snapshot while its family is not fully saved (R3: in a fully saved family a missing card is gone).
+   * ponytail: a deleted asset shows until its family is scrolled to the end, and gone favorites keep a few bytes each; a full
+   * Sync's orphan check would catch them sooner. */
   private snapped = (key: string): Item | null => {
     const snap = org.cards[key];
     const s = snap && this.families[snap.familyId];
@@ -183,6 +185,7 @@ class Library {
       // Another account's saved copy: wipe it with its favorites and folders (R4), then the check below runs for every family.
       clearOrg();
       await wipe().catch(() => {});
+      await loadOrg(); // the empty record, now: an open check already running has loaded org before the clear
       this.families = {} as Record<FamilyId, FamilyState | undefined>;
       this.errors = {};
     }

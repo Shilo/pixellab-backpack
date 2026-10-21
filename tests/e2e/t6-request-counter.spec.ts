@@ -712,8 +712,13 @@ test('organize: a page-2 favorite after the deep pages expired shows in Favorite
   expect(sent.map((h) => new URL(h.url).searchParams.get('offset'))).toEqual(Array(7).fill('0'));
 });
 
-test('organize: a tileset favorited before its picture resolved asks at most 1 costly request in Favorites, and 0 after a reload', async ({ page }) => {
-  const mock = await openFirst(page);
+test('organize: a deep tileset favorited before its picture resolved asks exactly 1 costly request; after its rows expired, its snapshot asks 0', async ({ page }) => {
+  // 60 side tilesets: "Side tileset 56" is on page 2 (page size 50), so after its deep rows expire only the snapshot draws it,
+  // and the snapshot's saved link (org.setThumb, R2) is what keeps the second visit at 0.
+  const mock = await mockPixelLab(page, { a: { 'tilesets-side': 60 } });
+  await page.goto('/');
+  await connect(page);
+  await settle(page, mock);
   // Hold the side tileset helpers' answers: the picture is asked, not yet resolved, when it is favorited.
   const HELPERS = 'https://api.pixellab.ai/mcp/sidescroller-tilesets/**';
   let release = () => {};
@@ -722,29 +727,32 @@ test('organize: a tileset favorited before its picture resolved asks at most 1 c
     await held;
     await route.fallback().catch(() => {});
   });
+  await page.getByRole('link', { name: GRIDS[2] }).click();
+  const deep = () => mock.hits.some((h) => h.url.includes('/v2/tilesets-sidescroller?') && h.url.endsWith('offset=49'));
+  await expect.poll(async () => (await page.locator('main.grid').evaluate((el) => el.scrollTo(0, el.scrollHeight)), deep()), { timeout: 15_000 }).toBe(true);
+  await page.getByRole('button', { name: 'Library' }).click();
   await openSearch(page);
-  await field(page).fill('side tileset 3');
-  await expect(results(page)).toHaveText(['Side tileset 3']);
+  await field(page).fill('side tileset 56');
+  await expect(results(page)).toHaveText(['Side tileset 56']);
+  await page.waitForTimeout(500); // the result's costly picture is asked (0.3 s) and held
   await favorite(page, results(page).first());
   await page.keyboard.press('Escape');
   await expect(field(page)).toHaveCount(0);
   release();
   await settle(page, mock);
   await page.unroute(HELPERS);
-  const asks = (hits: Hit[]) => api(hits).filter((h) => h.url.includes('a-tilesets-side-2'));
+  const asks = (hits: Hit[]) => api(hits).filter((h) => h.url.includes('a-tilesets-side-55'));
+  expect(asks(mock.hits)).toHaveLength(1);
 
-  let at = mock.hits.length;
-  await page.getByRole('link', { name: 'Favorites, 1' }).click();
-  await expect(page.locator('main.grid a.cell .art canvas')).toHaveCount(1);
-  await settle(page, mock);
-  expect(asks(mock.hits.slice(at)).length).toBeLessThanOrEqual(1);
-  expect(api(mock.hits.slice(at))).toEqual(asks(mock.hits.slice(at)));
-
-  at = mock.hits.length;
+  await ageSaved(page, 'tilesets-side', { checkedMs: 2 * HOUR, deepMs: 8 * 24 * HOUR });
+  const at = mock.hits.length;
+  await page.goto('/#/fav');
   await page.reload();
+  await expect(page.locator('main.grid a.cell')).toHaveCount(1);
   await expect(page.locator('main.grid a.cell .art canvas')).toHaveCount(1);
   await settle(page, mock);
-  expect(api(mock.hits.slice(at))).toEqual([]);
+  expect(mock.hits.slice(at).some((h) => h.url.endsWith('offset=49'))).toBe(false); // the snapshot, never a list page
+  expect(asks(mock.hits.slice(at))).toEqual([]);
 });
 
 test('organize: → through a viewer opened from Favorites never sends a list request, even at the last item', async ({ page }) => {

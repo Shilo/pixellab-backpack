@@ -68,7 +68,7 @@
 
 <dialog
   bind:this={sheet}
-  class="sheet vt-scrim"
+  class="sheet vt-scrim vt-grip"
   aria-labelledby="st-title"
   onclose={onClose}
   onclick={backdrop}
@@ -187,6 +187,5 @@
   @media (max-width: 600px) {
     .sheet { inset: auto 8px var(--vt-bot, 12px) 8px; width: auto; max-width: none; max-height: 90vh; margin: 0; padding: 26px 0 14px; border-radius: 30px; }
     .scroll { padding: 0 14px; }
-    .sheet::before { content: ''; position: absolute; top: 7px; left: 50%; width: 36px; height: 5px; margin-left: -18px; border-radius: 3px; background: var(--gl-border-strong); }
   }
 </style>

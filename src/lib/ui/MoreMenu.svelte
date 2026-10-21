@@ -37,7 +37,7 @@
 
 {#if open}
   <button type="button" class="backdrop" tabindex="-1" aria-label="Close menu" onclick={onClose}></button>
-  <div class="glass-popover is-open vt-scrim menu" role="menu" aria-label="More">
+  <div class="glass-popover is-open vt-scrim menu vt-grip" role="menu" aria-label="More">
     <button type="button" role="menuitem" class="glass-list__item glass-list__item--interactive" aria-disabled={cooling} bind:this={first} onclick={refresh}>
       <span class="glass-list__content">
         <span class="glass-list__title">Refresh</span>
@@ -74,7 +74,6 @@
   @media (max-width: 600px) {
     .backdrop { background: rgba(8, 10, 16, .45); }
     .menu { left: 8px; right: 8px; bottom: var(--vt-bot, 12px); width: auto; padding: 18px 0 8px; border-radius: 30px; --gl-list-item-min-height: 50px; }
-    .menu::before { content: ''; position: absolute; top: 7px; left: 50%; width: 36px; height: 5px; margin-left: -18px; border-radius: 3px; background: var(--gl-border-strong); }
     .glass-list__subtitle { font-size: 13px; }
   }
 </style>

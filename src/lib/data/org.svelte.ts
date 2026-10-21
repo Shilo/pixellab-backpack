@@ -55,9 +55,10 @@ export function check(o: unknown): Rec {
   const keys = (l: unknown) => (Array.isArray(l) ? [...new Set(l)].filter((k): k is string => typeof k === 'string' && Object.hasOwn(r.cards, k)) : []);
   r.favorites = keys(o.favorites);
   for (const f of Array.isArray(o.folders) ? o.folders : []) {
-    if (!isObj(f) || typeof f.id !== 'string' || !KEY.test(f.id) || typeof f.name !== 'string' || typeof f.at !== 'number' || !Array.isArray(f.items)) continue;
+    if (!isObj(f) || typeof f.id !== 'string' || !KEY.test(f.id) || typeof f.name !== 'string' || !Array.isArray(f.items)) continue;
     const name = f.name.trim();
-    if (fits(name) && !r.folders.some((g) => g.id === f.id || same(g.name, name))) r.folders.push({ id: f.id, name, at: f.at, items: keys(f.items) });
+    const at = typeof f.at === 'number' ? f.at : 0; // written, never read: a missing one never costs the folder
+    if (fits(name) && !r.folders.some((g) => g.id === f.id || same(g.name, name))) r.folders.push({ id: f.id, name, at, items: keys(f.items) });
   }
   return tidy(r);
 }
@@ -68,21 +69,27 @@ function show(r: Rec): void {
   org.cards = r.cards;
 }
 
+/** The one live region's text (R10). A repeat alternates a trailing no-break space, so the text changes and is read again. */
+export function say(text: string): void {
+  org.said = text === org.said ? text + '\u00a0' : text;
+}
+
 /** One write in one transaction, applied to the SAVED record (not this tab's memory), so another tab's change survives.
- * `apply` changes the record and returns the live-region text, or nothing to leave `said` alone. */
+ * `apply` changes the record and returns the live-region text, or nothing to leave `said` alone. A saved record of another
+ * version (a newer release in another tab) is left untouched: this tab refuses the write rather than replace it. */
 async function change(apply: (r: Rec) => string | void): Promise<void> {
   if (!enabled) return;
-  let next = empty();
+  let next: Rec | undefined;
   let said = undefined as string | void;
   await updateOrg((o) => {
+    if (isObj(o) && o.v !== 1) return o;
     next = check(o);
     said = apply(next);
     return tidy(next);
   });
-  if (!enabled) return; // cleared while writing
+  if (!enabled || !next) return; // cleared while writing, or refused
   show(next);
-  // A repeat alternates a trailing no-break space, so the live region's text changes and is read again (R10).
-  if (said) org.said = said === org.said ? said + '\u00a0' : said;
+  if (said) say(said);
 }
 
 /** Puts the card's key first (once) and keeps its snapshot (R2). */
@@ -139,7 +146,7 @@ export const setInFolder = (id: string, it: Item, keys: string[], on: boolean): 
   });
 
 /** The new folder's id, or '' when refused (bad or taken name, or not enabled). */
-export async function createFolder(name: string, add?: { it: Item; keys: string[] }): Promise<string> {
+export async function createFolder(name: string, add?: Item): Promise<string> {
   if (!enabled || nameError(name)) return '';
   const id = Array.from(crypto.getRandomValues(new Uint8Array(6)), (b) => b.toString(16).padStart(2, '0')).join(''); // 48 bits, no clash retry (R5)
   const f: Folder = { id, name: name.trim(), at: Date.now(), items: [] };
@@ -147,7 +154,7 @@ export async function createFolder(name: string, add?: { it: Item; keys: string[
   // Checked again against the saved record: another tab may have made this name since (load would drop the second folder).
   await change((r) => {
     if (clash(r.folders, f.name)) return;
-    if (add) f.items = put([], add.it, r);
+    if (add) f.items = put([], add, r);
     r.folders.push(f);
     made = true;
     return add && `Added to ${f.name}.`;
@@ -159,7 +166,9 @@ export async function renameFolder(id: string, name: string): Promise<void> {
   if (nameError(name, id)) return;
   await change((r) => {
     const f = folder(r, id);
-    if (f && !clash(r.folders, name.trim(), id)) f.name = name.trim(); // checked again against the saved record
+    if (!f || clash(r.folders, name.trim(), id)) return; // checked again against the saved record
+    f.name = name.trim();
+    return `Renamed to ${f.name}.`;
   });
 }
 

@@ -44,8 +44,7 @@
         if (nameError(name, mode.folder.id)) return; // another tab took the name meanwhile: the error shows and the dialog stays
         onDone();
       } else {
-        const add = mode.add && { it: mode.add, keys: library.states(mode.add.card, mode.add.familyId).map((c) => c.key) };
-        const id = await createFolder(name, add);
+        const id = await createFolder(name, mode.add);
         if (!id) return; // refused (the name was taken meanwhile): the error shows and the dialog stays
         onDone(id);
       }
@@ -85,7 +84,8 @@
       </div>
       <div class="glass-modal__body">
         {#if mode.kind === 'delete'}
-          <p id="{uid}-body">{n === 1 ? 'The asset in it stays in your library.' : `The ${n} assets in it stay in your library.`} Only the folder goes away.</p>
+          <!-- Empty (or only gone items): no "The 0 assets…" (R12 copy ruling). -->
+          <p id="{uid}-body">{n === 0 ? '' : n === 1 ? 'The asset in it stays in your library. ' : `The ${n} assets in it stay in your library. `}Only the folder goes away.</p>
         {:else}
           <input
             bind:this={field}
