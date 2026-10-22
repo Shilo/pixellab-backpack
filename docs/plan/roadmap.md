@@ -20,7 +20,7 @@ See the [Phase 4 build log](phase4-build-log.md#project-review-2026-10-21).
 
 ## What the owner needs to do
 
-- [ ] **Rotate the PixelLab API key** that was used in chat during testing (on your pixellab.ai account page). If AI agents still need a key, put the new one only in the git-ignored `.env` as `PIXELLAB_TOKEN_AGENT_DEV` (P-18; [AGENTS.md](../../AGENTS.md)).
+- [ ] **Rotate the PixelLab API key** that was used in chat during testing (on your pixellab.ai account page). If AI agents still need a key, put the new one only in the git-ignored `.env` as `PIXELLAB_API_KEY_AGENT_DEV` (P-18; [AGENTS.md](../../AGENTS.md)).
 - [ ] **Real-phone checks** on an iPhone and an Android phone:
   - the search field, ✕, Cancel and the first panel row stay visible with the keyboard open (Phase 3);
   - a long press opens the card menu with no system link preview, and a short tap opens the viewer (Phase 4);

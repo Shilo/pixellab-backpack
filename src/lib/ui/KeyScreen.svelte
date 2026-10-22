@@ -72,7 +72,20 @@
   );
 </script>
 
-{#if full}
+{#if library.restoreError}
+  <main class="g1-state">
+    <div class="glass-empty g1-empty vt-scrim">
+      <h2 class="glass-empty__title">Couldn't verify your saved connection.</h2>
+      <p class="glass-empty__text">Your saved key is still on this device. Check your connection and try again.</p>
+      <div class="glass-empty__action">
+        <button type="button" class="glass-btn glass-btn--primary glass-btn--auto" disabled={library.restoring}
+          onclick={() => { library.recover(); void library.start(); }}>
+          {library.restoring ? 'Checking…' : 'Try again'}
+        </button>
+      </div>
+    </div>
+  </main>
+{:else if full}
   <main class="g1-state">
     <div class="glass-empty g1-empty vt-scrim">
       <span class="glass-empty__icon">

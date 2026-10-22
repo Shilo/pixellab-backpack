@@ -28,6 +28,10 @@ export async function loadFamilies(ids: FamilyId[]): Promise<Partial<Record<Fami
   return Object.fromEntries(ids.flatMap((id, i) => (isFamily(states[i]) ? [[id, states[i]]] : [])));
 }
 
+/** Non-secret digest of the verified key that owns this cache; never the credential itself. */
+export const loadKeyFingerprint = () => get<string>('meta:key-fingerprint', store());
+export const saveKeyFingerprint = (fingerprint: string) => set('meta:key-fingerprint', fingerprint, store());
+
 export const saveFamily = (id: FamilyId, state: FamilyState) => set('family:' + id, state, store());
 /** A saved detail, or undefined when missing or not the expected shape (it is asked again). */
 export async function loadDetail(key: string): Promise<SavedDetail | undefined> {

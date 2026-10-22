@@ -91,6 +91,8 @@ vi.mock('../../src/lib/api/http', () => ({
 // The real record checks (isObj, isCard) with fake storage.
 vi.mock('../../src/lib/data/store', async (actual) => ({
   ...(await actual<typeof import('../../src/lib/data/store')>()),
+  loadKeyFingerprint: async () => h.st.db.get('meta:key-fingerprint'),
+  saveKeyFingerprint: async (value: string) => void h.st.db.set('meta:key-fingerprint', value),
   loadOrg: async () => structuredClone(h.st.db.get('org')),
   updateOrg: async (fn: (old: unknown) => unknown) => void h.st.db.set('org', structuredClone(fn(structuredClone(h.st.db.get('org'))))),
   loadFamilies: async () => structuredClone(Object.fromEntries(h.st.db)),
@@ -151,7 +153,7 @@ describe('open check', () => {
       ].sort(),
     );
     expect(h.apiGet.mock.calls[0][1]).toMatchObject({ label: 'Characters · first page' });
-    expect(h.st.db.size).toBe(7);
+    expect([...h.st.db.keys()].filter((k) => k !== 'meta:key-fingerprint')).toHaveLength(7);
     expect(lib.status).toBe('ok');
     expect(lib.hasKey).toBe(true);
     const tiles = lib.categories.find((c) => c.id === 'tiles')!;
@@ -1151,4 +1153,66 @@ describe('favorites and folders', () => {
     expect(await lib.art(pro, 'tiles-pro')).toBeInstanceOf(Blob);
     await vi.waitFor(() => expect((h.st.db.get('org') as { cards: Record<string, Snap> }).cards[pro.key].card.thumb).toBe(h.img('a-tiles-pro-0')));
   });
+});
+
+
+describe('shared-key startup verification', () => {
+  for (const kind of ['offline', 'http', 'cap', 'blocked'] as const) {
+    it(`retains saved authentication on ${kind} and retries without trusting old-account data`, async () => {
+      let lib = await tab();
+      await lib.connect('key-a');
+      h.st.kept = true;
+      h.st.key = 'key-b';
+      fill('b');
+      lib = await tab();
+      h.st.fail = new h.HttpError(kind);
+      await lib.start();
+      expect([h.st.key, h.st.kept, lib.hasKey, !!lib.restoreError]).toEqual(['key-b', true, false, true]);
+      h.st.fail = null;
+      await lib.start();
+      expect([lib.hasKey, lib.restoreError]).toEqual([true, '']);
+      expect(lib.families.characters?.cards[0].id).toBe('b-characters-0');
+    });
+  }
+  it('rejects an invalid saved key instead of retrying it', async () => {
+    h.st.key = 'invalid';
+    h.st.kept = true;
+    const lib = await tab();
+    h.st.fail = new h.HttpError('key-lost', 401);
+    await lib.start();
+    expect([h.st.key, lib.hasKey, lib.restoreError]).toEqual([null, false, '']);
+  });
+  it('does not stamp new cache ownership when the old account cannot be wiped', async () => {
+    let lib = await tab();
+    await lib.connect('key-a');
+    const oldFingerprint = h.st.db.get('meta:key-fingerprint');
+    h.st.key = 'key-b';
+    fill('b');
+    lib = await tab();
+    h.wipe.mockRejectedValueOnce(new Error('disk'));
+    await lib.start();
+    expect(lib.hasKey).toBe(false);
+    expect(lib.restoreError).toBe('server');
+    expect(h.st.db.get('meta:key-fingerprint')).toBe(oldFingerprint);
+    await lib.start();
+    expect(lib.hasKey).toBe(true);
+    expect(h.st.db.get('meta:key-fingerprint')).not.toBe(oldFingerprint);
+    expect(lib.families.characters?.cards[0].id).toBe('b-characters-0');
+  });
+});
+
+
+it('a late failed restore cannot clear a newer successfully connected key', async () => {
+  h.st.key = 'key-a';
+  h.st.kept = true;
+  const lib = await tab();
+  let rejectOld!: (error: Error) => void;
+  h.apiGet.mockImplementationOnce(() => new Promise((_, reject) => { rejectOld = reject; }));
+  const restoring = lib.start();
+  await vi.waitFor(() => expect(rejectOld).toBeTypeOf('function'));
+  fill('b');
+  expect(await lib.connect('key-b')).toBe('ok');
+  rejectOld(new h.HttpError('key-lost', 401));
+  await restoring;
+  expect([h.st.key, lib.hasKey, lib.restoreError]).toEqual(['key-b', true, '']);
 });
