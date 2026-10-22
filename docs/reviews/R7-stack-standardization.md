@@ -38,7 +38,7 @@ Review challenged putting the slow complete browser suite into each CI run. The 
 
 ## Full-suite failure investigation and final scope
 
-OBSERVED, local: the complete managed-Chromium suite ran once with two workers: 275 passed, one desktop-only touch test was intentionally skipped, and one invalid-deep-link test failed with ERR_ABORTED at page.reload. The unchanged test reproduced against the saved original production build in four of five repetitions, confirming that the package migration did not introduce the race.
+OBSERVED, local: the complete managed-Chromium suite ran once with two workers: 275 passed, one desktop-only touch test was intentionally skipped, and one invalid-deep-link test failed with ERR_ABORTED at page.reload. The unchanged test reproduced against the saved original production build in four of five repetitions, confirming that the package migration did not introduce the race. A 2026-10-22 audit found that the race shows in Playwright-managed Chromium (the old test failed 10 of 10 local runs) but not in the installed Edge the suite used before this change (10 of 10 passed), so it surfaced through the browser switch rather than the package changes.
 
 The test assigned location.hash and immediately reloaded, racing an unfinished same-document navigation. It now sets the cold-load URL synchronously with history.replaceState before reloading; all original invalid-key, unknown-key, landing-page and no-dialog assertions remain. No application code, timeout, retry or assertion was relaxed. After the fix, five desktop and five phone repetitions all passed. CI also rejects focused tests, and the full suite defaults to two workers; the smoke explicitly uses one.
 

@@ -1,4 +1,4 @@
-# CI on every push to main and every PR (check, unit tests, build + dist guard); main (a push or a manual run) also deploys
+# CI on every push to main and every PR (check, unit tests, build + dist guard, browser smoke); main (a push or a manual run) also deploys
 # dist/ to GitHub Pages. Enable Pages once: Settings > Pages > Source = "GitHub Actions". No secrets or env: the PixelLab key never touches CI.
 # The bounded mocked browser smoke runs here; the full suite remains a local release check (AGENTS.md).
 name: CI and Pages
