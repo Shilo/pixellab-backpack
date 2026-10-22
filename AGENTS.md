@@ -5,7 +5,7 @@ It runs entirely in the browser: no backend, no accounts, no telemetry. It never
 Live at https://shilo.github.io/pixellab-backpack/ (GitHub Pages, deployed from main). MIT license. Not affiliated with or endorsed by PixelLab.
 Features: key screen, library home with category tiles, category grids and All assets, search, viewer (animation player, Info, zoom, backdrops), favorites and folders, Settings, Activity panel (every request the app sends), Refresh.
 Design: iOS-like simplicity with progressive disclosure. One dock, few visible controls, everything else in menus and sheets. Pixel art is drawn crisp at whole-pixel sizes. Keyboard, screen reader, 4.5:1 text contrast and 44 px touch targets are required.
-Stack: Svelte 5 runes, Vite 8, TypeScript, plain CSS on a vendored GlassKit theme, idb-keyval (IndexedDB), Vitest, Playwright with the installed Microsoft Edge.
+Stack: Node.js 24.22.1 / npm 11.19.1; Svelte 5.57.2 runes, Vite 8.3.4, TypeScript 6.0.3 strict, plain CSS on the npm GlassKit 1.27.0 theme, idb-keyval 6.3.0 (IndexedDB), Vitest 4.1.12, Playwright Test 1.64.1 with managed Chromium by default.
 
 ## Rules
 
@@ -14,7 +14,7 @@ Network: only src/lib/api/http.ts calls fetch; a unit test enforces it.
 Key: sent only as a Bearer header to api.pixellab.ai, never in URLs, logs or exports. It is stored in sessionStorage, or in localStorage only while "Keep me signed in" is on.
 Local data: the saved library, favorites and folders live in IndexedDB. Forget key and switching accounts wipe them.
 Privacy and security: no new hosts and no analytics. The CSP lives in public/_headers and is copied into index.html at build.
-GlassKit: src/vendor/glasskit stays byte-identical; override it in src/app.css.
+GlassKit: import @jungherz-de/glasskit/glasskit.css unchanged; override it in src/app.css. Keep the existing cssMinify workaround until independently verified.
 Art: never commit PixelLab art or screenshots of it (mockups/ is gitignored for this reason).
 KISS and YAGNI: make the smallest complete change and reuse before adding. Write no speculative code. Mark deliberate limits with a "ponytail:" comment.
 
@@ -42,7 +42,7 @@ PixelLab API shapes: docs/research/01-pixellab-api-asset-inventory.md, docs/rese
 ## Validate
 
 Run npm run check, npm test and npm run build; the build ends with the dist guard, scripts/dist-guard.mjs.
-Then run npx playwright test --workers=2, which takes about 15 minutes. Run one Playwright run at a time: it serves the build on port 4291 and fails if that port is taken. The e2e tests mock PixelLab and need no key.
+Install its browser once with npx playwright install chromium. Then run npm run e2e -- --workers=2, which takes about 15 minutes. Run one Playwright run at a time: it serves the build on port 4291 and fails if that port is taken. The e2e tests mock PixelLab and need no key. npm run e2e:smoke is the bounded CI subset. Set PLAYWRIGHT_CHANNEL=msedge only for an optional installed-Edge check.
 For UI changes, also look at the running app at 1440, 390 and 320 px wide.
 
 ## Agent testing with the real key
@@ -55,7 +55,7 @@ Real-key use stays read-only: the open check is the test, so add no other calls.
 
 ## Deploy
 
-.github/workflows/pages.yml checks, tests and builds every push and PR, and deploys main to GitHub Pages. CI has no secrets and never sees the key.
+.github/workflows/pages.yml checks, unit-tests, builds and runs the bounded browser smoke on every push and PR, and deploys main to GitHub Pages. CI has no secrets and never sees the key.
 
 ## Commits
 
