@@ -145,7 +145,7 @@ Start with the [product brief](docs/design/01-product-brief.md), then the [decis
 | [17-cross-device-sync.md](docs/research/17-cross-device-sync.md) | Folders and favorites across devices |
 | [naming/](docs/research/naming/18c-name-ideas-professional.md) | Name research (18a, 18b, 18c) |
 
-**Reviews** (`docs/reviews/`): [R1](docs/reviews/R1-research-cross-review.md) research cross-review · [R2](docs/reviews/R2-design-spec-review.md) design spec review · [R3a](docs/reviews/R3a-mockup-ux-review.md) mockup UX review · [R3b](docs/reviews/R3b-mockup-visual-a11y-review.md) visual and accessibility review · [R4](docs/reviews/R4-builder-check.md) builder check · [R5](docs/reviews/R5-final-qa.md) final QA · [R6](docs/reviews/R6-api-minimization-review.md) API minimization review.
+**Reviews** (`docs/reviews/`): [R1](docs/reviews/R1-research-cross-review.md) research cross-review · [R2](docs/reviews/R2-design-spec-review.md) design spec review · [R3a](docs/reviews/R3a-mockup-ux-review.md) mockup UX review · [R3b](docs/reviews/R3b-mockup-visual-a11y-review.md) visual and accessibility review · [R4](docs/reviews/R4-builder-check.md) builder check · [R5](docs/reviews/R5-final-qa.md) final QA · [R6](docs/reviews/R6-api-minimization-review.md) API minimization review · [R7](docs/reviews/R7-stack-standardization.md) stack standardization and regression evidence.
 
 ## License
 
