@@ -5,15 +5,16 @@ import { render } from 'svelte/server';
 const h = vi.hoisted(() => ({
   emit: (_e: unknown) => {},
   openCheck: vi.fn(),
-  counters: { sessionApi: 7, todayApi: 9, dailyCap: 1000, imageHost: 3, status: 'ok' },
+  counters: { sessionApi: 7, todayApi: 9, dailyCap: 1000, apiCached: 4, imageHost: 3, imageCached: 1, status: 'ok' },
 }));
-vi.mock('../../src/lib/data/library.svelte', () => ({ library: { openCheck: h.openCheck, avoided: 0 }, REFRESH_GAP: 60_000 }));
+vi.mock('../../src/lib/data/library.svelte', () => ({ library: { openCheck: h.openCheck }, REFRESH_GAP: 60_000 }));
 vi.mock('../../src/lib/api/http', () => ({
   onActivity: (cb: (e: unknown) => void) => ((h.emit = cb), () => {}),
   getCounters: () => h.counters,
+  CACHE_MS: 15,
 }));
 
-import Activity, { copyLog, estimatePreflights, formatLog, resultName, size, statusName } from '../../src/lib/ui/Activity.svelte';
+import Activity, { copyLog, estimatePreflights, formatLog, listSummary, resultName, size, statusName } from '../../src/lib/ui/Activity.svelte';
 import MoreMenu, { runRefresh } from '../../src/lib/ui/MoreMenu.svelte';
 
 const at = new Date(2026, 9, 20, 9, 5, 7).getTime();
@@ -53,9 +54,34 @@ describe('Activity text', () => {
 
   it('copies a plain-text log with counters and one line per request', () => {
     const text = formatLog([entry()], counters);
-    expect(text).toContain('API requests today: 9 of 1000');
+    expect(text).toContain('API requests today: 9 / 1000');
     expect(text).toContain('Status: OK');
     expect(text.split('\n').at(-1)).toBe('09:05:07 | Characters · first page | PixelLab API | OK | 2.0 KB | 120 ms');
+  });
+
+  it('sums the list as real requests plus cached ones', () => {
+    const img = (cached: boolean) => entry({ source: 'image', cached });
+    expect(listSummary([entry(), ...Array.from({ length: 16 }, () => img(true))])).toBe('1 request + 16 cached, newest first');
+    expect(listSummary([entry(), img(false), img(true)])).toBe('2 requests + 1 cached, newest first');
+    expect(listSummary([entry()])).toBe('1 request + 0 cached, newest first');
+    expect(listSummary([entry(), entry({ cached: true })])).toBe('1 request + 1 cached, newest first'); // a saved-copy row
+    expect(listSummary(Array.from({ length: 200 }, () => entry()))).toBe('200 requests + 0 cached, newest 200 shown');
+  });
+
+  it('names every cached row "Cached", API or picture, and counts cached requests next to real ones', () => {
+    const list = [
+      entry({ label: 'Objects · first page', cached: true, auth: false, ms: 0, bytes: undefined }),
+      entry({ source: 'image', label: 'UI · picture', cached: true, ms: 9 }),
+      entry({ source: 'image', label: 'UI · picture', cached: false, ms: 700 }),
+    ];
+    const text = formatLog(list, counters);
+    expect(text).toContain('API requests: 7 + 4 cached');
+    expect(text).toContain('Image requests: 2 + 1 cached'); // 3 image loads, 1 of them from the browser cache
+    expect(text).toContain('Objects · first page | PixelLab API | Cached');
+    expect(text).toContain('UI · picture | Image host | Cached');
+    expect(text).toContain('UI · picture | Image host | OK');
+    expect(resultName(list[0])).toBe('Cached');
+    expect(text).not.toContain('Browser cache');
   });
 });
 
@@ -69,7 +95,8 @@ describe('panels', () => {
 
   it('Activity shows counters, the estimate note and Copy log', () => {
     const body = html(Activity, { open: true, onClose() {} });
-    for (const s of ['API requests this session', 'API requests today', 'Image-host loads', 'Status', 'Copy log', 'hidden permission check']) expect(body).toContain(s);
+    for (const s of ['API requests', 'API requests today', 'Image requests', '+ 0 cached', 'Status', 'Copy log', 'hidden permission check']) expect(body).toContain(s);
+    for (const s of ['this session', 'Requests avoided', 'Image-host loads']) expect(body).not.toContain(s);
   });
 
   it('the menu has exactly three items: Refresh, Activity and Settings', () => {
@@ -98,7 +125,7 @@ describe('Copy log', () => {
     vi.stubGlobal('navigator', { clipboard: { writeText } });
     expect(await copyLog()).toBe('done');
     expect(writeText).toHaveBeenCalledOnce();
-    expect(String((writeText.mock.calls[0] as unknown[])[0])).toContain('Image-host loads: 3');
+    expect(String((writeText.mock.calls[0] as unknown[])[0])).toContain('Image requests: 2 + 1 cached');
   });
 
   it('reports a failed copy', async () => {

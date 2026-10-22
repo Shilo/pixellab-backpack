@@ -517,6 +517,33 @@ test('image-host requests go straight out, without the key, and do not count tow
   expect(http.getCounters()).toMatchObject({ sessionApi: 0, todayApi: 0, imageHost: 20 });
 });
 
+test('an image-host answer under 15 ms is marked as from the browser cache; slower or failed ones are not', async () => {
+  const entries: { cached?: boolean }[] = [];
+  http.onActivity((e) => entries.push(e));
+  const fast = http.publicGet(`${IMG}/fast.png`);
+  const slow = http.publicGet(`${IMG}/slow.png`);
+  const bad = http.publicGet(`${IMG}/bad.png`);
+  await tick();
+  pending[0].reply();
+  await fast;
+  await tick(15);
+  pending[1].reply(); // exactly 15 ms is not under the line: downloaded
+  await slow;
+  pending[2].reply(404); // a failed load is never "from cache"
+  await bad;
+  expect(entries.map((e) => e.cached)).toEqual([true, false, false]);
+  expect(http.getCounters()).toMatchObject({ imageHost: 3, imageCached: 1 });
+});
+
+test('a request the saved copy answers is logged as a cached API row and never counts toward caps', async () => {
+  const entries: unknown[] = [];
+  http.onActivity((e) => entries.push(e));
+  http.recordCached('Objects · first page');
+  expect(entries).toEqual([expect.objectContaining({ label: 'Objects · first page', source: 'api', result: 'ok', cached: true, auth: false, ms: 0 })]);
+  expect(http.getCounters()).toMatchObject({ sessionApi: 0, todayApi: 0, apiCached: 1 });
+  expect(calls).toHaveLength(0);
+});
+
 test('API-host helpers via publicGet use the safety net but send no key', async () => {
   autoReply();
   const entries: { auth: boolean }[] = [];

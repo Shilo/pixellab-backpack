@@ -33,7 +33,16 @@ export interface ActivityEntry {
   status?: number;
   bytes?: number;
   ms: number;
+  /** Answered on this device, never by PixelLab: by the saved copy (API, see recordCached) or, for the image host, in under
+   * CACHE_MS, so most likely by the browser's own cache. */
+  cached?: boolean;
 }
+
+/** Browsers hide whether a cross-origin picture came from their cache (no Timing-Allow-Origin), so Activity judges by time.
+ * Measured on the real image host: cache reads 5-12 ms, downloads from 24 ms (warm connection to Cloudflare) up to seconds.
+ * ponytail: a guess that errs toward "downloaded" (a slow phone cache read counts as a download); exact labels would need
+ * an app-managed Cache API store. */
+export const CACHE_MS = 15;
 
 /** Messages carry only the kind and status: never the URL, the key or an id. */
 export class HttpError extends Error {
@@ -164,7 +173,9 @@ let status: Status = 'ok';
 const statusListeners = new Set<(s: Status) => void>();
 const activityListeners = new Set<(e: ActivityEntry) => void>();
 let sessionApi = 0;
+let apiCached = 0;
 let imageHost = 0;
+let imageCached = 0;
 
 /** While halted the status stays 'stopped'/'blocked' until retry(), so the UI always offers Try again. */
 function setStatus(s: Status): void {
@@ -184,7 +195,18 @@ export function onActivity(cb: (e: ActivityEntry) => void): () => void {
 }
 
 function record(source: 'api' | 'image', { label, auth = false, retries = 0 }: { label: string; auth?: boolean; retries?: number }, result: ActivityEntry['result'], t0: number, status?: number, bytes?: number) {
-  const entry: ActivityEntry = { time: Date.now(), label, source, auth: auth && !retries, result, status, bytes, ms: Date.now() - t0 };
+  const ms = Date.now() - t0;
+  const entry: ActivityEntry = { time: Date.now(), label, source, auth: auth && !retries, result, status, bytes, ms };
+  if (source === 'image' && result !== 'cancelled') entry.cached = result === 'ok' && ms < CACHE_MS;
+  if (entry.cached) imageCached++;
+  activityListeners.forEach((cb) => cb(entry));
+}
+
+/** A request the app needed but the copy saved on this device answered: logged as a cached row, never sent, never counted
+ * toward the caps. The library calls it where it chooses saved data (fresh first pages, saved picture links, saved details). */
+export function recordCached(label: string): void {
+  apiCached++;
+  const entry: ActivityEntry = { time: Date.now(), label, source: 'api', auth: false, result: 'ok', ms: 0, cached: true };
   activityListeners.forEach((cb) => cb(entry));
 }
 
@@ -227,7 +249,7 @@ export function keepLoading(): void {
 }
 
 export function getCounters() {
-  return { sessionApi, todayApi: used(), dailyCap: limit(), imageHost, status: status as string };
+  return { sessionApi, todayApi: used(), dailyCap: limit(), apiCached, imageHost, imageCached, status: status as string };
 }
 
 // ---- scheduler (API requests only) ----

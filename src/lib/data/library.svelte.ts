@@ -15,6 +15,7 @@ import {
   onSignedOut,
   onStatus,
   publicGet,
+  recordCached,
   retry,
   setKeepSignedIn,
   setKey,
@@ -56,8 +57,6 @@ class Library {
   errors = $state<Partial<Record<FamilyId, string>>>({});
   /** A verified key is held: false shows the key screen (the saved list stays). */
   hasKey = $state(!!getKey());
-  /** First-page requests the saved copy made unnecessary (fresh families, Refresh within a minute). Shown in Activity. */
-  avoided = $state(0);
   /** The key is kept in this browser rather than this tab only. */
   keepSignedIn = $state(keptSignedIn());
 
@@ -206,7 +205,7 @@ class Library {
     if (running) return running;
     if (opts.force) {
       if (Date.now() - lastForce < REFRESH_GAP) {
-        this.avoided += adapters.length;
+        for (const f of adapters) recordCached(`${f.label} · first page`);
         return Promise.resolve();
       }
       lastForce = Date.now();
@@ -227,7 +226,7 @@ class Library {
         if (getKey() !== key) return;
         await adopt();
         const ids = adapters.map((f) => f.id).filter((id) => opts.force || unchecked.has(id) || !isFresh(this.families[id], Date.now()));
-        this.avoided += adapters.length - ids.length;
+        for (const f of adapters) if (!ids.includes(f.id)) recordCached(`${f.label} · first page`);
         if (!ids.length) return;
         checking = true;
         sync();
@@ -298,6 +297,7 @@ class Library {
         const saved = await loadDetail(card.key).catch(() => undefined);
         if (saved && fresh(saved, card)) {
           entry.at = saved.at;
+          recordCached(`${f.label} · details`);
           return saved.detail;
         }
         // ponytail: one shared request; if the first caller's signal aborts, every waiting caller gets the cancel and asks again.
@@ -360,7 +360,6 @@ function signedOut(): void {
   library.families = {} as Record<FamilyId, FamilyState | undefined>;
   library.errors = {};
   library.loading = {};
-  library.avoided = 0;
   blobs.clear();
   pictures.clear();
   details.clear();
@@ -467,7 +466,10 @@ async function loadArt(card: Card, familyId: FamilyId, signal?: AbortSignal): Pr
   try {
     if (f.artCostsApi && card.thumb) {
       const res = await publicGet(card.thumb, { signal, label: `${f.label} · picture` });
-      if (res.ok) return await res.blob(); // otherwise the saved link went stale: resolve it again below
+      if (res.ok) {
+        recordCached(`${f.label} · picture`); // the API request that resolves the link was skipped
+        return await res.blob();
+      } // otherwise the saved link went stale: resolve it again below
     }
     const { blob, thumb } = await f.art(card, signal);
     if (f.artCostsApi && thumb) setThumb(card.key, thumb); // a favorite or folder snapshot keeps it too (R2)

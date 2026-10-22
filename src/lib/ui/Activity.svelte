@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  import { getCounters, onActivity, type ActivityEntry } from '../api/http';
+  import { CACHE_MS, getCounters, onActivity, type ActivityEntry } from '../api/http';
 
   type Counters = ReturnType<typeof getCounters>;
 
@@ -20,7 +20,7 @@
   export const sourceName = (e: ActivityEntry) => (e.source === 'api' ? 'PixelLab API' : 'Image host');
   export const size = (b?: number) => (b == null ? '-' : b < 1024 ? `${b} B` : `${(b / 1024).toFixed(1)} KB`);
   export function resultName(e: ActivityEntry): string {
-    if (e.result === 'ok') return 'OK';
+    if (e.result === 'ok') return e.cached ? 'Cached' : 'OK';
     if (e.result === 'cap') return 'Blocked by daily cap';
     if (e.result === 'cancelled') return 'Cancelled';
     if (e.status === 401) return 'Wrong key (401)';
@@ -37,12 +37,19 @@
     return new Set(sent.map((e, i) => (/page( \d+)?$/.test(e.label) ? `${e.label}|${Math.floor(e.time / 600_000)}` : i))).size;
   }
 
+  /** The list header: requests that went out, plus the cached ones (saved copy or browser cache) in the list. */
+  export function listSummary(list: ActivityEntry[]): string {
+    const cached = list.filter((e) => e.cached).length;
+    const sent = list.length - cached;
+    return `${sent} ${sent === 1 ? 'request' : 'requests'} + ${cached} cached, ${list.length >= KEEP ? `newest ${KEEP} shown` : 'newest first'}`;
+  }
+
   /** Plain text for a bug report: labels and numbers only, never keys, ids or links. */
   export function formatLog(list: ActivityEntry[], c: Counters): string {
     const head = [
-      `API requests this session: ${c.sessionApi}`,
-      `API requests today: ${c.todayApi} of ${c.dailyCap}`,
-      `Image-host loads: ${c.imageHost}`,
+      `API requests: ${c.sessionApi} + ${c.apiCached} cached`,
+      `API requests today: ${c.todayApi} / ${c.dailyCap}`,
+      `Image requests: ${c.imageHost - c.imageCached} + ${c.imageCached} cached`,
       `Hidden browser permission checks (estimate): about ${estimatePreflights(list)}`,
       `Status: ${statusName(c.status)}`,
       '',
@@ -62,9 +69,7 @@
 </script>
 
 <script lang="ts">
-  // The Activity panel: every request this tab sent to PixelLab, live. Reads the network module's counters and log,
-  // plus the library's count of requests the saved copy made unnecessary.
-  import { library } from '../data/library.svelte';
+  // The Activity panel: every request this tab needed, live: sent to PixelLab, or cached (muted) when this device answered it.
   import { leaves } from './keys';
 
   let { open, onClose }: { open: boolean; onClose: () => void } = $props();
@@ -120,16 +125,16 @@
     </header>
 
     <dl class="counters">
-      <div><dt>API requests this session</dt><dd>{counters.sessionApi}</dd></div>
-      <div><dt>API requests today</dt><dd>{counters.todayApi} of {counters.dailyCap}</dd></div>
-      <div><dt>Image-host loads</dt><dd>{counters.imageHost}</dd></div>
+      <div><dt>API requests</dt><dd>{counters.sessionApi} <span class="of">+ {counters.apiCached} cached</span></dd></div>
+      <div><dt>API requests today</dt><dd>{counters.todayApi} <span class="of">/ {counters.dailyCap}</span></dd></div>
+      <div><dt>Image requests</dt><dd>{counters.imageHost - counters.imageCached} <span class="of">+ {counters.imageCached} cached</span></dd></div>
       <div><dt>Status</dt><dd>{statusName(counters.status)}</dd></div>
-      <div class="wide"><dt>Requests avoided by the saved copy</dt><dd>{library.avoided}</dd></div>
     </dl>
     <p class="note">Browsers also send PixelLab a small hidden permission check before key requests, which this list cannot show. Estimate: about {estimatePreflights(entries)}.</p>
+    <p class="note">Cached requests (muted) never reached PixelLab. Cached API requests were answered by the copy saved on this device. Image requests count as cached when they load in under {CACHE_MS} ms, which means your browser already had the picture; browsers don't say for sure, so this is a close guess.</p>
 
     <div class="bar">
-      <span class="vt-text-2">{entries.length} {entries.length === 1 ? 'request' : 'requests'}, newest first</span>
+      <span class="vt-text-2">{listSummary(entries)}</span>
       <button type="button" class="glass-btn glass-btn--secondary glass-btn--sm glass-btn--auto" onclick={copy}>
         {copied === 'done' ? 'Copied' : copied === 'failed' ? "Couldn't copy" : 'Copy log'}
       </button>
@@ -138,7 +143,7 @@
     {#if entries.length}
       <ul class="log">
         {#each entries as e (e)}
-          <li class:bad={e.result === 'error' || e.result === 'cap'}>
+          <li class:bad={e.result === 'error' || e.result === 'cap'} class:cached={e.cached}>
             <span class="what">{e.label}</span>
             <span class="res">{resultName(e)}</span>
             <span class="meta">{clock(e.time)} · {sourceName(e)} · {size(e.bytes)} · {e.ms} ms</span>
@@ -160,10 +165,10 @@
   h2 { font-size: 22px; font-weight: 600; }
   .sub { margin-top: 4px; font-size: 13px; color: var(--gl-color-text-muted); }
   .counters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .counters .wide { grid-column: 1 / -1; }
   .counters div { padding: 8px 12px; border-radius: 14px; background: var(--gl-surface-1); border: 1px solid var(--gl-border-subtle); }
   dt { font-size: 12px; color: var(--gl-color-text-muted); }
   dd { margin-top: 2px; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .of { font-size: 13px; font-weight: 400; color: var(--gl-color-text-muted); }
   .note { font-size: 12.5px; color: var(--gl-color-text-muted); }
   .bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13px; }
   .log { list-style: none; padding: 0; overflow-y: auto; overscroll-behavior: contain; min-height: 80px; }
@@ -171,6 +176,7 @@
   .what { font-weight: 500; overflow-wrap: anywhere; }
   .res { text-align: end; font-size: 13px; }
   .bad .res { color: var(--gl-color-warning); }
+  .cached .what, .cached .res { font-weight: 400; color: var(--gl-color-text-muted); }
   .meta { grid-column: 1 / -1; font-size: 12.5px; color: var(--gl-color-text-muted); font-variant-numeric: tabular-nums; }
   .empty { padding: 18px 4px; text-align: center; }
   .panel :global(.glass-btn:focus-visible) { outline: 2px solid #fff; outline-offset: 2px; }

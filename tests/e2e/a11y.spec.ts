@@ -312,7 +312,7 @@ test('U3: a menu or panel closes when focus leaves it; a click on its blank spac
   await more.click();
   await page.getByRole('menuitem', { name: /Activity/ }).click();
   const activity = page.getByRole('dialog', { name: 'Activity' });
-  await activity.locator('.note').click();
+  await activity.locator('.note').first().click();
   await expect(activity).toBeVisible();
   await activity.getByRole('button', { name: 'Close activity' }).focus();
   await page.keyboard.press('Shift+Tab');

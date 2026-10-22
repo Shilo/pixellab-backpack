@@ -10,6 +10,17 @@ const ids = (url: string) => url.match(/\b[ab]-(?:characters|objects|ui|tilesets
  * alone can end before the last one under load, and a count that starts next would see it. */
 const homeDrawn = (page: Page) => expect(page.locator('.tile .mosaic canvas:not([style*="display: none"])')).toHaveCount(16);
 
+/** Every request the app needed is one row: sent to PixelLab, or cached (muted) when this device answered it. Every network hit
+ * is a row (a picture the browser cache answered is still a fetch); a saved-copy answer is a cached API row with no hit. The mock
+ * answers pictures at once, so how many count as cached depends on machine load: only the totals are fixed. */
+async function rowsMatch(panel: Locator, sent: Hit[]) {
+  await expect(panel.locator('.log li:not(.cached)', { hasText: 'PixelLab API' })).toHaveCount(api(sent).length);
+  await expect(panel.locator('.log li', { hasText: 'Image host' })).toHaveCount(sent.length - api(sent).length);
+  const rows = await panel.locator('.log li').count();
+  const real = await panel.locator('.log li:not(.cached)').count();
+  await expect(panel.locator('.bar')).toContainText(`${real} request${real === 1 ? '' : 's'} + ${rows - real} cached, newest first`);
+}
+
 async function openFirst(page: Page): Promise<Mock> {
   const mock = await mockPixelLab(page);
   await page.goto('/');
@@ -44,17 +55,15 @@ test('every request shows up exactly once in the Activity panel', async ({ page 
   const panel = page.getByRole('dialog', { name: 'Activity' });
   await expect(panel).toBeVisible();
   const sent = mock.hits.filter((h) => !h.redirected); // a helper's redirect is one request from the app
-  await expect(panel.getByText(`${sent.length} requests, newest first`)).toBeVisible();
-  await expect(panel.locator('.log li')).toHaveCount(sent.length);
-  await expect(panel.locator('.log li', { hasText: 'PixelLab API' })).toHaveCount(api(sent).length);
-  await expect(panel.locator('.log li', { hasText: 'Image host' })).toHaveCount(sent.length - api(sent).length);
-  await expect(panel.locator('.counters')).toContainText(`API requests this session${api(sent).length}`);
+  await rowsMatch(panel, sent);
+  await expect(panel.locator('.counters div', { hasText: 'Image requests' })).toContainText(/\d+ \+ \d+ cached/);
+  await expect(panel.locator('.counters div').first()).toContainText(`API requests${api(sent).length} + `);
   await expect(panel).not.toContainText(GOOD_KEY);
   await expect(panel).not.toContainText('pixellab.ai');
   for (const id of new Set(mock.hits.flatMap((h) => ids(h.url)))) await expect(panel).not.toContainText(id);
 });
 
-test('reload within the hour sends 0 API requests; Activity counts the 7 avoided; #activity opens it over the screen', async ({ page }) => {
+test('reload within the hour sends 0 API requests; Activity lists the 7 first pages as cached; #activity opens it over the screen', async ({ page }) => {
   const mock = await openFirst(page);
   const at = mock.hits.length;
   await page.reload();
@@ -64,7 +73,10 @@ test('reload within the hour sends 0 API requests; Activity counts the 7 avoided
 
   await page.evaluate(() => (location.hash = '#activity'));
   const panel = page.getByRole('dialog', { name: 'Activity' });
-  await expect(panel.locator('.counters div', { hasText: 'Requests avoided by the saved copy' })).toContainText('7');
+  // None sent: the saved copy answered the 7 first pages (and each saved tileset picture link skips its helper).
+  await expect(panel.locator('.log li.cached', { hasText: '· first page' })).toHaveCount(7);
+  const cachedApi = await panel.locator('.log li.cached', { hasText: 'PixelLab API' }).count();
+  await expect(panel.locator('.counters div').first()).toContainText(`API requests0 + ${cachedApi} cached`);
   await expect(page.getByRole('link', { name: 'Characters, 250' })).toBeAttached(); // the home stays underneath
   await panel.getByRole('button', { name: 'Close' }).click();
   await expect(panel).toHaveCount(0);
@@ -378,11 +390,10 @@ test('viewer: Activity lists each detail as "Characters · details" / "Objects �
   await expect(panel).toBeVisible();
   const sent = mock.hits.filter((h) => !h.redirected);
   expect(details(sent)).toHaveLength(2);
-  await expect(panel.getByText(`${sent.length} requests, newest first`)).toBeVisible();
-  await expect(panel.locator('.log li')).toHaveCount(sent.length);
+  await rowsMatch(panel, sent);
   await expect(panel.locator('.log li .what', { hasText: /^Characters · details$/ })).toHaveCount(1);
   await expect(panel.locator('.log li .what', { hasText: /^Objects · details$/ })).toHaveCount(1);
-  await expect(panel.locator('.counters')).toContainText(`API requests this session${api(sent).length}`);
+  await expect(panel.locator('.counters div').first()).toContainText(`API requests${api(sent).length} + `);
   await expect(panel).not.toContainText(GOOD_KEY);
   for (const id of new Set(mock.hits.flatMap((h) => ids(h.url)))) await expect(panel).not.toContainText(id);
   cleanHits(mock);

@@ -63,6 +63,7 @@ const h = vi.hoisted(() => {
     retry: vi.fn(),
     keepLoading: vi.fn(),
     whenVisible: vi.fn(async () => {}),
+    recordCached: vi.fn(),
     wipe: vi.fn(async () => st.db.clear()),
     // structuredClone throws on a Svelte proxy, just like IndexedDB.
     saveFamily: vi.fn(async (id: string, s: unknown) => void st.db.set(id, structuredClone(s))),
@@ -85,6 +86,7 @@ vi.mock('../../src/lib/api/http', () => ({
   retry: h.retry,
   keepLoading: h.keepLoading,
   whenVisible: h.whenVisible,
+  recordCached: h.recordCached,
 }));
 // The real record checks (isObj, isCard) with fake storage.
 vi.mock('../../src/lib/data/store', async (actual) => ({
@@ -671,6 +673,55 @@ describe('art: stale saved link (K19)', () => {
   });
 });
 
+describe('cached rows in Activity: every request the saved copy answers', () => {
+  const cached = () => h.recordCached.mock.calls.map(([label]) => label as string);
+
+  it('an open check within the hour logs one cached first-page row per family; so does a Refresh inside the minute', async () => {
+    const lib = await tab();
+    await lib.connect('key');
+    h.recordCached.mockClear();
+    await (await tab()).openCheck();
+    expect(cached()).toHaveLength(7);
+    expect(cached()).toContain('Characters · first page');
+    expect(cached()).toContain('Tiles Pro · first page');
+    h.recordCached.mockClear();
+    await lib.openCheck({ force: true }); // sent: 7 real requests
+    expect(cached()).toEqual([]);
+    later(30_000);
+    await lib.openCheck({ force: true }); // inside the minute: answered by the saved copy
+    expect(cached()).toHaveLength(7);
+  });
+
+  it('a saved costly picture link logs the skipped helper as cached; memory reuse in the same visit logs nothing', async () => {
+    const lib = await tab();
+    await lib.connect('key');
+    await lib.art(lib.families['tiles-pro']!.cards[0], 'tiles-pro'); // resolves and saves the link
+    h.recordCached.mockClear();
+    await lib.art(lib.families['tiles-pro']!.cards[0], 'tiles-pro'); // same visit: memory, not a request
+    expect(cached()).toEqual([]);
+    later(HOUR + 1);
+    const next = await tab();
+    await next.openCheck();
+    h.recordCached.mockClear();
+    await next.art(next.families['tiles-pro']!.cards[0], 'tiles-pro');
+    expect(cached()).toEqual(['Tiles Pro · picture']);
+  });
+
+  it('a saved detail logs a cached details row; memory reuse in the same visit logs nothing', async () => {
+    const lib = await tab();
+    await lib.connect('key');
+    await lib.detail(lib.families.characters!.cards[0], 'characters'); // asked and saved
+    h.recordCached.mockClear();
+    await lib.detail(lib.families.characters!.cards[0], 'characters');
+    expect(cached()).toEqual([]);
+    const next = await tab();
+    await next.openCheck();
+    h.recordCached.mockClear();
+    await next.detail(next.families.characters!.cards[0], 'characters');
+    expect(cached()).toEqual(['Characters · details']);
+  });
+});
+
 describe('detail', () => {
   const details = () => h.apiGet.mock.calls.map(([p]) => p as string).filter((p) => !p.includes('?'));
   const char = (lib: Awaited<ReturnType<typeof tab>>) => lib.families.characters!.cards[0];
@@ -838,7 +889,7 @@ describe('forget and keep signed in', () => {
     await vi.waitFor(() => expect(answer).toBeDefined());
     h.st.key = null; // http.ts dropped the key, then tells the library
     h.st.signedOutCb!();
-    expect([lib.hasKey, lib.keepSignedIn, lib.families, lib.errors, lib.avoided]).toEqual([false, false, {}, {}, 0]);
+    expect([lib.hasKey, lib.keepSignedIn, lib.families, lib.errors]).toEqual([false, false, {}, {}]);
     expect(h.wipe).not.toHaveBeenCalled(); // the forgetting tab wipes
     h.st.db.clear(); // ...as it did
     answer({ rotation_urls: {}, animations: [] });
