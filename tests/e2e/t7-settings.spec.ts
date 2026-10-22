@@ -122,7 +122,7 @@ test('Forget key: Cancel does nothing; confirm shows the key screen, wipes the c
   const at = mock.hits.length;
   await dialog.getByRole('button', { name: 'Forget key' }).click();
   await confirm.getByRole('button', { name: 'Forget key' }).click();
-  await expect(page.getByRole('heading', { name: 'Your PixelLab art, all in one place' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Keep your PixelLab art packed in one place' })).toBeVisible();
   await expect(page.getByText('Welcome back!')).toHaveCount(0);
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const stored = await deviceStorage(page);
@@ -224,7 +224,7 @@ test('Forget key: a failed wipe says so and keeps the confirm open; Forget key a
   });
   await confirm.getByRole('button', { name: 'Forget key' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Your PixelLab art, all in one place' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Keep your PixelLab art packed in one place' })).toBeVisible();
   const stored = await deviceStorage(page);
   expect(stored).not.toContain('family:');
   expect(stored).not.toContain(GOOD_KEY);
@@ -273,7 +273,7 @@ test('Forget key in one tab signs out a second kept tab, which sends nothing wit
   await page.bringToFront();
   await dialog.getByRole('button', { name: 'Forget key' }).click();
   await page.getByRole('dialog', { name: 'Forget your API key?' }).getByRole('button', { name: 'Forget key' }).click();
-  await expect(page.getByRole('heading', { name: 'Your PixelLab art, all in one place' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Keep your PixelLab art packed in one place' })).toBeVisible();
   await tab.bringToFront();
   await expect(tab.getByLabel('PixelLab API key')).toBeVisible();
   expect(await tab.evaluate(() => [localStorage.getItem('pixellab-backpack:key-kept'), sessionStorage.length])).toEqual([null, 0]);
@@ -305,10 +305,10 @@ test('Forget key in one tab signs out a second "this tab only" tab, which then w
   const dialog = await open(page);
   await dialog.getByRole('button', { name: 'Forget key' }).click();
   await page.getByRole('dialog', { name: 'Forget your API key?' }).getByRole('button', { name: 'Forget key' }).click();
-  await expect(page.getByRole('heading', { name: 'Your PixelLab art, all in one place' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Keep your PixelLab art packed in one place' })).toBeVisible();
   await tab.bringToFront();
   // The plain key screen: no library, no "Welcome back", no "stopped working".
-  await expect(tab.getByRole('heading', { name: 'Your PixelLab art, all in one place' })).toBeVisible();
+  await expect(tab.getByRole('heading', { name: 'Keep your PixelLab art packed in one place' })).toBeVisible();
   await expect(tab.getByText('Welcome back!')).toHaveCount(0);
   await expect(tab.getByText(/stopped working/)).toHaveCount(0);
   await expect(tab.getByRole('link', { name: /^Characters, / })).toHaveCount(0);

@@ -94,8 +94,8 @@
         <span class="g1-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8" /><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8" /><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8" /><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8" /></svg></span>
         <b>{APP_NAME}</b>
       </div>
-      <h2 class="g1-h">Your PixelLab art, all in one place</h2>
-      <p class="g1-value">{APP_SHORT} shows everything in your PixelLab account. It only looks. It never creates, changes, or deletes anything.</p>
+      <h2 class="g1-h">Keep your PixelLab art packed in one place</h2>
+      <p class="g1-value">Browse, search, play and organize images. {APP_SHORT} only looks: it never creates, changes, or deletes anything.</p>
     </section>
 
     <section class="glass-card glass-card--glow g1-form">

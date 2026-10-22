@@ -11,7 +11,7 @@ const keyNowhere = async (page: import('@playwright/test').Page, key: string) =>
 test('good key opens the library; the key is not in the address bar or device storage', async ({ page }) => {
   const mock = await mockPixelLab(page);
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Your PixelLab art, all in one place' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Keep your PixelLab art packed in one place' })).toBeVisible();
   await expect(page.getByText('Welcome back!')).toHaveCount(0);
   await connect(page);
   await expect(page.getByRole('link', { name: 'Characters, 250' })).toBeVisible();

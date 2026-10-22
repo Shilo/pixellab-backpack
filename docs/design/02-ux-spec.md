@@ -1037,8 +1037,8 @@ Voice: friendly, short, plain. No jargon ("API key", not "bearer credential"). U
 
 | Slot | Copy |
 |---|---|
-| Heading | Your PixelLab art, all in one place |
-| Value line | Vitrine shows everything in your PixelLab account. It only looks. It never creates, changes, or deletes anything. |
+| Heading | Keep your PixelLab art packed in one place |
+| Value line | Browse, search, play and organize images. Backpack only looks: it never creates, changes, or deletes anything. |
 | Steps heading | Get your API key |
 | Step 1 | Open your PixelLab account page ↗ (sign in if PixelLab asks). |
 | Step 2 | Tap **Copy API key**. It's a secret token, so keep it private, like a password. |
