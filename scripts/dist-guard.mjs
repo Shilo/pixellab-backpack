@@ -1,9 +1,9 @@
-// Runs after `npm run build` (postbuild): fails if dist/ carries dev or agent-key code, an .env file or a source map.
+// Part of `npm run build`: fails if dist/ carries dev or agent-key code, an .env file or a source map (file or inline).
 // Prints file names only, never the matched content.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-const MARKERS = ['__dev', 'pixellab-key', 'PIXELLAB_TOKEN_AGENT_DEV', 'API_KEY_OVERRIDE', 'DEV_API_KEY', 'devkey', 'backpack.agentKey', 'agent-badge'];
+const MARKERS = ['__dev', 'pixellab-key', 'PIXELLAB_TOKEN_AGENT_DEV', 'API_KEY_OVERRIDE', 'DEV_API_KEY', 'devkey', 'backpack.agentKey', 'agent-badge', 'sourceMappingURL'];
 const bad = [];
 for (const rel of readdirSync('dist', { recursive: true })) {
   const file = join('dist', rel);

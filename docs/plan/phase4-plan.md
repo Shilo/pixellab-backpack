@@ -381,7 +381,7 @@ In Group E, Task 8 owns App's root `CardMenu` and listeners; Task 9 owns only Ap
 
 **Behaviour (R17).** By hand: drop the `?devkey` line and its `getKey`/`library` imports from `src/main.ts`; drop `__DEV_API_KEY__` from `src/env.d.ts`; drop `loadEnv` and the `__DEV_API_KEY__` define from `vite.config.ts` (back to a plain object config if nothing else needs `({ command, mode })`), keeping `cssMinify: false` and its comment. The git-ignored `.env` is never committed.
 
-**Done when:** `npm run check`, `npm test`, `npm run build` and `npm run e2e -- --workers=2` pass, and `grep -r "DEV_API_KEY\|API_KEY_OVERRIDE\|devkey" src vite.config.ts` finds nothing.
+**Done when:** `npm run check`, `npm test`, `npm run build` and `npm run e2e -- --workers=2` pass, and `grep -r "DEV_API_KEY|API_KEY_OVERRIDE|devkey" src vite.config.ts` finds nothing. Since the agent-dev token contract (P-18): `PIXELLAB_TOKEN_AGENT_DEV`, `/__dev/pixellab-key` and `agent-badge` appear only in `vite.config.ts` and the `MODE === 'agent'` blocks, and `npm run build` passes the dist guard.\|API_KEY_OVERRIDE\|devkey" src vite.config.ts` finds nothing.
 
 ## Risks
 
