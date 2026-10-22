@@ -19,6 +19,8 @@ const h = vi.hoisted(() => {
     statusCb: null as ((s: string) => void) | null,
     signedOutCb: null as (() => void) | null,
     fail: null as HttpError | null,
+    /** API paths starting with this answer 500 (one family failing while the others answer). */
+    failOn: null as string | null,
     db: new Map<string, unknown>(),
     lists: {} as Record<string, { total: number; rows: Record<string, unknown>[] }>,
   };
@@ -43,6 +45,7 @@ const h = vi.hoisted(() => {
         if (st.fail.kind === 'key-lost') st.statusCb?.('key-lost');
         throw st.fail;
       }
+      if (st.failOn && path.startsWith(st.failOn)) throw new HttpError('http', 500);
       const [base, query = ''] = path.split('?');
       if (base.startsWith('/tiles-pro/')) return { storage_urls: { tile_0: img(base.slice(11)) } };
       if (/^\/(characters|objects)\//.test(base)) return { rotation_urls: { south: img('r') }, animations: [] };
@@ -54,11 +57,12 @@ const h = vi.hoisted(() => {
     }),
     publicGet: vi.fn(async () => new Response(new Blob(['png']), { status: 200 })),
     // Like http.ts: clearing the key ends Keep me signed in; a 401 does not.
-    setKey: vi.fn((k: string | null) => void ((st.key = k || null), st.key || (st.kept = false))),
+    setKey: vi.fn((k: string | null, _o?: { memoryOnly?: boolean }) => void ((st.key = k || null), st.key || (st.kept = false))),
     setKeepSignedIn: vi.fn((on: boolean) => void (st.kept = on)),
     forgetKey: vi.fn(() => void Object.assign(st, { key: null, kept: false })),
     retry: vi.fn(),
     keepLoading: vi.fn(),
+    whenVisible: vi.fn(async () => {}),
     wipe: vi.fn(async () => st.db.clear()),
     // structuredClone throws on a Svelte proxy, just like IndexedDB.
     saveFamily: vi.fn(async (id: string, s: unknown) => void st.db.set(id, structuredClone(s))),
@@ -71,7 +75,7 @@ vi.mock('../../src/lib/api/http', () => ({
   publicGet: h.publicGet,
   setKey: h.setKey,
   forgetKey: h.forgetKey,
-  IMAGE_HOST: 'backblaze.pixellab.ai',
+  isImageUrl: (u: string) => /^https:\/\/backblaze\.pixellab\.ai\//.test(u),
   onSignedOut: (cb: () => void) => ((h.st.signedOutCb = cb), () => {}),
   getKey: () => h.st.key,
   onStatus: (cb: (s: string) => void) => ((h.st.statusCb = cb), () => {}),
@@ -80,6 +84,7 @@ vi.mock('../../src/lib/api/http', () => ({
   setKeepSignedIn: h.setKeepSignedIn,
   retry: h.retry,
   keepLoading: h.keepLoading,
+  whenVisible: h.whenVisible,
 }));
 // The real record checks (isObj, isCard) with fake storage.
 vi.mock('../../src/lib/data/store', async (actual) => ({
@@ -88,8 +93,6 @@ vi.mock('../../src/lib/data/store', async (actual) => ({
   updateOrg: async (fn: (old: unknown) => unknown) => void h.st.db.set('org', structuredClone(fn(structuredClone(h.st.db.get('org'))))),
   loadFamilies: async () => structuredClone(Object.fromEntries(h.st.db)),
   saveFamily: h.saveFamily,
-  loadMeta: async () => undefined,
-  saveMeta: async () => {},
   loadDetail: async (k: string) => structuredClone(h.st.db.get('detail:' + k)),
   saveDetail: async (k: string, v: unknown) => void h.st.db.set('detail:' + k, structuredClone(v)),
   wipe: h.wipe,
@@ -125,7 +128,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(T0);
   vi.clearAllMocks();
-  Object.assign(h.st, { key: null, kept: false, fail: null, statusCb: null, signedOutCb: null });
+  Object.assign(h.st, { key: null, kept: false, fail: null, failOn: null, statusCb: null, signedOutCb: null });
   h.st.db.clear();
   fill('a');
 });
@@ -216,6 +219,128 @@ describe('open check', () => {
     expect((h.st.db.get('tiles-pro') as { cards: { id: string }[] }).cards[0].id).toBe('b-tiles-pro-0');
   });
 
+  it('another account with more characters than the saved total: 1 key test + 1 one-row check + 6 first pages, then wiped', async () => {
+    await (await tab()).connect('key');
+    h.apiGet.mockClear();
+    fill('b', { characters: 150 });
+    h.st.key = null;
+    expect(await (await tab()).connect('other-key')).toBe('ok');
+    expect(h.wipe).toHaveBeenCalledOnce();
+    expect(lists()).toHaveLength(8);
+    expect(lists()).toContain('/characters?limit=1&offset=147');
+  });
+
+  describe('account check (P2a): the same account keeps its favorites and folders', () => {
+    const FAV = 'b00000000009';
+    const seedFav = () =>
+      h.st.db.set('org', { v: 1, favorites: [FAV], folders: [], cards: { [FAV]: { familyId: 'ui', card: { key: FAV, id: 'x', name: 's', done: true, thumb: null, fp: 'f', meta: {} } } } });
+    const rows = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => ({ id: `${prefix}-${i}`, name: 'n', status: 'completed', preview_url: h.img(`${prefix}-${i}`) }));
+    /** Saved on this device with a favorite; then a new tab ("this tab only") pastes the key again. */
+    async function newTabAfter(change: () => void, ms = 0) {
+      await (await tab()).connect('key');
+      seedFav();
+      change();
+      later(ms);
+      h.apiGet.mockClear();
+      h.st.key = null;
+      const lib = await tab();
+      return { lib, result: await lib.connect('key'), org: (await orgOf()).org };
+    }
+
+    it('120 new characters: no saved character on page 0, but the one row where the newest saved one should sit matches (2 requests)', async () => {
+      fill('a', { characters: 150 });
+      const { result, org } = await newTabAfter(() => {
+        const c = h.st.lists.characters;
+        c.rows.unshift(...rows('new', 120));
+        c.total = 270;
+      });
+      expect(result).toBe('ok');
+      expect(h.wipe).not.toHaveBeenCalled();
+      expect(lists()).toEqual(['/characters?limit=100&offset=0', '/characters?limit=1&offset=120']);
+      expect([org.favorites, org.ready]).toEqual([[FAV], true]);
+    });
+
+    it.each([
+      ['within the hour: 1 extra first page, the first family that overlaps', 0, 2],
+      ['after the hour: that page is one of the open check\'s 7, 0 extra', HOUR + 1, 7],
+    ])('every saved character replaced, other families overlap: same account (%s)', async (_, ms, n) => {
+      const { result, org } = await newTabAfter(() => (h.st.lists.characters.rows = rows('z', 3)), ms);
+      expect(result).toBe('ok');
+      expect(h.wipe).not.toHaveBeenCalled();
+      expect(lists()).toHaveLength(n);
+      if (!ms) expect(lists()).toEqual(['/characters?limit=100&offset=0', '/objects?limit=100&offset=0']); // one family at a time, stops at the first match
+      expect([org.favorites, org.ready]).toEqual([[FAV], true]);
+    });
+
+    it('no saved character: another family still decides (R4); same account = 1 extra request within the hour', async () => {
+      fill('a', { characters: 0 });
+      const { result, org } = await newTabAfter(() => {});
+      expect(result).toBe('ok');
+      expect(h.wipe).not.toHaveBeenCalled();
+      expect(lists()).toEqual(['/characters?limit=100&offset=0', '/objects?limit=100&offset=0']);
+      expect([org.favorites, org.ready]).toEqual([[FAV], true]);
+    });
+
+    it('no saved character: another account is wiped, with 0 extra requests (its pages are reused)', async () => {
+      fill('a', { characters: 0 });
+      const { result, org } = await newTabAfter(() => fill('b', { characters: 0 }));
+      expect(result).toBe('ok');
+      expect(h.wipe).toHaveBeenCalledOnce();
+      expect(lists()).toHaveLength(7);
+      expect([org.favorites, org.ready]).toEqual([[], true]);
+    });
+
+    it('no saved card in any family: nothing to compare, the copy is kept (1 request)', async () => {
+      fill('a', { characters: 0, objects: 0, ui: 0, tilesets: 0, 'tilesets-side': 0, isometric: 0, 'tiles-pro': 0 });
+      const { result, org } = await newTabAfter(() => fill('b'));
+      expect(result).toBe('ok');
+      expect(h.wipe).not.toHaveBeenCalled();
+      expect(lists()).toEqual(['/characters?limit=100&offset=0']);
+      expect(org.favorites).toEqual([FAV]);
+    });
+
+    it('M-2: a sign-out in another tab during the account check wins: no library without a key', async () => {
+      const real = h.apiGet.getMockImplementation()!;
+      let answer!: (v: unknown) => void;
+      await (await tab()).connect('key');
+      h.st.lists.characters.rows = rows('z', 3);
+      h.st.key = null;
+      h.apiGet.mockImplementationOnce(real).mockImplementationOnce(() => new Promise((ok) => (answer = ok as (v: unknown) => void)));
+      const lib = await tab();
+      const done = lib.connect('key');
+      await vi.waitFor(() => expect(answer).toBeDefined()); // waiting on the first other-family page
+      h.st.key = null; // another tab's Forget: http.ts dropped the key, then tells the library
+      h.st.signedOutCb!();
+      answer({ objects: [], total: 0 });
+      expect(await done).toBe('server');
+      expect(lib.hasKey).toBe(false);
+    });
+
+    it('fails closed: a fallback page that fails with no match leaves favorites and folders hidden and intact, nothing wiped or decided', async () => {
+      const { lib, result, org } = await newTabAfter(() => {
+        fill('z');
+        h.st.failOn = '/objects';
+      });
+      expect(result).toBe('server');
+      expect(lists()).toHaveLength(7); // the key test and 6 first pages, no retry storm
+      expect(h.wipe).not.toHaveBeenCalled();
+      expect([lib.hasKey, h.st.key, org.ready, org.favorites]).toEqual([false, null, false, []]);
+      expect((h.st.db.get('org') as { favorites: string[] }).favorites).toEqual([FAV]);
+      expect((h.st.db.get('characters') as { cards: { id: string }[] }).cards[0].id).toBe('a-characters-0'); // the saved copy is untouched
+      h.st.failOn = null;
+      expect(await lib.connect('key')).toBe('ok'); // the next test decides: another account
+      expect(h.wipe).toHaveBeenCalledOnce();
+    });
+  });
+
+  it('connect forwards memory-only (the agent token, I1) to the network module; a pasted key is not memory-only', async () => {
+    const lib = await tab();
+    await lib.connect('agent', { memoryOnly: true });
+    expect(h.setKey).toHaveBeenLastCalledWith('agent', { memoryOnly: true });
+    await lib.connect('key');
+    expect(h.setKey).toHaveBeenLastCalledWith('key', { memoryOnly: false });
+  });
+
   it("a 401 during connect → 'wrong-key', one request, key cleared", async () => {
     h.st.fail = new h.HttpError('key-lost', 401);
     const lib = await tab();
@@ -263,6 +388,93 @@ describe('open check', () => {
     expect(lib.status).toBe('key-lost');
     expect(lib.hasKey).toBe(false);
     expect(lib.families.characters?.cards).toHaveLength(3);
+  });
+});
+
+describe('races (code review K5-K7)', () => {
+  it('K5: a check answer that lands after another key took over is dropped, not saved under the new key', async () => {
+    const lib = await tab();
+    await lib.connect('key');
+    later(HOUR + 1);
+    let answer!: (v: unknown) => void;
+    h.apiGet.mockImplementationOnce(() => new Promise((ok) => (answer = ok as (v: unknown) => void))); // the Characters first page
+    const check = lib.openCheck();
+    await vi.waitFor(() => expect(answer).toBeDefined());
+    h.st.key = 'other-key';
+    answer({ characters: [{ id: 'late', name: 'late', status: 'completed', preview_url: h.img('late') }], total: 1 });
+    await check;
+    expect(lib.families.characters?.cards[0].id).toBe('a-characters-0');
+    expect((h.st.db.get('characters') as { checkedAt: number }).checkedAt).toBe(T0);
+  });
+
+  it('M-3: a first page read by connect clears its failed mark, so the next open check does not ask it again', async () => {
+    const lib = await tab();
+    await lib.connect('key');
+    later(61_000);
+    h.st.fail = new h.HttpError('cap');
+    await lib.openCheck({ force: true }); // every family fails and is marked
+    h.st.fail = null;
+    h.apiGet.mockClear();
+    expect(await lib.connect('key')).toBe('ok'); // a reconnect: Characters is read by the key test
+    expect(lists()).toHaveLength(7); // + the 6 still-marked families, not Characters twice
+  });
+
+  it('I-1: a hidden tab never takes the check lock, so a visible tab\'s check, next page and Refresh go ahead', async () => {
+    fill('a', { characters: 250 });
+    await (await tab()).connect('key');
+    later(HOUR + 1);
+    let tail = Promise.resolve();
+    const request = (_n: string, fn: () => Promise<void>) => {
+      const run = tail.then(fn);
+      tail = run.catch(() => {});
+      return run;
+    };
+    vi.stubGlobal('navigator', { locks: { request } }); // one lock for both tabs
+    const real = h.apiGet.getMockImplementation()!;
+    try {
+      let hold = true;
+      h.apiGet.mockImplementation((p, o) => (hold ? new Promise(() => {}) : real(p, o))); // K1: a hidden tab's requests wait
+      h.whenVisible.mockImplementationOnce(() => new Promise(() => {})); // tab A stays hidden
+      const a = await tab();
+      void a.openCheck();
+      await new Promise((r) => setTimeout(r, 20));
+      hold = false;
+      h.apiGet.mockClear();
+      const b = await tab();
+      const within = (p: Promise<void>) => Promise.race([p.then(() => 'done'), new Promise((r) => setTimeout(() => r('stuck'), 500))]);
+      expect(await within(b.openCheck())).toBe('done');
+      expect(lists()).toHaveLength(7);
+      expect(await within(b.loadMore('characters'))).toBe('done');
+      later(61_000);
+      expect(await within(b.openCheck({ force: true }))).toBe('done');
+      expect(lists()).toHaveLength(15);
+    } finally {
+      h.apiGet.mockImplementation(real);
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('K6: a next page asked while the open check runs waits for it, so the family is still checked', async () => {
+    fill('a', { characters: 250 });
+    const lib = await tab();
+    await lib.connect('key');
+    later(HOUR + 1);
+    h.apiGet.mockClear();
+    await Promise.all([lib.openCheck(), lib.loadMore('characters')]);
+    expect(lists()).toHaveLength(8);
+    expect(lists()).toContain('/characters?limit=100&offset=0');
+    expect(lists()).toContain('/characters?limit=100&offset=99');
+  });
+
+  it("K7: a tab takes another tab's longer saved list when both were checked at the same time", async () => {
+    fill('a', { characters: 250 });
+    const a = await tab();
+    await a.connect('key');
+    const b = await tab();
+    await b.openCheck(); // within the hour: 0 requests, the saved copy only
+    await a.loadMore('characters');
+    await b.openCheck();
+    expect(b.families.characters?.cards).toHaveLength(199);
   });
 });
 
@@ -389,6 +601,22 @@ describe('art', () => {
     expect(await next.art(next.families['tiles-pro']!.cards[0], 'tiles-pro')).toBeInstanceOf(Blob);
     expect(h.apiGet).not.toHaveBeenCalled();
     expect(h.publicGet).toHaveBeenCalledWith(h.img('a-tiles-pro-0'), expect.anything());
+  });
+});
+
+describe('art: stale saved link (K19)', () => {
+  it('a saved costly link that no longer answers is resolved again once and the new link saved', async () => {
+    await (await tab()).connect('key');
+    const saved = h.st.db.get('tiles-pro') as { cards: { thumb: string | null }[] };
+    saved.cards[0].thumb = h.img('stale');
+    vi.clearAllMocks();
+    h.publicGet.mockResolvedValueOnce(new Response(null, { status: 404 }));
+    const lib = await tab();
+    await lib.openCheck(); // within the hour: 0 requests
+    expect(await lib.art(lib.families['tiles-pro']!.cards[0], 'tiles-pro')).toBeInstanceOf(Blob);
+    expect(h.apiGet.mock.calls.map(([p]) => p)).toEqual(['/tiles-pro/a-tiles-pro-0']);
+    expect(h.publicGet.mock.calls.map((c) => (c as unknown[])[0])).toEqual([h.img('stale'), h.img('a-tiles-pro-0')]);
+    expect((h.st.db.get('tiles-pro') as { cards: { thumb: string }[] }).cards[0].thumb).toBe(h.img('a-tiles-pro-0'));
   });
 });
 
@@ -802,12 +1030,12 @@ describe('favorites and folders', () => {
       await vi.waitFor(() => expect(waiting).toBe(true));
       fill('b');
       const done = lib.connect('other-key');
-      await vi.waitFor(() => expect(lib.hasKey).toBe(true));
+      await vi.waitFor(() => expect(lists()).toHaveLength(7)); // connect's key test and account check went out (hasKey was already true)
       await new Promise((r) => setTimeout(r));
       open();
       expect(await done).toBe('ok');
-      expect(sentByOld).toBe(1); // only connect's key test
-      expect(lists()).toHaveLength(7); // connect's own check asked the rest
+      expect(sentByOld).toBe(7); // only connect's: the key test and the account check's 6 first pages (P2a)
+      expect(lists()).toHaveLength(7); // connect's own check finds them fresh: still 7 in all
     } finally {
       vi.unstubAllGlobals();
     }

@@ -11,11 +11,11 @@ vi.mock('idb-keyval', () => ({
 }));
 
 import { createStore } from 'idb-keyval';
-import { loadDetail, loadFamilies, loadMeta, loadOrg, SCHEMA, saveDetail, saveFamily, saveMeta, updateOrg, wipe } from '../../src/lib/data/store';
+import { loadDetail, loadFamilies, loadOrg, SCHEMA, saveDetail, saveFamily, updateOrg, wipe } from '../../src/lib/data/store';
 import type { FamilyState, SavedDetail } from '../../src/lib/types';
 
-const fam: FamilyState = { total: 1, cards: [{ key: 'k', id: 'i', name: 'n', done: true, thumb: null, fp: 'f', meta: {} }], checkedAt: 5, deepLoadedAt: null };
-const detail: SavedDetail = { fp: 'f', at: 1, detail: { rotations: {}, animations: [], extra: {} } };
+const fam: FamilyState = { total: 1, cards: [{ key: 'a1b2c3d4e5f6', id: 'i', name: 'n', done: true, thumb: null, fp: 'f', meta: {} }], checkedAt: 5, deepLoadedAt: null };
+const detail: SavedDetail = { fp: 'f', at: 1, detail: { rotations: {}, animations: [{ name: 'Walk', type: 'walk', description: null, frames: {} }], extra: {} } };
 
 describe('store', () => {
   beforeEach(() => {
@@ -23,26 +23,22 @@ describe('store', () => {
     db.set('meta:schema', SCHEMA);
   });
 
-  it('round-trips families, details and meta, and wipe clears them all', async () => {
+  it('round-trips families and details, and wipe clears them all', async () => {
     await saveFamily('characters', fam);
     await saveFamily('ui', { ...fam, total: 2 });
     await saveDetail('k', detail);
-    await saveMeta('lastCheck', 123);
     expect(await loadFamilies(['characters', 'objects', 'ui'])).toEqual({ characters: fam, ui: { ...fam, total: 2 } });
     expect(await loadDetail('k')).toEqual(detail);
-    expect(await loadMeta<number>('lastCheck')).toBe(123);
-    expect(await loadMeta('missing')).toBeUndefined();
     await wipe();
     expect(await loadFamilies(['characters', 'ui'])).toEqual({});
     expect(await loadDetail('k')).toBeUndefined();
-    expect(await loadMeta('lastCheck')).toBeUndefined();
+    expect([...db.keys()]).toEqual(['meta:schema']);
   });
 
   it('loadFamilies reads only the asked family keys, never meta or saved details', async () => {
-    await saveMeta('x', 1);
     await saveDetail('characters', detail); // a detail key that looks like a family id
     expect(await loadFamilies(['characters'])).toEqual({});
-    expect([...db.keys()].sort()).toEqual(['detail:characters', 'meta:schema', 'meta:x']);
+    expect([...db.keys()].sort()).toEqual(['detail:characters', 'meta:schema']);
   });
 
   it('a saved copy from another schema version is wiped once', async () => {
@@ -71,6 +67,9 @@ describe('store', () => {
       { ...fam, cards: [{ ...card, key: 1 }] },
       { ...fam, cards: [{ ...card, fp: null }] },
       { ...fam, cards: [{ ...card, done: 'yes' }] },
+      { ...fam, cards: [{ ...card, id: undefined }] }, // K16: no id, no name, or a key that is not 12 hex digits
+      { ...fam, cards: [{ ...card, name: 3 }] },
+      { ...fam, cards: [{ ...card, key: 'k"]' }] },
       { ...fam, cards: [null] },
       { ...fam, cards: {} },
       { ...fam, total: '1' },
@@ -84,8 +83,17 @@ describe('store', () => {
     }
   });
 
-  it('a saved detail without a string fp or an animations list loads as missing', async () => {
-    for (const b of [{ ...detail, fp: 1 }, { ...detail, detail: { ...detail.detail, animations: null } }, { fp: 'f', at: 1 }, 'junk']) {
+  it('a saved detail without a string fp, a rotations object or well-formed animations loads as missing', async () => {
+    const d = detail.detail;
+    for (const b of [
+      { ...detail, fp: 1 },
+      { ...detail, detail: { ...d, animations: null } },
+      { ...detail, detail: { ...d, rotations: null } }, // K16: the viewer reads both without guards
+      { ...detail, detail: { ...d, animations: [{ name: 'Walk' }] } },
+      { ...detail, detail: { ...d, animations: [null] } },
+      { fp: 'f', at: 1 },
+      'junk',
+    ]) {
       db.set('detail:k', b);
       expect(await loadDetail('k')).toBeUndefined();
     }
@@ -104,7 +112,7 @@ describe('store', () => {
   });
 
   it('uses a database named from APP_ID', async () => {
-    await loadMeta('any'); // the store is created lazily on first use, so this test does not depend on order
+    await loadOrg(); // the store is created lazily on first use, so this test does not depend on order
     expect(createStore).toHaveBeenCalledWith('pixellab-backpack', 'kv');
   });
 });

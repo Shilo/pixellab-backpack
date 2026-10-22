@@ -33,9 +33,9 @@ test('outside MODE agent, or in a build, the agent block never asks for the key'
   expect(h.agentKey).not.toHaveBeenCalled();
 });
 
-test('in MODE agent the key takes the human verify-then-keep path, unless a key is already held', async () => {
+test('in MODE agent the key takes the human verify-then-keep path in memory only, unless a key is already held', async () => {
   await boot({ MODE: 'agent' });
-  expect(h.connect).toHaveBeenCalledWith('agent-key');
+  expect(h.connect).toHaveBeenCalledWith('agent-key', { memoryOnly: true });
   await boot({ MODE: 'agent' }, true);
   expect(h.agentKey).not.toHaveBeenCalled();
 });

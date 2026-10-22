@@ -4,7 +4,7 @@ import { APP_ID } from '../app';
 
 const API = 'https://api.pixellab.ai/v2';
 const API_HOST = 'api.pixellab.ai';
-export const IMAGE_HOST = 'backblaze.pixellab.ai';
+const IMAGE_HOST = 'backblaze.pixellab.ai';
 const KEY_NAME = `${APP_ID}:key`; // sessionStorage: this tab only
 const KEPT_NAME = `${APP_ID}:key-kept`; // localStorage: only while "Keep me signed in" is on
 const COUNT_NAME = `${APP_ID}:api-count`; // localStorage: request times only, no data
@@ -52,6 +52,8 @@ export class HttpError extends Error {
 // "Keep me signed in" is on, localStorage. A storage failure falls back to memory.
 let key: string | null = null;
 let kept = false;
+/** The agent token (I1): held in memory only, never written to either store, Keep me signed in included. */
+let memoryOnly = false;
 try {
   key = localStorage.getItem(KEPT_NAME);
   kept = !!key;
@@ -82,7 +84,7 @@ export function keyHint(): string | null {
 
 /** Put the key in the store `on` picks and clear the other. No-op without a key. */
 function store(on: boolean): void {
-  if (!key) return;
+  if (!key || memoryOnly) return;
   const was = kept;
   let ok = false;
   try {
@@ -107,9 +109,11 @@ export function setKeepSignedIn(on: boolean): void {
   store(on);
 }
 
-export function setKey(k: string | null): void {
+export function setKey(k: string | null, o: { memoryOnly?: boolean } = {}): void {
   if (k) {
+    if (k !== key) dropKeyed();
     key = k;
+    memoryOnly = !!o.memoryOnly;
     store(kept);
     if (status === 'key-lost') setStatus('ok');
   } else {
@@ -127,8 +131,10 @@ export function forgetKey(): void {
 
 /** Clears the key from memory and both stores and fails waiting jobs that need it. Tells no other tab. */
 function dropKey(): void {
+  dropKeyed();
   key = null;
   kept = false;
+  memoryOnly = false;
   for (const s of [() => localStorage.removeItem(KEPT_NAME), () => sessionStorage.removeItem(KEY_NAME)]) {
     try {
       s();
@@ -280,7 +286,7 @@ function rejectQueue(kind: HttpErrorKind): void {
 function pump(): void {
   if (status === 'slowed' && Date.now() >= pausedUntil) setStatus('ok');
   if (halted) return rejectQueue('stopped');
-  if (hidden()) return rejectQueue('cancelled');
+  if (hidden()) return; // paused: the visibilitychange listener below pumps again
   if (offline()) {
     setStatus('offline');
     return rejectQueue('offline');
@@ -329,7 +335,8 @@ async function attempt(job: Job): Promise<void> {
   writeCount({ ...c, t: [...c.t, t0] });
   if (used() >= limit()) setStatus('paused');
   try {
-    const init: RequestInit = { method: 'GET', signal: timed(job.signal) };
+    // K8: the caller's signal only takes a job out of the queue (submit); a request that went out finishes, so its answer is kept.
+    const init: RequestInit = { method: 'GET', signal: timed() };
     if (job.auth) init.headers = { Authorization: `Bearer ${key}` };
     let res: Response | undefined;
     try {
@@ -429,16 +436,29 @@ function guard(url: string): 'api' | 'image' {
   throw new HttpError('guard');
 }
 
+/** Plain https on the image host (frames and rotations: no API request, no key). */
+export function isImageUrl(url: string): boolean {
+  try {
+    return guard(url) === 'image';
+  } catch {
+    return false;
+  }
+}
+
 // One shared request per identical in-flight URL. ponytail: a user request that joins a queued
 // background one keeps its lower priority; the first caller's signal governs the shared request.
 const inflight = new Map<string, Promise<unknown>>();
+/** A new or dropped key never joins the old key's requests (M-1); their callers keep their own promise. */
+function dropKeyed(): void {
+  for (const k of inflight.keys()) if (k.startsWith('k ')) inflight.delete(k);
+}
 
 function shared<T>(url: string, auth: boolean, make: () => Promise<T>): Promise<T> {
   const k = (auth ? 'k ' : '') + url;
   let p = inflight.get(k) as Promise<T> | undefined;
   if (!p) {
     p = make();
-    const done = () => inflight.delete(k);
+    const done = () => inflight.get(k) === p && inflight.delete(k); // never drop a newer key's entry
     p.then(done, done);
     inflight.set(k, p);
   }
@@ -513,6 +533,19 @@ async function direct(url: string, o: Opts): Promise<Response> {
     record('image', { label }, kind === 'cancelled' ? 'cancelled' : 'error', t0);
     throw new HttpError(kind);
   }
+}
+
+/** Resolves at once while the tab is visible, else when it is shown again. */
+export function whenVisible(): Promise<void> {
+  return new Promise((ok) => {
+    if (!hidden()) return ok();
+    const on = () => {
+      if (hidden()) return;
+      document.removeEventListener('visibilitychange', on);
+      ok();
+    };
+    document.addEventListener('visibilitychange', on);
+  });
 }
 
 // ---- browser events ----

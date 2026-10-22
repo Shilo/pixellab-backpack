@@ -2,13 +2,13 @@
 // PixelLab (first-page check on open, the 1-hour rule, paging on scroll, art once) and holds the state screens read.
 import { APP_ID } from '../app';
 import { CATEGORIES, familiesOf, type Scope } from '../categories';
-import { createFamilies, dedupeTilesets, groupStates, type Family } from '../api/families';
+import { createFamilies, dedupeTilesets, groupOf, groupStates, type Family } from '../api/families';
 import {
   apiGet,
   forgetKey,
   getKey,
   HttpError,
-  IMAGE_HOST,
+  isImageUrl,
   keepLoading,
   keptSignedIn,
   keyHint,
@@ -18,6 +18,7 @@ import {
   retry,
   setKeepSignedIn,
   setKey,
+  whenVisible,
   type Status,
 } from '../api/http';
 import type { Card, Detail, FamilyId, FamilyState, Item, Page } from '../types';
@@ -27,7 +28,7 @@ import { loadDetail, loadFamilies, saveDetail, saveFamily, wipe } from './store'
 
 export type LibraryStatus = 'idle' | 'checking' | Status;
 
-const REFRESH_GAP = 60_000;
+export const REFRESH_GAP = 60_000;
 
 const adapters = createFamilies({ apiGet, publicGet });
 const byId = Object.fromEntries(adapters.map((f) => [f.id, f])) as Record<FamilyId, Family>;
@@ -37,21 +38,13 @@ let ran = false;
 let checking = false;
 let running: Promise<void> | null = null;
 let lastForce = -Infinity;
+// ponytail: session caches never evict (a few KB per picture); add an LRU if memory shows up in long sessions.
 const blobs = new Map<string, Promise<Blob | null>>();
 const pictures = new Map<string, Promise<Blob | null>>();
 /** In-flight or answered details of this session, by card key. */
 const details = new Map<string, { fp: string; at: number; p: Promise<Detail> }>();
 /** Families whose last first-page check failed: the next open check asks again even while their saved copy is fresh (Try again, Keep loading). */
 const unchecked = new Set<FamilyId>();
-/** Frames and rotations come only from the image host (no API request, no key). */
-function onImageHost(url: string): boolean {
-  try {
-    const u = new URL(url);
-    return u.protocol === 'https:' && u.hostname === IMAGE_HOST;
-  } catch {
-    return false;
-  }
-}
 const fresh = (s: { fp: string; at: number } | undefined, card: Card) => !!s && s.fp === card.fp && Date.now() - s.at < DEEP_TTL_MS;
 
 class Library {
@@ -134,8 +127,8 @@ class Library {
       Object.keys(byId).map((id) => {
         const m = new Map<string, Card[]>();
         for (const c of this.done(id as FamilyId)) {
-          const g = c.meta.group_id;
-          if (typeof g === 'string' && g.trim()) (m.get(g) ?? m.set(g, []).get(g)!).push(c);
+          const g = groupOf(c);
+          if (g) (m.get(g) ?? m.set(g, []).get(g)!).push(c);
         }
         return [id, m];
       }),
@@ -144,8 +137,8 @@ class Library {
 
   /** Done cards sharing card's group_id, in list order; [card] when ungrouped. */
   states = (card: Card, familyId: FamilyId): Card[] => {
-    const g = card.meta.group_id;
-    return (typeof g === 'string' && this.groups[familyId].get(g)) || [card];
+    const g = groupOf(card);
+    return (g && this.groups[familyId].get(g)) || [card];
   };
 
   /** Every key of a card's group on this device (R7): its live states, plus snapshots of the same character group (a favorited
@@ -153,10 +146,10 @@ class Library {
    * The ♡ and the heart test these; removing drops them all. No request. */
   groupKeys = (card: Card, familyId: FamilyId): string[] => {
     const keys = this.states(card, familyId).map((c) => c.key);
-    const g = card.meta.group_id;
-    if (familyId !== 'characters' || typeof g !== 'string' || !g.trim()) return keys;
+    const g = groupOf(card);
+    if (familyId !== 'characters' || !g) return keys;
     for (const [k, s] of Object.entries(org.cards))
-      if (s.familyId === familyId && s.card.meta.group_id === g && !keys.includes(k) && this.snapped(k)) keys.push(k);
+      if (s.familyId === familyId && groupOf(s.card) === g && !keys.includes(k) && this.snapped(k)) keys.push(k);
     return keys;
   };
 
@@ -164,34 +157,39 @@ class Library {
 
   family = (id: FamilyId): Family => byId[id];
 
-  /** The key test IS the Characters first-page request. 'server': PixelLab answered badly or the safety net stopped; 'paused': daily cap. */
-  connect = async (key: string): Promise<'ok' | 'wrong-key' | 'offline' | 'blocked' | 'server' | 'paused'> => {
-    setKey(key);
+  /** The key test IS the Characters first-page request, plus the account check when it misses. 'server': PixelLab answered
+   * badly or the safety net stopped; 'paused': daily cap. `memoryOnly`: the agent token, never stored (I1). */
+  connect = async (key: string, o: { memoryOnly?: boolean } = {}): Promise<'ok' | 'wrong-key' | 'offline' | 'blocked' | 'server' | 'paused'> => {
+    setKey(key, { memoryOnly: !!o.memoryOnly });
     await adopt();
-    let page: Page;
+    let check: Awaited<ReturnType<typeof accountCheck>>;
     try {
-      page = await byId.characters.list(0);
+      check = await accountCheck(await byId.characters.list(0), this.families);
     } catch (e) {
-      setKey(null); // ponytail: an unverified key is never kept; the key screen keeps the typed text
+      // ponytail: an unverified key is never kept, nor one whose account check is undecided (fail closed: nothing wiped,
+      // favorites and folders not loaded; the next key test asks again). The key screen keeps the typed text.
+      setKey(null);
       this.hasKey = false;
       this.keepSignedIn = keptSignedIn();
       const kind = e instanceof HttpError ? e.kind : null;
       return kind === 'key-lost' ? 'wrong-key' : kind === 'offline' || kind === 'blocked' ? kind : kind === 'cap' ? 'paused' : 'server';
     }
-    const saved = this.families.characters;
-    // ponytail: an account with 0 saved Characters cannot be told apart, so it keeps the copy (fresh families up to 1 h)
-    const keys = new Set(saved?.cards.map((c) => c.key));
-    if (keys.size && !page.cards.some((c) => keys.has(c.key))) {
+    if (getKey() !== key) return 'server'; // signed out (another tab's Forget) or replaced while the check ran: that wins (M-2)
+    if (check.other) {
       // Another account's saved copy: wipe it with its favorites and folders (R4), then the check below runs for every family.
       clearOrg();
       await wipe().catch(() => {});
       this.families = {} as Record<FamilyId, FamilyState | undefined>;
       this.errors = {};
     }
-    delete this.errors.characters;
     this.hasKey = true;
     this.keepSignedIn = keptSignedIn();
-    await put('characters', applyCheck(this.families.characters, page, Date.now()));
+    // The pages the account check read are this key's first pages: the open check below skips them as fresh.
+    for (const [id, page] of check.pages) {
+      delete this.errors[id];
+      unchecked.delete(id);
+      await put(id, applyCheck(this.families[id], page, Date.now()), key);
+    }
     // A check that started before this key (or before the wipe) loaded org too early, and may have been cut short by a sign-out:
     // wait it out, then run this key's own check, which loads org after everything above (Phase 4 deferred N6).
     while (running) await running;
@@ -215,6 +213,10 @@ class Library {
       if (!key || getKey() !== key) return;
       await loadOrg(); // after connect's possible wipe
       ran = true;
+      // A hidden tab never takes the lock: its requests wait until it is shown (K1), and the lock would stall every other tab (I-1).
+      // ponytail: a tab hidden DURING its ~1 s check still holds the lock until shown; add a lock timeout if that shows up.
+      await whenVisible();
+      if (getKey() !== key) return;
       // One check across tabs: a tab that waited for the lock re-reads what the other tab saved.
       await locked(async () => {
         // Forgotten while waiting for the lock: never bring the library back into memory. Another key: its connect runs its own check.
@@ -229,7 +231,7 @@ class Library {
           guarded(id, async (f) => {
             const page = await f.list(0);
             const saved = this.families[id];
-            await put(id, applyCheck(saved, page, Date.now()));
+            await put(id, applyCheck(saved, page, Date.now()), key);
           });
         await Promise.all(ids.map(check));
         for (const id of ids) this.errors[id] ? unchecked.add(id) : unchecked.delete(id);
@@ -244,6 +246,8 @@ class Library {
 
   /** Next page, starting one row back; a shifted list reloads the family from page 0. */
   loadMore = async (id: FamilyId): Promise<void> => {
+    while (running) await running; // build on the checked page 0 (K6); no caller runs inside the open check
+    const key = getKey();
     const s = this.families[id];
     if (!s?.cards.length || s.cards.length >= s.total) return;
     await guarded(id, async (f) => {
@@ -253,7 +257,7 @@ class Library {
       const next = cur ? joinNextPage(cur, n, page.cards, Date.now()) : 'reload';
       // Reload: page 0 against the saved page 0 only, so unchanged pictures stay and the shifted deep rows go.
       const top = cur && { ...cur, cards: cur.cards.slice(0, f.pageSize), deepLoadedAt: null };
-      await put(id, next === 'reload' ? applyCheck(top, await f.list(0), Date.now()) : next);
+      await put(id, next === 'reload' ? applyCheck(top, await f.list(0), Date.now()) : next, key);
     });
   };
 
@@ -293,7 +297,7 @@ class Library {
 
   /** One image-host frame or rotation, cached by link for the session. Image-host links only (no API request). */
   picture = (url: string, familyId: FamilyId, signal?: AbortSignal): Promise<Blob | null> => {
-    if (!onImageHost(url)) return Promise.resolve(null);
+    if (!isImageUrl(url)) return Promise.resolve(null);
     let p = pictures.get(url);
     if (!p) {
       p = publicGet(url, { signal, label: `${byId[familyId].label} · frame` })
@@ -373,13 +377,16 @@ async function adopt(): Promise<void> {
   for (const f of adapters) {
     const d = disk[f.id];
     const m = library.families[f.id];
-    if (d && (!m || d.checkedAt > m.checkedAt)) library.families[f.id] = dropExpiredDeep(d, Date.now(), f.pageSize);
+    // An equal checkedAt with more rows: another tab scrolled further from the same page 0 (K7).
+    if (d && (!m || d.checkedAt > m.checkedAt || (d.checkedAt === m.checkedAt && d.cards.length > m.cards.length)))
+      library.families[f.id] = dropExpiredDeep(d, Date.now(), f.pageSize);
   }
 }
 
-/** Set a family and save a plain copy. ponytail: the saved copy is best effort; a failed save only costs a later request. */
-function put(id: FamilyId, state: FamilyState): Promise<void> {
-  if (!getKey()) return Promise.resolve(); // an answer that lands after Forget or sign-out is dropped, not saved back
+/** Set a family and save a plain copy. ponytail: the saved copy is best effort; a failed save only costs a later request.
+ * `key` is the key the answer was asked with: one that lands after Forget, sign-out or another key is dropped, not saved. */
+function put(id: FamilyId, state: FamilyState, key: string | null): Promise<void> {
+  if (!key || getKey() !== key) return Promise.resolve();
   library.families[id] = state;
   return saveFamily(id, $state.snapshot(library.families[id]) as FamilyState).catch(() => {});
 }
@@ -398,8 +405,49 @@ async function guarded(id: FamilyId, fn: (f: Family) => Promise<void>): Promise<
   }
 }
 
+const overlaps = (saved: FamilyState | undefined, page: Page) => {
+  const keys = new Set(saved?.cards.map((c) => c.key));
+  return page.cards.some((c) => keys.has(c.key));
+};
+
+/** P2a: is the new key the account of the saved copy? Same when a saved card's key is on a fresh page (keys come from
+ * PixelLab ids, so another account never matches): Characters page 0; on a miss after growth, the one row where the saved
+ * newest character should now sit; else the other saved families' first pages, one at a time, stopping at the first match.
+ * Every page read is returned and saved, so another account costs 0 extra (all reused after the wipe) and the same account
+ * at most 1 extra within the hour (0 after: the open check would ask it). Throws when nothing matched and a page failed. */
+async function accountCheck(page: Page, families: Library['families']): Promise<{ other: boolean; pages: [FamilyId, Page][] }> {
+  const pages: [FamilyId, Page][] = [['characters', page]];
+  const saved = families.characters;
+  const same = { other: false, pages };
+  if (overlaps(saved, page)) return same;
+  const ids = adapters.map((f) => f.id).filter((id) => id !== 'characters' && families[id]?.cards.length);
+  // ponytail: no saved card in any family: nothing to compare, so the copy is kept (fresh families up to 1 h)
+  if (!saved?.cards.length && !ids.length) return same;
+  let failed: unknown = null;
+  if (saved?.cards.length && saved.total < page.total) {
+    try {
+      const row = await byId.characters.list(page.total - saved.total, undefined, 1);
+      if (row.cards[0]?.key === saved.cards[0].key) return same;
+    } catch (e) {
+      failed = e;
+    }
+  }
+  for (const id of ids) {
+    try {
+      const p = await byId[id].list(0);
+      pages.push([id, p]);
+      if (overlaps(families[id], p)) return same;
+    } catch (e) {
+      failed ??= e;
+    }
+  }
+  if (failed) throw failed;
+  return { other: true, pages };
+}
+
 async function loadArt(card: Card, familyId: FamilyId, signal?: AbortSignal): Promise<Blob | null> {
   const f = byId[familyId];
+  const key = getKey();
   try {
     if (f.artCostsApi && card.thumb) {
       const res = await publicGet(card.thumb, { signal, label: `${f.label} · picture` });
@@ -412,7 +460,7 @@ async function loadArt(card: Card, familyId: FamilyId, signal?: AbortSignal): Pr
       const saved = library.families[familyId]?.cards.find((c) => c.key === card.key && c.fp === card.fp);
       if (saved) {
         saved.thumb = thumb;
-        await put(familyId, library.families[familyId]!);
+        await put(familyId, library.families[familyId]!, key);
       }
     }
     return blob;

@@ -12,7 +12,8 @@ export interface Family {
   id: FamilyId;
   label: string;
   pageSize: 100 | 50;
-  list(offset: number, signal?: AbortSignal): Promise<Page>;
+  /** `limit`: the page size unless given (the account check asks for 1 row). */
+  list(offset: number, signal?: AbortSignal, limit?: number): Promise<Page>;
   /** One picture. Throws for a card that is not done (no art requests for unfinished/failed rows). */
   art(card: Card, signal?: AbortSignal): Promise<{ blob: Blob; thumb?: string }>;
   /** true: the picture costs an API request, so the screen waits before asking. */
@@ -199,9 +200,10 @@ function make(t: Transport, s: Spec): Family {
     label: s.label,
     pageSize: s.pageSize,
     artCostsApi: !!s.costly,
-    async list(offset, signal) {
+    async list(offset, signal, limit = s.pageSize) {
       const page = Math.round(offset / s.pageSize) + 1; // a one-row overlap start still counts as that page
-      const body = await t.apiGet<Row>(`${s.path}?limit=${s.pageSize}&offset=${offset}`, { user: offset > 0, signal, label: `${s.label} · ${offset ? `page ${page}` : 'first page'}` });
+      const what = limit !== s.pageSize ? 'account check' : offset ? `page ${page}` : 'first page';
+      const body = await t.apiGet<Row>(`${s.path}?limit=${limit}&offset=${offset}`, { user: offset > 0, signal, label: `${s.label} · ${what}` });
       const rows = body?.[s.rows];
       if (!Array.isArray(rows) || typeof body.total !== 'number') throw new Error(`${s.label}: unexpected list answer`);
       const cards = (await Promise.all(rows.map((r) => toCard(s, r)))).filter((c): c is Card => c !== null);
@@ -224,11 +226,14 @@ function make(t: Transport, s: Spec): Family {
 
 export const createFamilies = (t: Transport): Family[] => SPECS.map((s) => make(t, s));
 
+/** A card's character group, or null: the one "has a group" rule (a blank group_id is none). */
+export const groupOf = (c: Card): string | null => str(c.meta.group_id);
+
 /** Sibling states of one character share a group_id: keep the first card per group (the grid shows one). Order kept. */
 export function groupStates(cards: Card[]): Card[] {
   const seen = new Set<string>();
   return cards.filter((c) => {
-    const g = str(c.meta.group_id);
+    const g = groupOf(c);
     if (!g) return true;
     if (seen.has(g)) return false;
     seen.add(g);

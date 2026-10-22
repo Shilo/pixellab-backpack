@@ -358,6 +358,22 @@ test('Keep me signed in moves the key between the two stores, never both', async
   expect([session.size, local.has(L), http.keptSignedIn()]).toEqual([0, false, false]);
 });
 
+test('I1: a memory-only key (the agent token) never reaches either store, even with Keep me signed in on; a human key still does', async () => {
+  local.clear();
+  session.clear();
+  http = await loadModule();
+  http.setKey(KEY, { memoryOnly: true });
+  expect(http.getKey()).toBe(KEY);
+  expect([...session.values(), ...local.values()]).not.toContain(KEY);
+  http.setKeepSignedIn(true);
+  expect([...session.values(), ...local.values()]).not.toContain(KEY);
+  expect(http.keptSignedIn()).toBe(false);
+  http.setKey(KEY); // a pasted key: the normal path again (this tab only, as Keep never turned on)
+  expect([...session.values()]).toContain(KEY);
+  http.setKeepSignedIn(true);
+  expect([...local.values()]).toContain(KEY);
+});
+
 test('a kept key wins over a tab key on load', async () => {
   local.set('pixellab-backpack:key-kept', 'kept-key-1234');
   session.set('pixellab-backpack:key', 'tab-key-5678');
@@ -538,7 +554,7 @@ test('identical in-flight requests share one fetch', async () => {
   expect(await (await c).json()).toEqual(await (await d).json());
 });
 
-test('waiting work is cancelled while the tab is hidden; running work finishes', async () => {
+test('waiting work waits while hidden and goes out when visible; running work finishes', async () => {
   let onChange = () => {};
   const doc = { visibilityState: 'visible', addEventListener: (_: string, cb: () => void) => (onChange = cb) };
   vi.stubGlobal('document', doc);
@@ -550,9 +566,46 @@ test('waiting work is cancelled while the tab is hidden; running work finishes',
   expect(pending).toHaveLength(2);
   doc.visibilityState = 'hidden';
   onChange();
-  expect((await waiting).err?.kind).toBe('cancelled');
   pending.forEach((p) => p.reply());
   expect((await Promise.all(running)).every((r) => !r.err)).toBe(true);
+  await tick(5000);
+  expect(pending).toHaveLength(2); // nothing new goes out while hidden, and nothing is cancelled
+  doc.visibilityState = 'visible';
+  onChange();
+  await tick();
+  expect(pending).toHaveLength(3);
+  pending[2].reply();
+  expect((await waiting).err).toBeUndefined();
+});
+
+test('whenVisible resolves at once while visible, else on the first change to visible', async () => {
+  const listeners: (() => void)[] = [];
+  const doc = { visibilityState: 'hidden', addEventListener: (_: string, cb: () => void) => listeners.push(cb), removeEventListener: () => {} };
+  vi.stubGlobal('document', doc);
+  http = await loadModule();
+  let shown = false;
+  void http.whenVisible().then(() => (shown = true));
+  await tick();
+  expect(shown).toBe(false);
+  doc.visibilityState = 'visible';
+  listeners.forEach((cb) => cb());
+  await tick();
+  expect(shown).toBe(true);
+  await http.whenVisible(); // visible: at once
+});
+
+test('M-1: a keyed request in flight is not shared with the next key; each answer reaches its own caller', async () => {
+  const a = outcome(http.apiGet('/objects?limit=100&offset=0'));
+  await tick();
+  http.setKey('other-key-456');
+  const b = outcome(http.apiGet('/objects?limit=100&offset=0'));
+  await tick();
+  expect(pending).toHaveLength(2);
+  expect(pending[1].init?.headers).toEqual({ Authorization: 'Bearer other-key-456' });
+  pending[0].reply(200, { who: 'a' });
+  pending[1].reply(200, { who: 'b' });
+  expect((await a).value).toEqual({ who: 'a' });
+  expect((await b).value).toEqual({ who: 'b' });
 });
 
 test('an aborted request leaves the queue', async () => {
@@ -565,6 +618,22 @@ test('an aborted request leaves the queue', async () => {
   pending.forEach((p) => p.reply());
   await Promise.all(ps);
   expect(calls).toHaveLength(2);
+});
+
+test('K8: aborting a request that already went out does not cut it off: its answer still arrives', async () => {
+  const ac = new AbortController();
+  const p = outcome(http.apiGet('/characters/x', { signal: ac.signal }));
+  await tick();
+  ac.abort();
+  expect(pending[0].init?.signal?.aborted).toBe(false);
+  pending[0].reply();
+  expect((await p).err).toBeUndefined();
+});
+
+test('isImageUrl: plain https on the image host only', () => {
+  expect(http.isImageUrl(`${IMG}/x.png`)).toBe(true);
+  for (const u of [`${API}/characters`, 'http://backblaze.pixellab.ai/x.png', 'https://u:p@backblaze.pixellab.ai/x.png', 'https://evil.example/x.png', 'not a url'])
+    expect(http.isImageUrl(u)).toBe(false);
 });
 
 test('a failure while online is retried and counted; "blocked" only after the last retry', async () => {

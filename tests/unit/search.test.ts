@@ -190,8 +190,9 @@ describe('sameAsset', () => {
     expect(sameAsset(at('a', { group_id: 'g' }, 'objects'), hit)).toBe(false);
     expect(sameAsset(at('a', { group_id: 'h' }), hit)).toBe(false);
   });
-  it('never groups by an empty or missing group id', () => {
+  it('never groups by an empty, blank or missing group id (the one groupOf rule, K15)', () => {
     expect(sameAsset(at('a', { group_id: '' }), at('b', { group_id: '' }))).toBe(false);
+    expect(sameAsset(at('a', { group_id: '  ' }), at('b', { group_id: '  ' }))).toBe(false);
     expect(sameAsset(at('a'), at('b'))).toBe(false);
   });
 });

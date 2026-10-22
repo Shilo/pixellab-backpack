@@ -1,4 +1,5 @@
 // Search rules, pure (Phase 3 R5/R6/R8): case- and accent-insensitive substring match on a card's name and (grouped cards only) state name.
+import { groupOf } from './api/families';
 import type { Card, Item } from './types';
 
 export const MAX_RESULTS = 100;
@@ -75,8 +76,8 @@ export const stateName = (c: Card, states: readonly Card[]): string =>
 
 /** `it` is `hit` or (a character group) another of its states: the grid, the search and the viewer show a group as one card. */
 export function sameAsset(it: Item, hit: Item): boolean {
-  const g = hit.card.meta.group_id;
-  return it.card.key === hit.card.key || (typeof g === 'string' && !!g && it.familyId === hit.familyId && it.card.meta.group_id === g);
+  const g = groupOf(hit.card);
+  return it.card.key === hit.card.key || (!!g && it.familyId === hit.familyId && groupOf(it.card) === g);
 }
 
 /** The whole name a card is searched and shown by in results: `card.name` is cut to 60 code points at load (kept, as it is

@@ -2,10 +2,10 @@
 // { v: 1, favorites: key[], folders: Folder[], cards: Record<key, Snap> }. Lists hold opaque card keys, newest added first.
 // Every listed key has a snapshot: the card as the screen held it when it was added (R6 §4.3), so Favorites and a folder draw
 // with 0 requests even after the deep pages expired or before their family is scrolled. A snapshot no list uses is dropped.
-// Writes run only while enabled (a key is held, R4). A future saved-copy SCHEMA bump must keep the `org` key.
+// Writes run only while enabled (a key is held, R4).
 import { familiesOf } from '../categories';
 import type { Card, FamilyId, Item } from '../types';
-import { isCard, isObj, loadOrg, updateOrg } from './store';
+import { isCard, isObj, loadOrg, persist, updateOrg } from './store';
 
 export interface Snap {
   familyId: FamilyId;
@@ -81,12 +81,17 @@ async function change(apply: (r: Rec) => string | void): Promise<void> {
   if (!enabled) return;
   let next: Rec | undefined;
   let said = undefined as string | void;
+  let first = false;
+  const used = (r: Rec) => r.favorites.length > 0 || r.folders.length > 0;
   await updateOrg((o) => {
     if (isObj(o) && o.v !== 1) return o;
     next = check(o);
+    const was = used(next);
     said = apply(next);
+    first = !was && used(next);
     return tidy(next);
   });
+  if (first) persist(); // the first favorite or folder: ask the browser to keep the data (P2b)
   if (!enabled || !next) return; // cleared while writing, or refused
   show(next);
   if (said) say(said);

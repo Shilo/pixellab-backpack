@@ -100,7 +100,7 @@ test('a key that stops working mid-session asks to reconnect, not "Welcome back"
   await expect(page.getByText('Welcome back!')).toHaveCount(0);
 });
 
-test("a key test cancelled during PixelLab's 429 pause: Try again waits out the pause instead of lifting it", async ({ page }) => {
+test("a key test waiting out PixelLab's 429 pause survives a tab switch (K1: paused, not cancelled) and goes out once the pause is over", async ({ page }) => {
   await page.clock.install(); // time flows normally; fastForward skips the 60 s pause
   await mockPixelLab(page);
   let asked = 0;
@@ -118,12 +118,13 @@ test("a key test cancelled during PixelLab's 429 pause: Try again waits out the 
   await page.getByRole('button', { name: 'Test key' }).click();
   await expect.poll(() => asked).toBe(1); // first 429: the test waits out a 60 s pause behind "Testing…"
   await page.waitForTimeout(300);
-  await visibility('hidden'); // switching tabs cancels the waiting test
-  await expect(page.getByRole('heading', { name: "PixelLab isn't answering right now." })).toBeVisible();
+  await visibility('hidden'); // switching tabs pauses the waiting test, it does not end it
+  await page.waitForTimeout(500);
   await visibility('visible');
-  await page.getByRole('button', { name: 'Try again' }).click();
   await page.waitForTimeout(1500);
-  expect(asked).toBe(1); // nothing sent inside the pause
+  await expect(page.getByRole('heading', { name: "PixelLab isn't answering right now." })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Testing/ })).toBeVisible();
+  expect(asked).toBe(1); // nothing sent inside the pause, visible or not
   await page.clock.fastForward('01:05');
   await expect(page.getByRole('link', { name: /^Characters, / })).toBeVisible();
   expect(asked).toBe(2);

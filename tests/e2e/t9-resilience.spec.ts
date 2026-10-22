@@ -1,7 +1,7 @@
 // T9 Resilience (mocked PixelLab): mid-session slowed / paused / blocked, the all-families-failed card and an empty category.
 // The mid-session stop with Try again is covered by t5-navigation.spec.ts.
 import { expect, test, type Page } from '@playwright/test';
-import { GOOD_KEY, connect, mockPixelLab, settle, type Hit } from '../fixtures/pixellab-mock';
+import { GOOD_KEY, ageSaved, connect, mockPixelLab, settle, type Hit } from '../fixtures/pixellab-mock';
 
 const lists = (hits: Hit[]) => hits.filter((h) => h.list);
 const tryAgainNotice = (page: Page) => page.getByRole('status').filter({ hasText: 'Try again' });
@@ -100,6 +100,31 @@ test('every family failing with nothing saved shows the error card; Try again lo
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(page.getByRole('link', { name: 'Characters, 250' })).toBeVisible();
   await expect(card).toHaveCount(0);
+});
+
+test('K1: an open check in a hidden tab waits, then goes out when the tab is shown: no "Cancelled", no error', async ({ page }) => {
+  const mock = await mockPixelLab(page);
+  await page.goto('/');
+  await connect(page);
+  await settle(page, mock);
+  // Same tab, saved copy older than the hour, reloaded in the background (a restored session or a middle-click).
+  for (const fam of ['characters', 'objects', 'ui', 'tilesets', 'tilesets-side', 'isometric', 'tiles-pro'] as const) await ageSaved(page, fam, { checkedMs: 2 * 3_600_000 });
+  await page.addInitScript(() => {
+    let state: DocumentVisibilityState = 'hidden';
+    Object.defineProperty(document, 'visibilityState', { get: () => state, configurable: true });
+    (window as unknown as { show: () => void }).show = () => ((state = 'visible'), document.dispatchEvent(new Event('visibilitychange')));
+  });
+  await page.reload();
+  await page.getByRole('link', { name: 'Characters, 250' }).waitFor(); // the saved copy shows at once
+  await page.waitForTimeout(1500);
+  const at = mock.hits.length;
+  expect(lists(mock.hits)).toHaveLength(7); // only the first open's 7: nothing went out while hidden
+  await page.evaluate(() => (window as unknown as { show: () => void }).show());
+  await expect.poll(() => lists(mock.hits.slice(at)).length).toBe(7);
+  await settle(page, mock);
+  expect(lists(mock.hits.slice(at))).toHaveLength(7);
+  await expect(tryAgainNotice(page)).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: "Couldn't reach PixelLab." })).toHaveCount(0);
 });
 
 test('an empty category says "Nothing here yet." and sends no extra request', async ({ page }) => {

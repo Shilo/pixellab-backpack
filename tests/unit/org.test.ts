@@ -241,6 +241,31 @@ describe('device', () => {
 });
 
 describe('challenge fixes', () => {
+  it('P2b: asks the browser to keep the data once, when the first favorite or folder is created; works without the API', async () => {
+    const persist = vi.fn(async () => true);
+    vi.stubGlobal('navigator', { storage: { persist } });
+    try {
+      const o = await tab();
+      await o.load();
+      await o.setFavorite(item(K1), [K1], true);
+      expect(persist).toHaveBeenCalledOnce();
+      await o.setFavorite(item(K2), [K2], true);
+      await o.createFolder('Alpha');
+      expect(persist).toHaveBeenCalledOnce();
+      h.db.clear();
+      await o.load();
+      await o.createFolder('Beta'); // the first folder of an empty record
+      expect(persist).toHaveBeenCalledTimes(2);
+      vi.stubGlobal('navigator', {}); // no StorageManager: the write still works
+      h.db.clear();
+      await o.load();
+      await o.setFavorite(item(K3), [K3], true);
+      expect(stored().favorites).toEqual([K3]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('C1: a saved record of another version is never rewritten by a write', async () => {
     const future = { v: 2, everything: ['kept'] };
     h.db.set('org', future);
