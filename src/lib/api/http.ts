@@ -366,6 +366,7 @@ function netKind(e: unknown): 'cancelled' | 'offline' | 'blocked' {
 
 async function attempt(job: Job): Promise<void> {
   const t0 = Date.now();
+  const requestKey = key;
   running++;
   sessionApi++;
   const c = readCount();
@@ -374,17 +375,20 @@ async function attempt(job: Job): Promise<void> {
   try {
     // K8: the caller's signal only takes a job out of the queue (submit); a request that went out finishes, so its answer is kept.
     const init: RequestInit = { method: 'GET', signal: timed() };
-    if (job.auth) init.headers = { Authorization: `Bearer ${key}` };
+    if (job.auth) init.headers = { Authorization: `Bearer ${requestKey}` };
     let res: Response | undefined;
     try {
       res = await fetch(job.url, init);
     } catch (e) {
+      if (job.auth && requestKey !== key) return fail(job, new HttpError(key ? 'cancelled' : 'key-lost'), t0);
       // Offline and aborts end here. A failure while online may be an outage answering without CORS
       // headers, so it is treated like a 5xx below: retried, counted, and 'blocked' only at the end.
       const kind = netKind(e);
       if (kind === 'offline') setStatus(kind);
       if (kind !== 'blocked') return fail(job, new HttpError(kind), t0);
     }
+    // A response to a previous credential cannot reject or throttle the new connection.
+    if (job.auth && requestKey !== key && !res?.ok) return fail(job, new HttpError(key ? 'cancelled' : 'key-lost'), t0, res?.status);
     if (res && (status === 'offline' || status === 'blocked')) setStatus('ok');
     const s = res ? res.status : 0;
     if (res?.ok) {

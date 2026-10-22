@@ -857,3 +857,21 @@ for (const initial of ['shared', 'legacy', 'both', 'quota'] as const) {
     expect([http.getKey(), http.keptSignedIn(), local.has('pixellabApiKey'), local.has('pixellab-backpack:key-kept'), local.has('pixeldoll.apiKey')]).toEqual([null, false, false, false, false]);
   });
 }
+
+
+for (const oldStatus of [200, 401, 429, 500]) {
+  test(`late ${oldStatus} for the previous key cannot reject or throttle the new connection`, async () => {
+    const old = outcome(http.apiGet('/old-key-request'));
+    await tick();
+    http.setKey('new-key-456');
+    const current = outcome(http.apiGet('/current-key-request'));
+    await tick();
+    pending[1].reply();
+    expect((await current).err).toBeUndefined();
+    pending[0].reply(oldStatus);
+    expect((await old).err?.kind).toBe(oldStatus === 200 ? undefined : 'cancelled');
+    expect([http.getKey(), http.getCounters().status]).toEqual(['new-key-456', 'ok']);
+    await tick(10_000);
+    expect(calls).toHaveLength(2); // the stale response never schedules another request
+  });
+}
