@@ -1,6 +1,6 @@
 # MVP plan: PixelLab Backpack
 
-Status: 2026-10-19. Draft for the owner. The name is decided: PixelLab Backpack (see concern 1). The MVP and Phases 2 to 4 are built; owner checks remain (T7, Phase 0 Q1, Q4, Q6).
+Status: 2026-10-21. The MVP is done (2026-10-20) and Phases 2 to 4 are built. The name is decided: PixelLab Backpack (see concern 1). What comes next is in the [roadmap](#roadmap). What only you can do is in [What the owner needs to do](#what-the-owner-needs-to-do).
 
 **What the MVP is.** Paste your PixelLab API key. See your library as category tiles. Open a category, scroll through your art, and go back. That's it. Everything else waits.
 
@@ -15,7 +15,7 @@ Status: 2026-10-19. Draft for the owner. The name is decided: PixelLab Backpack 
 | [Architecture 05](../design/05-architecture.md) and [plan 06](../design/06-implementation-plan.md) | The module names and phases we reuse, cut down for the MVP |
 | [Full mockups](../../mockups/full/base/README.md) | The screens to build: `g1-connect`, `01-home`, `03-category-open` and their states |
 
-**What this replaces.** This plan narrows [plan 06](../design/06-implementation-plan.md) Phase 1. Where the two disagree, **this plan wins for the MVP**. Plan 06 still describes the full product. Its decisions are logged as P-1 to P-12 in the [decision log](../design/00-decision-log.md#7-mvp-plan-rulings-p).
+**What this replaces.** This plan narrows [plan 06](../design/06-implementation-plan.md) Phase 1. Where the two disagree, **this plan wins for the MVP**. Plan 06 still describes the full product. Its decisions are logged as P-1 to P-12 in the [decision log](../design/00-decision-log.md#7-mvp-plan-rulings-p); later product rulings follow as P-13 onward. Which doc wins is set at the top of the decision log: its rulings first, then each phase plan's rulings for the feature it built, then the design docs.
 
 ## Contents
 
@@ -24,9 +24,11 @@ Status: 2026-10-19. Draft for the owner. The name is decided: PixelLab Backpack 
 3. [Concern 3: Folders and favorites across devices](#concern-3-folders-and-favorites-across-devices)
 4. [Concern 4: MVP, KISS and YAGNI](#concern-4-mvp-kiss-and-yagni)
 5. [Concern 5: MVP scope](#concern-5-mvp-scope)
-6. [Decisions you still need to make](#decisions-you-still-need-to-make)
-7. [How the code is organized](#how-the-code-is-organized)
-8. [To-do list](#to-do-list)
+6. [Concern 6: Activity log](#concern-6-activity-log-developer-mode)
+7. [Decisions you still need to make](#decisions-you-still-need-to-make)
+8. [What the owner needs to do](#what-the-owner-needs-to-do)
+9. [How the code is organized](#how-the-code-is-organized)
+10. [To-do list](#to-do-list), with the [roadmap](#roadmap)
 
 ---
 
@@ -140,7 +142,7 @@ The Tilesets number is high because tileset lists have no picture link, so each 
 | A row changed (renamed, finished generating, new picture) | That row updates in place |
 | Anything else (a deletion, an edit that moved an old asset) | Page 0 is replaced. Deeper rows are dropped and reload as you scroll |
 
-What it can miss: an edit to an old asset deep in the list, if nothing else changed. That shows up within 7 days. Manual Sync (deferred) will fix it on demand.
+What it can miss: an edit to an old asset deep in the list, if nothing else changed. That shows up within 7 days. Full refresh (roadmap, Later) would fix it on demand.
 
 ### The safety net (R6 §5.4, all inside one network module)
 
@@ -219,12 +221,12 @@ One short email. Every "yes" lowers the load further. The MVP does not wait for 
 
 **Recommendation.**
 - **MVP: nothing.** The MVP has no folders or favorites.
-- **First after the MVP:** the backup file (export and import).
+- **First after the MVP:** the backup file (export and import), now in Phase 5.
 - **Later, on demand:** opt-in "Sync with Dropbox".
 - **Never** store anything in PixelLab. **No server** unless the product changes.
 - Never sync the API key.
 
-**Status: DECIDED for the MVP (nothing).**
+**Status: DECIDED.** Favorites and folders shipped in Phase 4; the backup file is in Phase 5.
 
 ---
 
@@ -242,7 +244,7 @@ One short email. Every "yes" lowers the load further. The MVP does not wait for 
 | One job per module | Each file does one thing. Only one file talks to PixelLab |
 | A plug-in point only where a second user is certain | The "family adapter" exists because 7 families use it on day one and Images and Maps will plug in later. Nothing else gets an abstraction |
 | Safety is never cut | View-only, key safety, the API safety net and accessibility basics stay, even in the MVP |
-| Deferred means hidden or inert | Unbuilt features are either not shown or shown as buttons that do nothing yet. No fake screens |
+| Deferred means hidden | Unbuilt features are not shown. No fake screens. (The MVP allowed buttons that did nothing yet; P-20 ends that) |
 | Every shortcut is marked | A deliberate simplification gets a `// ponytail:` comment naming its limit and its upgrade path |
 
 **Status: ADOPTED.**
@@ -263,7 +265,7 @@ One short email. Every "yes" lowers the load further. The MVP does not wait for 
 
 Copy comes word for word from [02](../design/02-ux-spec.md) §12 and the mockups. Desktop and phone layouts both follow the mockups.
 
-**Visible but inert** (they do nothing yet, and say so to screen readers): Search, Select and Settings. The "…" menu works but shows only two items: **Refresh** and **Activity**.
+**Visible but inert** (they do nothing yet, and say so to screen readers): Search, Select and Settings. The "…" menu works but shows only two items: **Refresh** and **Activity**. *Later: Search and Settings were built in Phases 2–3, and Select is hidden until Select mode ships (P-20).*
 
 **Small MVP rules**
 - **Key mode:** "this tab only" (the safe default). "Keep me signed in" waits for Settings.
@@ -273,16 +275,16 @@ Copy comes word for word from [02](../design/02-ux-spec.md) §12 and the mockups
 
 ### Deferred
 
-| Feature | Why it waits |
-|---|---|
-| Viewing a single asset (viewer, player, Info) | Needs detail requests and the player; the biggest next step |
-| Favorites and folders | Needs local storage of your own data and the final name |
-| Downloads and Select | Needs the viewer and the download module |
-| Images (Creator gallery) | Its read tool isn't marked read-only (Phase 0 check P0-9), and it's the biggest API cost: 836 requests for one full scroll today |
-| Maps | Each picture is a server-side render |
-| Search, Settings, Select | Visible but inert in the MVP |
-| Full refresh (re-read every saved page) | "Refresh" plus the check on open cover the MVP (concern 2) |
-| Cross-device sync | Concern 3 |
+| Feature | Why it waits | Built in |
+|---|---|---|
+| Viewing a single asset (viewer, player, Info) | Needs detail requests and the player; the biggest next step | Phase 2 |
+| Favorites and folders | Needs local storage of your own data and the final name | Phase 4 |
+| Downloads and Select | Needs the viewer and the download module | Roadmap: Phases 6 and 7 |
+| Images (Creator gallery) | Blocked on PixelLab's answer to question 2 (is `get_image` read-only?), or 06 check P0-9 with owner approval A1. It's also the biggest API cost: 836 requests for one full scroll today | Roadmap: Later |
+| Maps | Each picture is a server-side render | Roadmap: Later |
+| Search, Settings, Select | Visible but inert in the MVP | Search: Phase 3. Settings: Phase 2. Select: hidden until Phase 7 (P-20) |
+| Full refresh (re-read every saved page) | "Refresh" plus the check on open cover the MVP (concern 2) | Roadmap: Later |
+| Cross-device sync | Concern 3 | Backup: Phase 5. Dropbox: Later |
 
 **Images, Maps and the folder tiles: hidden, not disabled.** Hiding is simpler: no disabled style, no "coming soon" text, no tap that does nothing, and zero API requests. It also follows the existing rule that controls that don't apply are hidden (UX-19). They come back when their feature ships.
 
@@ -291,7 +293,7 @@ Copy comes word for word from [02](../design/02-ux-spec.md) §12 and the mockups
 - **Tasks:** each to-do item below is small, has one "done when", and says what it depends on.
 - **Code:** each module has one job and a small interface (next section). New families, screens and features plug in without changing the network module or the saved-copy logic.
 
-**Status: DECIDED, awaiting your sign-off.**
+**Status: DECIDED and built.**
 
 ---
 
@@ -308,7 +310,7 @@ Copy comes word for word from [02](../design/02-ux-spec.md) §12 and the mockups
 - **One gap:** for every request that carries your key, the browser first sends PixelLab a tiny automatic "is this website allowed to talk to you?" message. The browser does this on its own and hides it from the app, so the panel can only estimate how many there were (about one per kind of request every 10 minutes). Nothing in it is private and it does no real work, but it does reach PixelLab's server, which is why we count it.
 - **Cost:** it reads numbers the network module already keeps, so it adds no requests. The log lives only in memory and clears when the tab closes.
 
-**Status: BUILT** (decision 8; see [Phase 2](phase2-plan.md) and the [MVP build log](mvp-build-log.md)).
+**Status: BUILT in the MVP** (B13, decision 8; see the [MVP build log](mvp-build-log.md)).
 
 ---
 
@@ -320,13 +322,31 @@ Each has a recommended default. If you don't decide, the default applies and not
 |---|---|---|---|
 | 1 | Keep the saved asset list on the device in "this tab only" key mode? | **Yes** (R6) | Without it, every new tab is a first open, and scrolled pages are paid again every time. The key itself still lives in the tab only. The list holds only names and picture links of your own art |
 | 2 | Leave Images and Maps out of the MVP? | **Yes, hidden** | See concern 5 |
-| 3 | Send PixelLab the questions in concern 2 (especially picture links in tileset list rows)? | **Yes, soon**; the MVP doesn't wait for answers | Each "yes" lowers the load. It also starts the ToS conversation needed before any public launch (D31) |
-| 4 | Who uses the MVP? | **Only you, privately** | The MVP had no "Forget key" button; Settings (Forget key, Keep me signed in) shipped in [Phase 2](phase2-plan.md). Pasting another account's key replaces the saved list by itself (concern 2, step 2) |
-| 5 | Run the 6 owner checks in [Phase 0](#phase-0-checks-owner-run-real-key) with your real key? | **Yes**, about 1 hour, read-only, no spending | They confirm the data shapes and two unknowns the MVP relies on |
+| 3 | Send PixelLab the questions in concern 2 (especially picture links in tileset list rows)? | **Yes, soon**; nothing waits for answers. Not recorded as sent yet ([owner list](#what-the-owner-needs-to-do)) | Each "yes" lowers the load. It also starts the ToS conversation needed before any public launch (D31) |
+| 4 | Who uses the app? | **Only you.** It's hosted on GitHub Pages (P-17): the address is public, but don't share or advertise it before the PixelLab ToS contact (D31) | Settings (Forget key, Keep me signed in) shipped in [Phase 2](phase2-plan.md). Pasting another account's key replaces the saved list by itself (concern 2, step 2). On a shared `<user>.github.io` address, other pages there can read the saved data; a custom domain removes that (P-17) |
+| 5 | Run the 6 owner checks in [Phase 0](#phase-0-checks-owner-run-real-key) with your real key? | **Yes**, read-only, no spending. Q2, Q3 and Q5 are answered; Q1, Q4 and Q6 remain ([owner list](#what-the-owner-needs-to-do)) | They confirm the data shapes and two unknowns the MVP relies on |
 | 6 | Daily cap of 1,000 API requests per device | **Keep 1,000** | A daily visit uses 7. Scrolling through every Tilesets & tiles item uses about 376, once per device |
 | 7 | Final name | **Decided: PixelLab Backpack** | Owner choice, 2026-10-20 |
 | 8 | Add the Activity panel to the MVP? | **Yes** | Lets you and PixelLab see the real load at any time (concern 6) |
 | 9 | Add "Refresh" to the MVP? | **Yes**, once a minute at most | Otherwise new assets wait up to an hour; costs the same 7 requests |
+
+---
+
+## What the owner needs to do
+
+The one list of things only you can do. Other docs point here instead of keeping their own lists. Tick an item when it's done.
+
+- [ ] **Rotate the PixelLab API key** that was used in chat during testing (on your pixellab.ai account page). If AI agents still need a key, put the new one only in the git-ignored `.env` as `PIXELLAB_TOKEN_AGENT_DEV` (P-18; AGENTS.md, section "Agent testing").
+- [ ] **Real-phone checks** on an iPhone and an Android phone:
+  - the search field, ✕, Cancel and the first panel row stay visible with the keyboard open (Phase 3);
+  - a long press opens the card menu with no system link preview, and a short tap opens the viewer (Phase 4);
+  - sheets sit above the home indicator (Phase 4).
+- [ ] **Phase 0 checks Q1, Q4 and Q6, and the T7 request count**: about 30 minutes, read-only, nothing spent. Steps: [research 13](../research/13-phase0-results.md#still-to-do-owner) and its T7 checklist.
+- [ ] **Send PixelLab the six questions** in [concern 2](#questions-for-pixellab-draft-r6-6) (P-11), if you haven't yet. The email also starts the ToS contact (D31) that must happen before you share the app's address.
+- [ ] **Decide repo visibility.** GitHub Pages from a private repo needs a paid GitHub plan. A public repo exposes your real art in the committed `mockups/shared/assets/`: remove or replace it before a public push (B-4, P-17).
+- [ ] **Put the app on GitHub Pages**: add a GitHub remote, push `main`, then set Settings → Pages → Source to "GitHub Actions". The workflow then checks, builds and deploys every push to `main`. Don't advertise the address before the ToS contact (P-17).
+- [ ] *Optional:* **a custom domain** for Pages. Without one, other pages on your `<user>.github.io` address can read the app's saved key and library (P-17).
+- [ ] *Optional:* the checks in [01 §9](../design/01-product-brief.md#9-success-criteria-measurable-ux-targets) that need a real device (Lighthouse, screen-reader passes, performance traces). Not scheduled.
 
 ---
 
@@ -361,7 +381,7 @@ src/
       CategoryTile.svelte    one tile: 2x2 mosaic, name, count
       CategoryGrid.svelte    one category's cells, loads more on scroll, draws only rows on screen
       AssetCell.svelte       one square cell + name; waits 0.3 s on screen before costly art
-      Dock.svelte            the floating dock; Search, Select and "…" are inert in the MVP
+      Dock.svelte            the floating dock; Search, Select and "…" were inert in the MVP
       Notice.svelte          one-line banners: paused, offline, not answering, slow down
 public/_headers              security headers and CSP (05 §13.2)
 tests/unit  tests/e2e  tests/fixtures
@@ -454,18 +474,53 @@ About 1 hour in desktop Chrome, using the console helper in [plan 06 §2.2](../d
 - [x] **T6 Request counter** (e2e) `[P]`: first open = 7 API requests (+ up to 4 tileset helpers for the mosaic); back within an hour = 0; key pasted in a new tab within the hour = 1; another account's key wipes the saved copy; only GET requests; no key in any URL; no request for unfinished rows; the daily-cap banner appears (cap lowered for the test). *(with B7, B11)*
 - [ ] **T7 Real-key check** (owner-run; checklist in [Phase 0 results](../research/13-phase0-results.md#t7-owner-checklist-count-requests-in-activity)): open the MVP with your key and DevTools; count requests on first open, on a reopen within the hour, and the next day. Done when: the counts match the "Recommended MVP" row in concern 2 (allowing for new assets). Read the numbers in the Activity panel; no debug hook is needed. Expected: first open 7 API requests (+ up to 4 tileset pictures), reopen within the hour 0, next day 7. Stays unticked until the owner has run it. *(last)*
 
-### Deferred backlog (suggested order)
+### Roadmap
 
-- [x] Settings: Forget key, "Keep me signed in", About (needed before anyone but you uses the app). **Done in [Phase 2](phase2-plan.md).**
-- [x] Viewer for one asset: player for characters and objects, still views for the rest, Info; groups character states into one card. **Done in [Phase 2](phase2-plan.md).**
-- [ ] Full refresh in "…": re-read every saved page, never pictures; 60-second cooldown
-- [x] Search over the saved list, and "All assets" through the search panel. **Done in [Phase 3](phase3-plan.md).**
-- [x] Favorites and folders, with a local card snapshot so a folder opens with 0 requests (R6 §4.3); needs the final name first. **Built in [Phase 4](phase4-plan.md).**
-- [ ] Select mode and downloads (single asset first, then multi-asset ZIP)
-- [ ] Backup file export and import (the cross-device answer, concern 3)
-- [ ] Images (after Phase 0 P0-9 and approval A1) and Maps, with the MCP client and their own rate caps (R6 §4.2)
-- [ ] Play previews in the grid
-- [ ] Tilesets & tiles mixed by date (sort orders are confirmed newest first, but mixing is still not planned: deep pages would reshuffle, Phase 3 R4)
-- [ ] Help overlay and keyboard shortcuts
-- [ ] Built tileset picture links, only with PixelLab's written OK (R6 §4.1)
-- [ ] Opt-in "Sync with Dropbox", only if people ask (concern 3)
+Built after the MVP: Settings and the viewer ([Phase 2](phase2-plan.md)), Search ([Phase 3](phase3-plan.md)), favorites and folders ([Phase 4](phase4-plan.md)).
+
+What comes next, in order. Each phase gets its own plan with a "calls + checks" budget table for any new request (P-16). Items marked "(review-fix batch)" are being built now from the 2026-10-21 reviews; tick them when that batch lands.
+
+#### Phase 5: Keep it safe
+
+Closes the one known way to lose favorites and folders. No new API requests, except the account check's fallback below.
+
+- [ ] **Backup export and import** (Settings › Folders & favorites): download a versioned JSON file of favorites and folders (keys, names, order). Never in it: the key, PixelLab ids, picture links or card snapshots (Phase 4 R2). Import merges folders by name (UX-12) and says how many items will appear as their categories load. 0 API requests.
+- [ ] **Ask the browser to keep the data**: call `navigator.storage.persist()` once, when the first favorite or folder is created. 0 API requests. Safari mostly ignores it outside an installed web app, so the backup still matters. (review-fix batch)
+- [ ] **Better account check** (product review P2): it's the same account if any family's first page shares a card with that family's saved cards. Decide before favorites and folders load: check Characters first, and read the other families' first pages only when Characters shares nothing. Fail closed: if one of those pages fails, favorites and folders stay hidden, nothing is wiped and nothing is decided. Budget: 0 extra requests after the hour (those pages are the normal open check); within the hour up to 6 extra, only when Characters shares nothing. **Test:** a failed fallback page leaves favorites and folders hidden and intact, with no burst of requests. (review-fix batch)
+- [ ] **Check again on return** (P-21): when a hidden tab becomes visible again, run the normal open check under the 1-hour rule. (review-fix batch)
+- [ ] **Hide Select** in every dock until Select mode ships (P-20). (review-fix batch)
+- [ ] **Design and accessibility fixes U1–U5** (review-fix batch):
+  - U1: a white focus outline on checkboxes, switches and segmented buttons, visible on blue and glass;
+  - U2: readable blue and red text on dialogs and the Settings card;
+  - U3: menus and panels close when keyboard focus leaves them;
+  - U4: the dock title shrinks with an ellipsis at 320 px wide;
+  - U5: status messages sit in always-present live regions, so screen readers read them.
+- [ ] **Small design fixes** (review-fix batch): an empty Favorites tile shows the heart icon, not a folder; Activity closes with the ✕ button that Settings uses, not a "Close" text button.
+
+#### Phase 6: Downloads from the device
+
+Single-asset downloads built from bytes the viewer already has. No new API requests.
+
+- [ ] **Download in the viewer and the card menu**: PNG (1×, the current frame or still).
+- [ ] **GIF** (the current animation, direction and speed), made with `gifenc` (D5). The Phase 6 plan measures and states its bundle cost before adding it; it loads only when a download starts (01 §9: download code ≤ 10 KB gzipped).
+- [ ] **Copy image** and **Fullscreen** in the viewer "…" (P-19).
+- [ ] **Folder rows in Info**: which folders hold this asset, each opening the folder (local data, P-19).
+
+#### Phase 7: Select and multi-asset downloads
+
+- [ ] **Select mode**: Select comes back in the docks, with the selection bar (S-13).
+- [ ] **Multi-asset ZIP** from the selection, a folder's "…" and the library "…". Each character or object needs one detail request for its frames, unless its detail is already saved. So before it starts, the download says "Needs about {n} requests to PixelLab". It has a cap on requests per download (the number is set in the Phase 7 plan), counts toward the daily cap, pauses there with the existing "Keep loading" banner, and reuses every saved detail (0 requests for those).
+
+#### Later
+
+- [ ] **Images and Maps**: blocked on PixelLab's answer to question 2 (is `get_image` read-only?) and owner approval A1. They need the MCP client and their own rate caps (R6 §4.2).
+- [ ] **Built tileset picture links**: only with PixelLab's written OK (R6 §4.1).
+- [ ] **Play previews in the grid**: only with a budget rule. Frames need one detail request per character or object, and P-2 forbids detail requests just to draw a card. A rule to start from: play only cards whose detail is already saved on this device (0 requests), with no grid-wide autoplay.
+- [ ] **Tileset Grid overlay and tile info** (P-19).
+- [ ] **Tiles Pro thumbnail as a 2×2 of variations** (needs the variation links saved; P-19).
+- [ ] **Prompt and tag search** (P-19).
+- [ ] **Help overlay and single-key shortcuts**, with their off switch (F-15; P-19).
+- [ ] **Opt-in "Sync with Dropbox"**, only if people ask (concern 3).
+- [ ] **Full refresh** in "…": re-read every saved page, never pictures (about 36 requests at your size). Only if people report stale rows deep in a list; Refresh, the 7-day expiry and the free "gone" check cover it today.
+
+**Dropped:** Tilesets & tiles mixed by date (deep pages would reshuffle, Phase 3 R4), and the P-19 drops: Sort, Grid size, the light theme, the "Keep me signed in?" banner, the "{n} generating ↗" row, the "More in PixelLab" links and a remembered Info open state.

@@ -1,8 +1,8 @@
 # 15: GlassKit review
 
-> Note: `mockups/simple/` is kept locally and not published, so links to it from this file do not resolve on the public repo.
+> Note: `mockups/simple/` is kept only in the owner's local copy and is not committed, so its paths in this file are plain text, not links.
 
-Research date: 2026-10-19. The owner asked whether Vitrine should use **GlassKit** ([site](https://glasskit.jungherz.com/), [repo](https://github.com/JUNGHERZ/GlassKit)). This review rests on a read of the whole library at commit [`c8558ab`](https://github.com/JUNGHERZ/GlassKit/tree/c8558abb020a1c163f4aec07fbc0b3def7064fc2) (v1.27.0, 2026-10-18), its npm package, the live site, and a build of Concept 4 on it ([theme F mockup](../../mockups/simple/themes/f-glasskit/README.md)). Nothing from the repo was run. Line links below point at that commit (`gk:` = `https://github.com/JUNGHERZ/GlassKit/blob/c8558ab/`).
+Research date: 2026-10-19. The owner asked whether Vitrine should use **GlassKit** ([site](https://glasskit.jungherz.com/), [repo](https://github.com/JUNGHERZ/GlassKit)). This review rests on a read of the whole library at commit [`c8558ab`](https://github.com/JUNGHERZ/GlassKit/tree/c8558abb020a1c163f4aec07fbc0b3def7064fc2) (v1.27.0, 2026-10-18), its npm package, the live site, and a build of Concept 4 on it (theme F mockup, local only: `mockups/simple/themes/f-glasskit/README.md`). Nothing from the repo was run. Line links below point at that commit (`gk:` = `https://github.com/JUNGHERZ/GlassKit/blob/c8558ab/`).
 
 ## Verdict
 
@@ -91,7 +91,7 @@ There are no runtime dependencies (`package.json` has none). The only devDepende
 
 ### Contrast
 
-The figures below are WCAG 2.x ratios. "Measured" means composited over the real rendered pixels in headless Edge (method in the [mockup README](../../mockups/simple/themes/f-glasskit/README.md#measured-contrast)). "Computed" means flat token colours over GlassKit's own background `--gl-color-bg-mid` `#1a3d4e`.
+The figures below are WCAG 2.x ratios. "Measured" means composited over the real rendered pixels in headless Edge (method in the mockup README's "Measured contrast" section, local only: `mockups/simple/themes/f-glasskit/README.md`). "Computed" means flat token colours over GlassKit's own background `--gl-color-bg-mid` `#1a3d4e`.
 
 | Case | Ratio | Needs |
 |---|---|---|

@@ -1,4 +1,4 @@
-# 06 — Implementation Plan: Vitrine
+# 06 — Implementation Plan: PixelLab Backpack (formerly Vitrine)
 
 Working name **Vitrine**. Status: plan baseline, 2026-10-18.
 
@@ -358,7 +358,7 @@ Items 1–6 are carried from `01-product-brief.md` §11 (same numbers); item 8 i
 |---|---|---|---|
 | 1 | Final product name and trademark/domain check (research 08 advises against "PixelLab" as the leading word) | **Before the first build real users touch** (B-7): the name is one constant (`APP_ID`, `APP_NAME`), but a later rename breaks backup imports and signs out Remember-mode users. Trademark check by release | Keep "Vitrine" as the working name |
 | 2 | Accent colour vs PixelLab's brand palette (G23) | Visual token freeze (before 1.10 styling is final) | The ice blue in design 07 §5 |
-| 3 | Public hosting: launch publicly or not, which host (must send real CSP headers; GitHub Pages rejected), canonical URL | Release (3.7) | Cloudflare static assets, private URL |
+| 3 | Public hosting: launch publicly or not, which host, canonical URL | Release (3.7) | **Decided (P-17):** GitHub Pages, accepted for a preview with known risks; no public launch before the ToS contact (item 4) |
 | 4 | ToS contact with PixelLab before public launch: timing, and what to do with the answer (D31) | Release | No public launch until answered |
 | 5 | Phase 0 approvals: A1 (`get_image` gray area), A2 (one export download), plus A3 (burst-test acknowledgment, new) | Before Phase 0 | A1 declined → Images gate card; A2 declined → 8 fps stands; A3 declined → API lane 2 |
 | 6 | Source licence and repository visibility, public vs private (open source recommended against phishing). `mockups/shared/assets/` holds the owner's real PixelLab art and must be removed or replaced before any public push (B-4) | Before the first public push (release at the latest) | Private until decided |

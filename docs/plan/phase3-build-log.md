@@ -72,4 +72,4 @@ The controller ran the app on the dev server with the dev-only debug sign-in. It
   - no test for `states()` after a next page loads;
   - no test for a viewer opened from another screen.
 - Activity and the More menu close on Esc without `preventDefault`. Two things could close at once, but only by typing `#activity` in the address bar while searching.
-- Owner-run check: on a real iPhone and Android phone, the search field and the first panel row stay visible with the keyboard open.
+- Owner-run check (real phones, search keyboard): moved to the MVP plan's [What the owner needs to do](mvp-plan.md#what-the-owner-needs-to-do).

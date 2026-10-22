@@ -1,4 +1,4 @@
-# 01 — Product Brief: Vitrine
+# 01 — Product Brief: PixelLab Backpack (formerly Vitrine)
 
 **Vitrine** (working name) — *Unofficial gallery for your PixelLab assets.*
 Status: design baseline, 2026-10-18; final rulings applied. Inputs: `docs/reviews/R1-research-cross-review.md` (decisions D1–D31), `docs/reviews/R2`–`R3b`, `docs/research/01`–`09`, the orchestrator rulings R-1 to R-10 and F-1 to F-16, and the builder answers B-1 to B-20. Every decision, and the precedence order between docs and mockups, is in `00-decision-log.md`. Companion docs: `02-ux-spec.md` (behavior), `03-mockup-requirements.md` (mockup checklist), and `07-recommended-design.md` (visual design and layout).
@@ -146,7 +146,7 @@ Tap counts use R2's first-run walkthrough (R2 §2: phone hobbyist, landing → w
 | Download integrity | 1× PNG byte-identical to source; GIF total duration within 10 ms of the effective timing (the current playback speed); partial failures listed in `manifest.json` | Unit tests |
 | Bundle | Initial JS ≤ 60 KB gz; download code lazy-loaded ≤ 10 KB gz | CI bundle budget |
 
-The owner runs every measurement that needs the real API key or a real device (the real-key first run, device traces, the manual screen-reader passes) from checklists the builder writes (B-2).
+The owner runs every measurement that needs the real API key or a real device (the real-key first run, device traces, the manual screen-reader passes) from checklists the builder writes (B-2). **Status 2026-10-21:** none of these targets is measured yet, in CI or by hand. The device checks are optional and unscheduled ([MVP plan, What the owner needs to do](../plan/mvp-plan.md#what-the-owner-needs-to-do)).
 
 ## 10. Risks and dependencies
 
@@ -168,7 +168,7 @@ The owner runs every measurement that needs the real API key or a real device (t
 
 1. **Final product name** and trademark/domain check ("Vitrine" is a working name; research 08 advises against "PixelLab" as the leading word). **Timing (B-7):** decide it before the first build real users touch. The name is one constant, but renaming later breaks backup imports.
 2. **Accent color** vs PixelLab's brand palette (needs a PixelLab brand audit; G23). Default: the ice blue in 07 §5.
-3. **Public hosting**: whether to launch publicly, which host (it must send real CSP headers; GitHub Pages is rejected), and the canonical URL.
+3. **Public hosting**: whether to launch publicly, which host, and the canonical URL. **Decided (P-17):** GitHub Pages, accepted for a preview with known risks (shared origin, no `frame-ancestors`, only the CSP and referrer policy as meta tags). No public launch before the ToS contact (item 4).
 4. **ToS contact with PixelLab** before public launch: timing, and what to do with the answer (D31).
 5. **Phase 0 approvals A1–A3**: accepting the `get_image` gray area (A1), approving the one PixelLab export download needed for check P0-13 (A2), and acknowledging the burst test (A3) (06 §2.5).
 6. **Source license and repository visibility**, public or private (open source is the recommended anti-phishing measure). `mockups/shared/assets/` holds the owner's real PixelLab art and must be removed or replaced before any public push (B-4).

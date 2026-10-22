@@ -1,6 +1,6 @@
-# 08 — Simplicity Redesign: "Just the Art"
+# 08 — Simplicity Redesign: "Just the Art" (PixelLab Backpack, formerly Vitrine)
 
-> Note: `mockups/simple/` is kept locally and not published, so links to it from this file do not resolve on the public repo.
+> Note: `mockups/simple/` is kept only in the owner's local copy and is not committed, so its paths in this file are plain text, not links.
 
 Working name **Vitrine**, *Unofficial gallery for your PixelLab assets*. Status: canonical layout, visual-structure and control spec, 2026-10-19. The decisions are rows S-1 to S-17 in `00-decision-log.md`, which also holds the precedence order.
 
@@ -57,41 +57,41 @@ All three are static desktop renders, dark mode, 1440×900 at 2×, built on the 
 
 ### 3.1 Concept 1 · "Just the Art" (Photos / Unsplash model)
 
-The first screen is only art in uniform square cells, with no captions at rest. The title "All assets ▾" is the navigation: it switches between All, Favorites, the 7 types and every folder. There is no sidebar and no bottom pill. An asset opens on a calm dark stage with five floating controls, plus a "Walk · East ▾" chip for animated assets. ([README](../../mockups/simple/1-just-the-art/README.md))
+The first screen is only art in uniform square cells, with no captions at rest. The title "All assets ▾" is the navigation: it switches between All, Favorites, the 7 types and every folder. There is no sidebar and no bottom pill. An asset opens on a calm dark stage with five floating controls, plus a "Walk · East ▾" chip for animated assets. (README, local only: `mockups/simple/1-just-the-art/README.md`)
 
-![Concept 1: library grid, one cell in its hover state](../../mockups/simple/1-just-the-art/01-home.png)
+*Screenshot (local only): Concept 1: library grid, one cell in its hover state, `mockups/simple/1-just-the-art/01-home.png`.*
 
-![Concept 1: the "All assets" menu replaces the sidebar](../../mockups/simple/1-just-the-art/04-scope-menu.png)
+*Screenshot (local only): Concept 1: the "All assets" menu replaces the sidebar, `mockups/simple/1-just-the-art/04-scope-menu.png`.*
 
-![Concept 1: detail view, Android Courier walking east](../../mockups/simple/1-just-the-art/02-detail.png)
+*Screenshot (local only): Concept 1: detail view, Android Courier walking east, `mockups/simple/1-just-the-art/02-detail.png`.*
 
-![Concept 1: detail view with the Info drawer open](../../mockups/simple/1-just-the-art/03-detail-info.png)
+*Screenshot (local only): Concept 1: detail view with the Info drawer open, `mockups/simple/1-just-the-art/03-detail-info.png`.*
 
 ### 3.2 Concept 2 · "Home Screen" (iOS / Android home screen)
 
-Assets are icon tiles with a name underneath, on a wallpaper. Folders are 2×2 tiles at the start of the grid and open as an iOS-style overlay. A floating glass dock holds Search, a type menu "All ▾" and "…". Right-click and long press open the same context menu everywhere. ([README](../../mockups/simple/2-home-screen/README.md))
+Assets are icon tiles with a name underneath, on a wallpaper. Folders are 2×2 tiles at the start of the grid and open as an iOS-style overlay. A floating glass dock holds Search, a type menu "All ▾" and "…". Right-click and long press open the same context menu everywhere. (README, local only: `mockups/simple/2-home-screen/README.md`)
 
-![Concept 2: home screen with folder tiles and the dock](../../mockups/simple/2-home-screen/01-home.png)
+*Screenshot (local only): Concept 2: home screen with folder tiles and the dock, `mockups/simple/2-home-screen/01-home.png`.*
 
-![Concept 2: a folder open as an overlay](../../mockups/simple/2-home-screen/04-folder-open.png)
+*Screenshot (local only): Concept 2: a folder open as an overlay, `mockups/simple/2-home-screen/04-folder-open.png`.*
 
-![Concept 2: the context menu on right-click or long press](../../mockups/simple/2-home-screen/05-context-menu.png)
+*Screenshot (local only): Concept 2: the context menu on right-click or long press, `mockups/simple/2-home-screen/05-context-menu.png`.*
 
-![Concept 2: detail view](../../mockups/simple/2-home-screen/02-detail.png)
+*Screenshot (local only): Concept 2: detail view, `mockups/simple/2-home-screen/02-detail.png`.*
 
-![Concept 2: detail view with the Info sheet](../../mockups/simple/2-home-screen/03-detail-info.png)
+*Screenshot (local only): Concept 2: detail view with the Info sheet, `mockups/simple/2-home-screen/03-detail-info.png`.*
 
 ### 3.3 Concept 3 · "Library Tiles" (iOS App Library / iCloud.com)
 
-The first screen has no grid: six big category tiles with mosaic previews, then Favorites and folders as tiles of the same kind. Opening a tile shows a calm grid with 4 controls. The viewer matches Concept 1. ([README](../../mockups/simple/3-library-tiles/README.md))
+The first screen has no grid: six big category tiles with mosaic previews, then Favorites and folders as tiles of the same kind. Opening a tile shows a calm grid with 4 controls. The viewer matches Concept 1. (README, local only: `mockups/simple/3-library-tiles/README.md`)
 
-![Concept 3: library home of category tiles](../../mockups/simple/3-library-tiles/01-home.png)
+*Screenshot (local only): Concept 3: library home of category tiles, `mockups/simple/3-library-tiles/01-home.png`.*
 
-![Concept 3: a category opened (All assets)](../../mockups/simple/3-library-tiles/02-category.png)
+*Screenshot (local only): Concept 3: a category opened (All assets), `mockups/simple/3-library-tiles/02-category.png`.*
 
-![Concept 3: detail view](../../mockups/simple/3-library-tiles/03-detail.png)
+*Screenshot (local only): Concept 3: detail view, `mockups/simple/3-library-tiles/03-detail.png`.*
 
-![Concept 3: detail view with the Info panel](../../mockups/simple/3-library-tiles/04-detail-info.png)
+*Screenshot (local only): Concept 3: detail view with the Info panel, `mockups/simple/3-library-tiles/04-detail-info.png`.*
 
 ## 4. Control counts
 
@@ -349,7 +349,7 @@ All data, security, privacy, view-only and export decisions (D1–D31, R-1 to R-
 
 ## 12. Concept 4: Glass Library (added after owner feedback)
 
-The owner asked for a mix of Concept 2 and Concept 3: Concept 2's glass theming and floating UI (all content full screen, navigation in a floating bottom dock) with Concept 3's App Library layout for the content. It is a candidate alongside the recommendation in §6; the owner decides. ([README and storyboard](../../mockups/simple/4-glass-library/README.md))
+The owner asked for a mix of Concept 2 and Concept 3: Concept 2's glass theming and floating UI (all content full screen, navigation in a floating bottom dock) with Concept 3's App Library layout for the content. It is a candidate alongside the recommendation in §6; the owner decides. (README and storyboard, local only: `mockups/simple/4-glass-library/README.md`)
 
 - **Home:** six category tiles with mosaic previews and counts, then Favorites and folders as tiles. One floating glass dock: Library, Search, "…" (3 controls).
 - **Navigation:** the dock changes role by context: search panel, category breadcrumb (‹ Library · Objects, Search, Select, "…"), selection bar, viewer dock.
@@ -358,16 +358,16 @@ The owner asked for a mix of Concept 2 and Concept 3: Concept 2's glass theming 
 
 | Step | What the user did | Image |
 |---|---|---|
-| 1 | Opens the app | ![](../../mockups/simple/4-glass-library/01-home.png) |
-| 2 | Presses Search or `/` | ![](../../mockups/simple/4-glass-library/02-search-focused.png) |
-| 3 | Clicks the Objects tile | ![](../../mockups/simple/4-glass-library/03-category-open.png) |
-| 4 | Right-clicks an asset | ![](../../mockups/simple/4-glass-library/04-context-menu.png) |
-| 5 | Presses Select, picks 3 assets | ![](../../mockups/simple/4-glass-library/05-select-mode.png) |
-| 6 | Opens a character | ![](../../mockups/simple/4-glass-library/06-detail.png) |
-| 7 | Presses ⓘ | ![](../../mockups/simple/4-glass-library/07-detail-info.png) |
-| 8 | Opens the Download menu | ![](../../mockups/simple/4-glass-library/08-download-menu.png) |
-| 9 | Opens a folder from home | ![](../../mockups/simple/4-glass-library/09-folder-open.png) |
-| 10 | Presses the dock "…" | ![](../../mockups/simple/4-glass-library/10-more-menu.png) |
+| 1 | Opens the app | *Screenshot (local only): , `mockups/simple/4-glass-library/01-home.png`.* |
+| 2 | Presses Search or `/` | *Screenshot (local only): , `mockups/simple/4-glass-library/02-search-focused.png`.* |
+| 3 | Clicks the Objects tile | *Screenshot (local only): , `mockups/simple/4-glass-library/03-category-open.png`.* |
+| 4 | Right-clicks an asset | *Screenshot (local only): , `mockups/simple/4-glass-library/04-context-menu.png`.* |
+| 5 | Presses Select, picks 3 assets | *Screenshot (local only): , `mockups/simple/4-glass-library/05-select-mode.png`.* |
+| 6 | Opens a character | *Screenshot (local only): , `mockups/simple/4-glass-library/06-detail.png`.* |
+| 7 | Presses ⓘ | *Screenshot (local only): , `mockups/simple/4-glass-library/07-detail-info.png`.* |
+| 8 | Opens the Download menu | *Screenshot (local only): , `mockups/simple/4-glass-library/08-download-menu.png`.* |
+| 9 | Opens a folder from home | *Screenshot (local only): , `mockups/simple/4-glass-library/09-folder-open.png`.* |
+| 10 | Presses the dock "…" | *Screenshot (local only): , `mockups/simple/4-glass-library/10-more-menu.png`.* |
 
 ## 13. Inspiration links
 
@@ -385,18 +385,18 @@ The owner chose Concept 4's layout (S-18) and asked for themes beyond iOS glass.
 
 | Theme | Inspiration | Look | Folder |
 |---|---|---|---|
-| Glass (baseline) | Apple Liquid Glass | Dark translucent glass dock and panels | [4-glass-library](../../mockups/simple/4-glass-library/README.md) |
-| A · Tonal Dock | Material 3 Expressive | Opaque tonal greys, pill dock, pastel Download button, vibrant blue selection bar | [a-tonal-dock](../../mockups/simple/themes/a-tonal-dock/README.md) |
-| B · Mica Command | Fluent 2 / Windows 11 | Tight 8 px cards, command-bar dock, split Download button, Settings-style info cards | [b-mica-command](../../mockups/simple/themes/b-mica-command/README.md) |
-| C · Quiet Graphite | Linear / Raycast | Flat warm greys, hairlines, no colour; light inverted Download; shortcut hints | [c-quiet-graphite](../../mockups/simple/themes/c-quiet-graphite/README.md) |
-| D · Nothing Mono | Nothing OS | Black, white outlines, dot-matrix numerals, single red Download | [d-nothing-mono](../../mockups/simple/themes/d-nothing-mono/README.md) |
-| E · Pixel Bezel | Retro-modern hardware keys | Chamfered keys, hard shadows, pixel numerals, mint Download, marching-ants selection | [e-pixel-bezel](../../mockups/simple/themes/e-pixel-bezel/README.md) |
+| Glass (baseline) | Apple Liquid Glass | Dark translucent glass dock and panels | 4-glass-library (local only: `mockups/simple/4-glass-library/README.md`) |
+| A · Tonal Dock | Material 3 Expressive | Opaque tonal greys, pill dock, pastel Download button, vibrant blue selection bar | a-tonal-dock (local only: `mockups/simple/themes/a-tonal-dock/README.md`) |
+| B · Mica Command | Fluent 2 / Windows 11 | Tight 8 px cards, command-bar dock, split Download button, Settings-style info cards | b-mica-command (local only: `mockups/simple/themes/b-mica-command/README.md`) |
+| C · Quiet Graphite | Linear / Raycast | Flat warm greys, hairlines, no colour; light inverted Download; shortcut hints | c-quiet-graphite (local only: `mockups/simple/themes/c-quiet-graphite/README.md`) |
+| D · Nothing Mono | Nothing OS | Black, white outlines, dot-matrix numerals, single red Download | d-nothing-mono (local only: `mockups/simple/themes/d-nothing-mono/README.md`) |
+| E · Pixel Bezel | Retro-modern hardware keys | Chamfered keys, hard shadows, pixel numerals, mint Download, marching-ants selection | e-pixel-bezel (local only: `mockups/simple/themes/e-pixel-bezel/README.md`) |
 
 Note from research 14: the glass baseline's white-on-blue Download label is 3.65:1, below the 4.5:1 text minimum; any final theme must fix it.
 
 ## 15. GlassKit review and theme recommendation
 
-**GlassKit** ([review](../research/15-glasskit-review.md), [mockup](../../mockups/simple/themes/f-glasskit/README.md)): MIT, v1.27.0, no dependencies. Verdict: **reference only, don't ship.**
+**GlassKit** ([review](../research/15-glasskit-review.md), mockup (local only: `mockups/simple/themes/f-glasskit/README.md`)): MIT, v1.27.0, no dependencies. Verdict: **reference only, don't ship.**
 
 - **Size:** about 13 KB gzip minified, though the README claims 6.5 KB, and roughly two-thirds of it is components Vitrine doesn't use.
 - **Accessibility:** focus rings are removed or below 3:1, the default placeholder and muted text are below 4.5:1, and there is no forced-colors or reduced-transparency support.
@@ -414,6 +414,6 @@ Note from research 14: the glass baseline's white-on-blue Download label is 3.65
 | Floating detail controls over full-screen art | One high-contrast primary action (Download), at least 4.5:1, plus visible focus rings of at least 3:1 |
 | Blur only on the few floating surfaces (dock, open menu, panel), never per tile | Spring motion and shape change on press and on dock role switches |
 
-Rendered: [g-glass-material](../../mockups/simple/themes/g-glass-material/README.md).
+Rendered: g-glass-material (local only: `mockups/simple/themes/g-glass-material/README.md`).
 
 Implementation: write Vitrine's own small glass layer (about 150 lines of CSS custom properties, using GlassKit's tokens as a reference) instead of vendoring GlassKit. It keeps the look, stays light, and avoids GlassKit's accessibility gaps. If the owner still prefers vendoring, the fallback is the f-glasskit setup: v1.27.0 pinned and unmodified, its LICENSE next to it, plus a Vitrine override file, never loaded from a CDN.

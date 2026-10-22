@@ -1,4 +1,8 @@
-# 05 — Architecture: Vitrine
+# 05 — Architecture: PixelLab Backpack (formerly Vitrine)
+
+> **API rules: superseded by P-16** (decision log). Sync, the key test, session-mode storage and the Settings rows that call PixelLab (§5 here; 02 §3.1–3.2, §3.12) follow the [MVP plan](../plan/mvp-plan.md)'s concern 2: no balance call, a first-page check per family on open, nothing again within an hour (P-2, P-3, P-5, P-21).
+>
+> **Hosting: GitHub Pages (P-17).** §13.1 below describes the earlier choice.
 
 Working name **Vitrine**, *Unofficial gallery for your PixelLab assets*. Status: architecture baseline, 2026-10-18.
 
@@ -1085,7 +1089,7 @@ Run locally from task 1.1 on. Once a remote exists, a GitHub Actions workflow ru
 
 ### 13.1 Host
 
-**Cloudflare static assets** (Workers static assets, or Pages, which uses the same `_headers` format). It is assets-only with no Worker script, so `_headers` applies to every response (research 07 Q14). Netlify reads the same `_headers` syntax and is the equivalent alternative. GitHub Pages is rejected: no headers, so no `frame-ancestors` (S7).
+**Cloudflare static assets** (Workers static assets, or Pages, which uses the same `_headers` format). It is assets-only with no Worker script, so `_headers` applies to every response (research 07 Q14). Netlify reads the same `_headers` syntax and is the equivalent alternative. GitHub Pages was rejected here (no headers, so no `frame-ancestors`, S7). **Superseded by P-17:** the owner chose GitHub Pages, accepted for a preview with these risks: a shared `<user>.github.io` origin, no `frame-ancestors`, and only the CSP and referrer policy, carried as meta tags in the built `index.html`.
 
 The final host and canonical URL are the owner's decision (06 plan §8).
 

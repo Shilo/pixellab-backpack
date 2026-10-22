@@ -22,6 +22,8 @@ Questions come from the Phase 0 list in the [MVP plan](../plan/mvp-plan.md#phase
 
 ## Still to do (owner)
 
+Tracked in the MVP plan's [What the owner needs to do](../plan/mvp-plan.md#what-the-owner-needs-to-do). The steps:
+
 1. Q1: balance before and after one full session; expect no change.
 2. Q4: in a second session, open Tilesets & tiles and check that the Sidescroller and Isometric pictures show "Image host" in Activity.
 3. Q6: compare the top-down and sidescroller lists in PixelLab, or allow one read-only key check.
@@ -33,7 +35,7 @@ Use the production build (`npm run build`, then `npm run preview`) and a normal 
 
 1. **First open.** Paste the key. Open Activity. Expect 7 API requests: one first-page request per family, the Characters one doubling as the key test. Add up to 4 more for the tileset pictures that have been on screen for 0.3 s. The log's "Hidden browser permission checks" line adds about 7 more estimated, which the browser sends on its own.
 2. **Reopen within the hour.** Go home and back in the same tab, or open a new tab with "Keep me signed in" on (the log starts empty there, so read "API requests today" before and after). Expect no new list requests (a new tab without a saved key costs 1, the key test).
-3. **Next day.** Open it again. Expect 7 API requests (plus a few for newly appearing tilesets). "Today" restarts from 0.
+3. **Next day.** Open it again more than 24 hours after step 1. Expect 7 API requests (plus a few for newly appearing tilesets). "Today" counts the last 24 hours, so it drops back once step 1 is more than 24 hours old.
 4. **Scrolling.** Each grid page you scroll to adds one request, once per device. Expect no more for pages already saved.
 5. **Balance (Q1).** Note the credit balance on pixellab.ai before step 1 and after step 3. Expect no change.
 6. **Second session (Q4).** In a new tab, open Tilesets & tiles. Expect the Sidescroller and Isometric pictures to appear as "Image host", not "PixelLab API". Any "PixelLab API" picture entry means that helper answers directly and costs one request each per session.

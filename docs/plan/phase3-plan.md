@@ -371,4 +371,4 @@ export function clearRecent(): void   // module script
 - The compare step finds no unexplained differences.
 - Every Phase 3 test is green and this plan's tasks are ticked.
 
-**Owner check (owner-run, not a builder Done-when):** on a real iPhone and Android phone, open the search and type. The field, ✕, Cancel and the first panel row must stay visible with the keyboard open. If iOS fails, the builder records it as a `// ponytail:` limit; no visualViewport code is added now.
+**Owner check (owner-run, not a builder Done-when; tracked in the MVP plan's [owner list](mvp-plan.md#what-the-owner-needs-to-do)):** on a real iPhone and Android phone, open the search and type. The field, ✕, Cancel and the first panel row must stay visible with the keyboard open. If iOS fails, the builder records it as a `// ponytail:` limit; no visualViewport code is added now.

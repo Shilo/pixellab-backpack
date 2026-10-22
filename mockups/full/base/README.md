@@ -201,7 +201,7 @@ Every screen needed to show every feature in 08 §7 and 02 (§2 screens, §8 sta
 ## Files
 
 - `index.html`: loads GlassKit, `app.css`, the shared data, `art.js`, `bbox.js`, `app.js`, then the frame files.
-- `app.css`: 1 GlassKit tokens · 2 readability layer · 3 desktop layout · 4 what GlassKit lacks (split button, focus ring) · 5 phone layout. Details and measured contrast: [`../../simple/themes/f-glasskit/README.md`](../../simple/themes/f-glasskit/README.md).
+- `app.css`: 1 GlassKit tokens · 2 readability layer · 3 desktop layout · 4 what GlassKit lacks (split button, focus ring) · 5 phone layout. Details and measured contrast: `mockups/simple/themes/f-glasskit/README.md` (kept locally, not committed).
 - `art.js`, `bbox.js`: integer-scale nearest-neighbour art from `../../shared/assets/`.
 - `vendor/glasskit/`: GlassKit v1.27.0 (commit `c8558abb`), `glasskit.css` and `LICENSE` (MIT), byte-identical to f-glasskit's copy. Nothing loads from the network.
 - `shots/`: renders.

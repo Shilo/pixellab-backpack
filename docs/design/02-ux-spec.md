@@ -1,4 +1,6 @@
-# 02 — UX and Interaction Specification: Vitrine
+# 02 — UX and Interaction Specification: PixelLab Backpack (formerly Vitrine)
+
+> **API rules: superseded by P-16** (decision log). Sync, the key test, session-mode storage and the Settings rows that call PixelLab (§3.1–3.2, §3.12) follow the [MVP plan](../plan/mvp-plan.md)'s concern 2: no balance call, a first-page check per family on open, nothing again within an hour (P-2, P-3, P-5, P-21).
 
 > **Superseded in part.** Layout/visual and viewer-control sections superseded by [08-simplicity-redesign.md](08-simplicity-redesign.md) (owner feedback 2026-10-19); behavior, data, security, and download semantics still apply. 08 §11 lists the affected sections.
 

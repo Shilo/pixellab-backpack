@@ -76,10 +76,7 @@ Written from the build ledger when Phase 4 finished (on `main`). Rulings are dec
 - A tab still showing account 1 can save a fresh account-1 snapshot into account 2's store if the user favorites there (see Risks).
 - The folder "…" menu has no arrow keys, like the other "…" menus.
 - `Activity` and `MoreMenu` close on Esc without `preventDefault` (from Phase 3).
-- Owner-run checks:
-  - on a real iPhone and Android phone, a long press opens the card menu with no system link preview, and a short tap opens the viewer;
-  - sheets sit above the home indicator;
-  - Phase 3's search keyboard check.
+- Owner-run checks (real phones: long press, sheets, search keyboard): moved to the MVP plan's [What the owner needs to do](mvp-plan.md#what-the-owner-needs-to-do).
 
 ## Leftovers sweep (after Phase 4)
 
@@ -97,11 +94,7 @@ A review of every plan, build log and doc found 39 actionable leftovers, 10 owne
 - **Keyboard:** ↑/↓/Home/End work in the "…" menus, the arrow keys move around the direction rose, and the More menu's Esc stays contained.
 - **Tests:** the mock now uses real PixelLab shapes (B12): the `usage` key, failed and review rows, "Idle" and "base" state names, and newest-first lists, so the Recently added order is now tested. A new check confirms the production CSP never blocks the app. No request count changed.
 - **Plan docs:** the Phase 0 results are recorded in [research 13](../research/13-phase0-results.md), the T7 owner checklist is written, and stale statuses are fixed.
-- **Still open (owner-only):**
-  - real-phone checks;
-  - rotating the API key used in testing, and deleting the git-ignored `.env`;
-  - deciding repo visibility (the committed mockup assets include real art);
-  - the PixelLab questions Q1, Q4 and Q6, and the T7 counts.
+- **Still open (owner-only):** the real-phone checks, rotating the API key used in testing, repo visibility, the owner Phase 0 checks Q1, Q4 and Q6 with the T7 counts, and the six-question email to PixelLab (P-11). All are tracked in the MVP plan's [What the owner needs to do](mvp-plan.md#what-the-owner-needs-to-do). The git-ignored `.env` now holds the agent testing key (P-18), so it stays.
 - **Final verification of the sweep:** `npm run check` 0 errors, 311 unit tests, build OK. The first full double run had 5 failures, all test timing races exposed by heavy machine load, not app bugs. In each case the test now waits for the requests it owns; no count was loosened.
   - A count that started before the home's last paced picture request.
   - A test that held both request slots.
