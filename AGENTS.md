@@ -12,6 +12,7 @@ Stack: Svelte 5 runes, Vite 8, TypeScript, plain CSS on a vendored GlassKit them
 API budget: every request costs PixelLab. Opening the app costs 7 first-page GETs (one per asset family), at most once an hour. Next pages load only on scroll. Costly pictures are fetched after 0.3 s on screen, once per device. Safety net: 2 requests at a time, 2 per second, 1,000 per day. Any new request needs a budget in its plan (decision P-16).
 Network: only src/lib/api/http.ts calls fetch; a unit test enforces it.
 Key: sent only as a Bearer header to api.pixellab.ai, never in URLs, logs or exports. It is stored in sessionStorage, or in localStorage only while "Keep me signed in" is on.
+Remembered keys use localStorage pixellabApiKey, shared with PixelDoll on the same origin. The old app-specific key migrates on load; an existing shared key wins. Other open apps read the saved key on their next load.
 Local data: the saved library, favorites and folders live in IndexedDB. Forget key and switching accounts wipe them.
 Privacy and security: no new hosts and no analytics. The CSP lives in public/_headers and is copied into index.html at build.
 GlassKit: src/vendor/glasskit stays byte-identical; override it in src/app.css.
@@ -47,7 +48,7 @@ For UI changes, also look at the running app at 1440, 390 and 320 px wide.
 
 ## Agent testing with the real key
 
-npm run dev:agent (http://localhost:5281, launch config app-dev-agent) serves PIXELLAB_TOKEN_AGENT_DEV from the git-ignored repo-root .env to same-origin localhost requests. The app signs in through the normal key check, keeps the key in memory only and shows an "Agent mode" badge.
+npm run dev:agent (http://localhost:5281, launch config app-dev-agent) serves PIXELLAB_API_KEY_AGENT_DEV from the git-ignored repo-root .env to same-origin localhost requests. The app signs in through the normal key check, keeps the key in memory only and shows an "Agent mode" badge.
 Humans use npm run dev, which has no key endpoint. vite build --mode agent refuses to run, and the dist guard keeps agent code out of dist.
 Never open, print, log, screenshot or commit the key or .env. Never expose the agent server beyond localhost (no --host, tunnels or port forwards).
 For keyless runs on the agent server, set the localStorage item backpack.agentKey to "off" before the app loads. The switch is read at page load and covers every tab of that origin, so keep it set for the whole run.

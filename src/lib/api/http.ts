@@ -6,7 +6,8 @@ const API = 'https://api.pixellab.ai/v2';
 const API_HOST = 'api.pixellab.ai';
 const IMAGE_HOST = 'backblaze.pixellab.ai';
 const KEY_NAME = `${APP_ID}:key`; // sessionStorage: this tab only
-const KEPT_NAME = `${APP_ID}:key-kept`; // localStorage: only while "Keep me signed in" is on
+const KEPT_NAME = 'pixellabApiKey'; // shared across apps on this origin; only while "Keep me signed in" is on
+const LEGACY_KEPT_NAME = `${APP_ID}:key-kept`;
 const COUNT_NAME = `${APP_ID}:api-count`; // localStorage: request times only, no data
 
 const CONCURRENCY = 2;
@@ -65,10 +66,24 @@ let kept = false;
 let memoryOnly = false;
 try {
   key = localStorage.getItem(KEPT_NAME);
+  const legacy = localStorage.getItem(LEGACY_KEPT_NAME);
+  key ||= legacy;
   kept = !!key;
+  // Migration is best effort: a full store must not discard a readable saved key.
+  try {
+    if (key) localStorage.setItem(KEPT_NAME, key);
+    localStorage.removeItem(LEGACY_KEPT_NAME);
+  } catch {
+    /* retain the old saved copy until a successful move or explicit Forget */
+  }
 } catch {
   /* no localStorage */
 }
+const clearSavedKeys = () => {
+  for (const name of [KEPT_NAME, LEGACY_KEPT_NAME, 'pixeldoll.apiKey']) {
+    try { localStorage.removeItem(name); } catch { /* no localStorage */ }
+  }
+};
 if (!key) {
   try {
     key = sessionStorage.getItem(KEY_NAME);
@@ -106,7 +121,7 @@ function store(on: boolean): void {
   // key never stays in the saved copy (the new one stays in memory, and in the tab copy if that still holds it).
   try {
     if (on && ok) sessionStorage.removeItem(KEY_NAME);
-    else localStorage.removeItem(KEPT_NAME);
+    else clearSavedKeys();
   } catch {
     /* memory only */
   }
@@ -144,7 +159,7 @@ function dropKey(): void {
   key = null;
   kept = false;
   memoryOnly = false;
-  for (const s of [() => localStorage.removeItem(KEPT_NAME), () => sessionStorage.removeItem(KEY_NAME)]) {
+  for (const s of [clearSavedKeys, () => sessionStorage.removeItem(KEY_NAME)]) {
     try {
       s();
     } catch {

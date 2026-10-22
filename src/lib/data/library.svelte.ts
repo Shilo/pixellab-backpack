@@ -25,7 +25,7 @@ import {
 import type { Card, Detail, FamilyId, FamilyState, Item, Page } from '../types';
 import { applyCheck, DEEP_TTL_MS, dropExpiredDeep, isFresh, joinNextPage } from './check';
 import { clear as clearOrg, load as loadOrg, org, setThumb } from './org.svelte';
-import { loadDetail, loadFamilies, saveDetail, saveFamily, wipe } from './store';
+import { loadDetail, loadFamilies, loadKeyFingerprint, saveDetail, saveFamily, saveKeyFingerprint, wipe } from './store';
 
 export type LibraryStatus = 'idle' | 'checking' | Status;
 
@@ -160,31 +160,70 @@ class Library {
 
   family = (id: FamilyId): Family => byId[id];
 
+  restoring = $state(false);
+  restoreError = $state('');
+
+  /** A shared key may have changed in another app while this app was closed. An unchanged verified key keeps the warm cache. */
+  start = async (): Promise<void> => {
+    if (this.restoring) return;
+    this.restoring = true;
+    this.restoreError = '';
+    try {
+      const key = getKey();
+      if (!key) return await this.openCheck();
+      this.hasKey = false; // visibility events must wait for the account decision
+      const fingerprint = await keyFingerprint(key);
+      const saved = await loadKeyFingerprint().catch(() => undefined);
+      if (getKey() !== key) return;
+      if (saved !== fingerprint) {
+        const result = await this.connect(key, { restoring: true });
+        if (getKey() === key && result !== 'ok' && result !== 'wrong-key') this.restoreError = result;
+      } else {
+        this.hasKey = true;
+        await this.openCheck();
+      }
+    } catch {
+      this.hasKey = false;
+      if (getKey()) this.restoreError = 'server';
+    } finally {
+      this.restoring = false;
+    }
+  };
+
   /** The key test IS the Characters first-page request, plus the account check when it misses. 'server': PixelLab answered
    * badly or the safety net stopped; 'paused': daily cap. `memoryOnly`: the agent token, never stored (I1). */
-  connect = async (key: string, o: { memoryOnly?: boolean } = {}): Promise<'ok' | 'wrong-key' | 'offline' | 'blocked' | 'server' | 'paused'> => {
-    setKey(key, { memoryOnly: !!o.memoryOnly });
+  connect = async (key: string, o: { memoryOnly?: boolean; restoring?: boolean } = {}): Promise<'ok' | 'wrong-key' | 'offline' | 'blocked' | 'server' | 'paused'> => {
+    this.restoreError = '';
+    if (!o.restoring) setKey(key, { memoryOnly: !!o.memoryOnly });
     await adopt();
     let check: Awaited<ReturnType<typeof accountCheck>>;
     try {
       check = await accountCheck(await byId.characters.list(0), this.families);
     } catch (e) {
-      // ponytail: an unverified key is never kept, nor one whose account check is undecided (fail closed: nothing wiped,
-      // favorites and folders not loaded; the next key test asks again). The key screen keeps the typed text.
-      setKey(null);
+      // A newly pasted, unverified key is discarded. A saved key survives temporary verification failures;
+      // neither path exposes the old account's favorites or folders before verification finishes.
+      const kind = e instanceof HttpError ? e.kind : null;
+      // A saved key is already opted in. A transient startup failure must not erase it for every sharing app.
+      if (!o.restoring || kind === 'key-lost') setKey(null);
       this.hasKey = false;
       this.keepSignedIn = keptSignedIn();
-      const kind = e instanceof HttpError ? e.kind : null;
       return kind === 'key-lost' ? 'wrong-key' : kind === 'offline' || kind === 'blocked' ? kind : kind === 'cap' ? 'paused' : 'server';
     }
     if (getKey() !== key) return 'server'; // signed out (another tab's Forget) or replaced while the check ran: that wins (M-2)
     if (check.other) {
       // Another account's saved copy: wipe it with its favorites and folders (R4), then the check below runs for every family.
       clearOrg();
-      await wipe().catch(() => {});
+      try { await wipe(); } catch {
+        this.hasKey = false;
+        return 'server'; // never certify old-account records as owned by the new key
+      }
       this.families = {} as Record<FamilyId, FamilyState | undefined>;
       this.errors = {};
     }
+    const fingerprint = await keyFingerprint(key);
+    if (getKey() !== key) return 'server';
+    await saveKeyFingerprint(fingerprint).catch(() => {});
+    if (getKey() !== key) return 'server';
     this.hasKey = true;
     this.keepSignedIn = keptSignedIn();
     // The pages the account check read are this key's first pages: the open check below skips them as fresh.
@@ -351,11 +390,15 @@ class Library {
   };
 }
 
+const keyFingerprint = async (key: string): Promise<string> =>
+  Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key))), (b) => b.toString(16).padStart(2, '0')).join('');
+
 export const library = new Library();
 
 /** The key is gone from this tab (Forget here or in another tab): drop every memory copy; the plain key screen shows. */
 function signedOut(): void {
   library.hasKey = false;
+  library.restoreError = '';
   library.keepSignedIn = keptSignedIn();
   library.families = {} as Record<FamilyId, FamilyState | undefined>;
   library.errors = {};

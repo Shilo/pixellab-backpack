@@ -107,7 +107,7 @@ A review of every plan, build log and doc found 39 actionable leftovers, 10 owne
 Four reviewers checked the whole project: product and docs, design and accessibility, code, and security and deploy. Each finding was argued to agreement, then built in two batches. Each batch was reviewed and fixed until clean. Decisions P-16 to P-21 are in the [decision log](../design/00-decision-log.md); what comes next is in the [roadmap](roadmap.md).
 
 - **Agent-only dev token:**
-  - `PIXELLAB_TOKEN_AGENT_DEV` in the git-ignored `.env` is served only by `npm run dev:agent`, through a localhost, same-origin, no-store endpoint. The app keeps it in memory only.
+  - `PIXELLAB_API_KEY_AGENT_DEV` in the git-ignored `.env` is served only by `npm run dev:agent`, through a localhost, same-origin, no-store endpoint. The app keeps it in memory only.
   - `npm run dev` and every build have no access: `envDir: false`, an agent-mode build is refused, client code sits behind `MODE === 'agent'`, and `npm run build` ends with a dist guard (it also catches inline source maps).
   - Checked in all three modes: agent dev signs in, with nothing in storage; human dev shows the key screen and sends no key request; production has no endpoint and passes the guard.
 - **GitHub Pages:**
