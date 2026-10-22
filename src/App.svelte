@@ -241,7 +241,7 @@
 {#if import.meta.env.DEV && import.meta.env.MODE === 'agent'}
   <!-- AI-agent testing only (npm run dev:agent). Inline style, not <style>: scoped CSS would outlive the compiled-out block.
        No pointer events: it never blocks a control under it. -->
-  <div class="agent-badge glass-badge glass-badge--warning" style="position: fixed; z-index: 1000; top: max(4px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); pointer-events: none">Agent mode</div>
+  <div class="agent-badge glass-badge glass-badge--warning" style="position: fixed; z-index: 1000; top: max(4px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); pointer-events: none" title="Agent dev server (npm run dev:agent), for AI-agent testing only">Agent mode</div>
 {/if}
 <h1 class="vt-sr" tabindex="-1" bind:this={h1}>{grid ? title : inFolder ? (folder?.name ?? APP_NAME) : APP_NAME}</h1>
 

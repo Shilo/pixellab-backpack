@@ -8,5 +8,5 @@ mount(App, { target: document.getElementById('app')! });
 
 // AI-agent testing only (AGENTS.md "Agent testing"): `npm run dev:agent` serves the .env token, which takes the same
 // verify-then-keep path as a pasted key, kept in memory only (never in either store). A compile-time constant: no other mode
-// or build contains this.
-if (import.meta.env.DEV && import.meta.env.MODE === 'agent' && !library.hasKey) void agentKey().then((k) => k && library.connect(k, { memoryOnly: true }));
+// or build contains this. Never when framed: another page could embed and clickjack the app.
+if (import.meta.env.DEV && import.meta.env.MODE === 'agent' && window.top === window && !library.hasKey) void agentKey().then((k) => k && library.connect(k, { memoryOnly: true }));

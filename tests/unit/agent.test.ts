@@ -7,12 +7,15 @@ vi.mock('../../src/App.svelte', () => ({ default: {} }));
 vi.mock('../../src/lib/api/http', () => ({ agentKey: h.agentKey }));
 vi.mock('../../src/lib/data/library.svelte', () => ({ library: { get hasKey() { return h.hasKey; }, connect: h.connect } }));
 
-async function boot(env: { MODE: string; DEV?: boolean }, hasKey = false) {
+async function boot(env: { MODE: string; DEV?: boolean }, hasKey = false, framed = false) {
   vi.resetModules();
   h.agentKey.mockClear();
   h.connect.mockClear();
   h.hasKey = hasKey;
   vi.stubGlobal('document', { getElementById: () => ({}) });
+  const win: { top?: unknown } = {};
+  win.top = framed ? {} : win;
+  vi.stubGlobal('window', win);
   vi.stubEnv('MODE', env.MODE);
   vi.stubEnv('DEV', env.DEV ?? true);
   await import('../../src/main');
@@ -37,5 +40,10 @@ test('in MODE agent the key takes the human verify-then-keep path in memory only
   await boot({ MODE: 'agent' });
   expect(h.connect).toHaveBeenCalledWith('agent-key', { memoryOnly: true });
   await boot({ MODE: 'agent' }, true);
+  expect(h.agentKey).not.toHaveBeenCalled();
+});
+
+test('in MODE agent a framed app never asks for the key (another page could embed and clickjack it)', async () => {
+  await boot({ MODE: 'agent' }, false, true);
   expect(h.agentKey).not.toHaveBeenCalled();
 });

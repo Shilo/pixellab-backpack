@@ -49,8 +49,8 @@ For UI changes, also look at the running app at 1440, 390 and 320 px wide.
 
 npm run dev:agent (http://localhost:5281, launch config app-dev-agent) serves PIXELLAB_TOKEN_AGENT_DEV from the git-ignored repo-root .env to same-origin localhost requests. The app signs in through the normal key check, keeps the key in memory only and shows an "Agent mode" badge.
 Humans use npm run dev, which has no key endpoint. vite build --mode agent refuses to run, and the dist guard keeps agent code out of dist.
-Never open, print, log, screenshot or commit the key or .env. Never expose the agent server beyond localhost.
-For keyless runs on the agent server, set the localStorage item backpack.agentKey to "off" before the app loads.
+Never open, print, log, screenshot or commit the key or .env. Never expose the agent server beyond localhost (no --host, tunnels or port forwards).
+For keyless runs on the agent server, set the localStorage item backpack.agentKey to "off" before the app loads. The switch is read at page load and covers every tab of that origin, so keep it set for the whole run.
 Real-key use stays read-only: the open check is the test, so add no other calls.
 
 ## Deploy

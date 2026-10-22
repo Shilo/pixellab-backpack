@@ -9,6 +9,7 @@
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "skipLibCheck": true
   },
   "include": ["src", "tests", "*.ts"]

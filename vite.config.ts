@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
-import type { IncomingMessage } from 'node:http';
 import { join } from 'node:path';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { localSameOrigin } from './agent-key.ts';
 
 // The `/*` block of public/_headers, so `vite preview` (and e2e) run under the production CSP.
 const headers = Object.fromEntries(
@@ -33,12 +33,6 @@ function headersMeta(): Plugin {
     ],
   };
 }
-
-// Same-origin requests from this machine only (Host = localhost, Sec-Fetch-Site = same-origin, loopback socket).
-const localSameOrigin = (req: IncomingMessage) =>
-  ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress ?? '') &&
-  /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(req.headers.host ?? '') &&
-  req.headers['sec-fetch-site'] === 'same-origin';
 
 // AI-agent testing only (AGENTS.md "Agent testing"): serves PIXELLAB_TOKEN_AGENT_DEV from the repo-root .env at
 // /__dev/pixellab-key. Registered only for `npm run dev:agent`; read server-side per request, never through Vite's env.
