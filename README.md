@@ -1,6 +1,8 @@
 # PixelLab Backpack
 
-**An unofficial, view-only gallery for your PixelLab art. It runs entirely in your browser with your own API key.**
+**Keep your PixelLab art packed in one place. Browse, search, play and organize images.**
+
+An unofficial, view-only gallery that runs entirely in your browser with your own API key. Repository description and topics: [docs/github-repo.md](docs/github-repo.md).
 
 > **Unofficial.** PixelLab Backpack is not made by, affiliated with, or endorsed by PixelLab. It uses no PixelLab logo, mascot, colors or screenshots.
 
