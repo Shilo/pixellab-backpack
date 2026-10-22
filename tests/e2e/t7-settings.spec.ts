@@ -148,7 +148,7 @@ test('About shows the version and the outbound links, all safe', async ({ page }
     ['Effects', 'https://www.pixellab.ai/create-vfx'],
     ['Portraits', 'https://www.pixellab.ai/create-character'],
     ['Talking animations', 'https://www.pixellab.ai/create-character'],
-    ['Licences', '/licenses.txt'],
+    ['Licences', 'licenses.txt'],
     ['Generate a new API key in your PixelLab account', 'https://www.pixellab.ai/account'],
   ];
   // One screen-reader suffix, with its space (Svelte drops a tag's leading space), as on the All assets card.

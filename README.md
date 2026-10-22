@@ -57,18 +57,23 @@ npm run dev
 | Script | What it does |
 |---|---|
 | `npm run dev` | Dev server |
-| `npm run build` | Production build into `dist/` |
+| `npm run dev:agent` | AI agents only: dev server on :5281 that signs in with the `.env` key ([AGENTS.md](AGENTS.md)) |
+| `npm run build` | Production build into `dist/`, then a check that no dev or agent-key code got in |
 | `npm run preview` | Serves the build |
 | `npm run check` | Type check (svelte-check) |
 | `npm test` | Unit tests (Vitest) |
 | `npm run e2e` | End-to-end tests (Playwright, mocked PixelLab, desktop and phone) |
 
-The end-to-end tests drive the installed Microsoft Edge (Playwright channel `msedge`), so no browser download is needed. Run only one Playwright run at a time: it serves the build on port 4173.
+The end-to-end tests drive the installed Microsoft Edge (Playwright channel `msedge`), so no browser download is needed. Run only one Playwright run at a time: it serves the build on port 4291.
+
+## GitHub Pages
+
+Every push to `main` is checked, built and published by `.github/workflows/pages.yml`. One owner step, once the repo is on GitHub: **Settings → Pages → Source: GitHub Actions**. The app works under the `/<repo-name>/` path.
 
 ## Privacy and safety
 
 - No backend and no telemetry. The key is sent only to `api.pixellab.ai` and never appears in URLs or logs.
-- A strict content-security policy and other security headers are in `public/_headers` (served by `npm run preview`).
+- A strict content-security policy and other security headers are in `public/_headers` (served by `npm run preview`). The build also puts the CSP into `index.html`, because GitHub Pages ignores `_headers`.
 - The saved library lives in your browser. Forget key removes it.
 
 ## Stack

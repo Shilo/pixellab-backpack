@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:agent": "vite --mode agent --port 5281 --strictPort",
     "build": "vite build",
+    "postbuild": "node scripts/dist-guard.mjs",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",

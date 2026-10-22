@@ -320,7 +320,7 @@ test('a normal session under the production CSP causes no policy violation', asy
   await settle(page, mock, 600);
   expect(await hits()).toEqual([]);
 
-  // The listener works: an inline style is a violation.
+  // The listener works: an inline style is a violation, once per policy (the _headers header and the build's <meta> copy).
   await page.evaluate(() => document.head.append(Object.assign(document.createElement('style'), { textContent: 'a{}' })));
-  await expect.poll(hits).toEqual([expect.stringMatching(/^style-src-elem inline/)]);
+  await expect.poll(hits).toEqual([expect.stringMatching(/^style-src-elem inline/), expect.stringMatching(/^style-src-elem inline/)]);
 });

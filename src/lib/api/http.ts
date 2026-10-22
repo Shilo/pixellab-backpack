@@ -141,6 +141,18 @@ function dropKey(): void {
   if (status === 'key-lost') setStatus('ok'); // a new key starts clean: the key screen is the plain one
 }
 
+/** AI-agent testing only: the .env token from `npm run dev:agent`'s endpoint, or null (missing, or the kill switch
+ * localStorage 'backpack.agentKey' = 'off' is set). Called only from main.ts's agent block, so no build contains it. */
+export async function agentKey(): Promise<string | null> {
+  try {
+    if (localStorage.getItem('backpack.agentKey') === 'off') return null;
+    const r = await fetch('/__dev/pixellab-key', { cache: 'no-store' });
+    return r.ok ? await r.text() : null;
+  } catch {
+    return null;
+  }
+}
+
 // ---- status and activity ----
 let status: Status = 'ok';
 const statusListeners = new Set<(s: Status) => void>();

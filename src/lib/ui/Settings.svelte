@@ -60,6 +60,8 @@
   }
 
   const hint = $derived(library.hasKey ? library.keyHint() : null); // keyHint() is not reactive: hasKey re-reads it after a connect
+  // Every GitHub Pages site of one account shares the <account>.github.io origin, and so its browser storage.
+  const sharedOrigin = location.hostname.endsWith('.github.io');
 </script>
 
 {#snippet ext(href: string, label: string)}
@@ -97,9 +99,12 @@
               ? "Saved in this browser so you don't need to paste it again. Anyone using this browser profile could use it, so don't turn this on for shared computers."
               : "Kept in this tab only. You'll paste it again in a new tab."}
           </span>
+          {#if library.keepSignedIn && sharedOrigin}
+            <span class="sub warn" id="st-keep-warn">Other GitHub Pages sites from the same account share this browser storage, so they could read your saved key and library.</span>
+          {/if}
         </span>
         <span class="sw">
-          <input type="checkbox" role="switch" class="glass-toggle__input" checked={library.keepSignedIn} aria-describedby="st-keep-help" onchange={keep} />
+          <input type="checkbox" role="switch" class="glass-toggle__input" checked={library.keepSignedIn} aria-describedby="st-keep-help st-keep-warn" onchange={keep} />
           <span class="glass-toggle__track"><span class="glass-toggle__thumb"></span></span>
         </span>
       </label>
@@ -122,7 +127,7 @@
           {#each OTHER_CONTENT as [label, url] (label)}<li>{@render ext(url, label)}</li>{/each}
         </ul>
       </div>
-      <div class="row prose">{@render ext('/licenses.txt', 'Licences')}</div>
+      <div class="row prose">{@render ext('licenses.txt', 'Licences')}</div>
     </div>
   </div>
 </dialog>
@@ -168,6 +173,7 @@
   .status { display: flex; align-items: center; gap: 8px; }
   .status i { width: 10px; height: 10px; border-radius: 50%; background: var(--gl-color-success, #34c759); }
   .danger { color: var(--gl-color-error); font-weight: 600; }
+  .warn { color: var(--gl-color-warning-on-surface); }
   .sw { position: relative; flex: none; display: flex; }
   .sw .glass-toggle__input { top: 0; left: 0; margin: 0; }
   .prose { display: block; font-size: 14px; line-height: 1.5; color: var(--gl-color-text-muted); }

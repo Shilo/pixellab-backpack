@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "app-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "5173", "--strictPort"],
+      "port": 5173
+    },
+    {
+      "name": "app-dev-agent",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:agent"],
+      "port": 5281
+    }
+  ]
+}

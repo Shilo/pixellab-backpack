@@ -733,3 +733,13 @@ test('publicGet accepts the helper URLs on the API host and picture links on the
   expect(rs.map((r) => r.err)).toEqual([undefined, undefined, undefined, undefined]);
   expect(http.getCounters()).toMatchObject({ sessionApi: 3, imageHost: 1 });
 });
+
+test('agentKey: the kill switch sends no request; otherwise the dev endpoint answers, same-origin and uncached', async () => {
+  autoReply();
+  local.set('backpack.agentKey', 'off');
+  expect(await http.agentKey()).toBeNull();
+  expect(calls).toEqual([]);
+  local.delete('backpack.agentKey');
+  expect(await http.agentKey()).toBe('{"ok":true}');
+  expect(calls).toEqual([{ url: '/__dev/pixellab-key', init: { cache: 'no-store' } }]);
+});
