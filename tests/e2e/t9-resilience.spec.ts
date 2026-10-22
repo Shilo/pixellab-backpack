@@ -85,7 +85,14 @@ test('every family failing with nothing saved shows the error card; Try again lo
         const r = indexedDB.open('pixellab-backpack');
         r.onsuccess = () => {
           const tx = r.result.transaction('kv', 'readwrite');
-          tx.objectStore('kv').clear();
+          // Remove cached data while retaining the verified connection metadata.
+          const cursor = tx.objectStore('kv').openCursor();
+          cursor.onsuccess = () => {
+            const c = cursor.result;
+            if (!c) return;
+            if (!String(c.key).startsWith('meta:')) c.delete();
+            c.continue();
+          };
           tx.oncomplete = () => (r.result.close(), done(null));
         };
       }),
@@ -142,4 +149,35 @@ test('an empty category says "Nothing here yet." and sends no extra request', as
   expect(mock.hits.filter((h) => h.url.includes(GOOD_KEY))).toEqual([]);
   await page.getByRole('button', { name: 'Library' }).click();
   await expect(page).toHaveURL(/#\/$/);
+});
+
+
+test('first-upgrade connection failure retains the shared key and retries without pasting it again', async ({ page }) => {
+  const mock = await mockPixelLab(page);
+  await page.goto('/');
+  await connect(page);
+  await settle(page, mock);
+  await page.evaluate(async (key) => {
+    localStorage.setItem('pixellabApiKey', key);
+    sessionStorage.removeItem('pixellab-backpack:key');
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open('pixellab-backpack');
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction('kv', 'readwrite');
+        tx.objectStore('kv').delete('meta:key-fingerprint');
+        tx.oncomplete = () => { db.close(); resolve(); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+      };
+    });
+  }, GOOD_KEY);
+  mock.fail = ['/v2/'];
+  await page.reload();
+  await expect(page.getByRole('heading', { name: "Couldn't verify your saved connection." })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('pixellabApiKey'))).toBe(GOOD_KEY);
+  mock.fail = [];
+  await page.getByRole('button', { name: 'Try again', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Characters, 250', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('pixellabApiKey'))).toBe(GOOD_KEY);
 });
