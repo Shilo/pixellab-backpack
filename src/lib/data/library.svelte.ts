@@ -200,6 +200,7 @@ class Library {
     try {
       check = await accountCheck(await byId.characters.list(0), this.families);
     } catch (e) {
+      if (getKey() !== key) return 'server'; // a late failure from an older login must not clear the new one
       // A newly pasted, unverified key is discarded. A saved key survives temporary verification failures;
       // neither path exposes the old account's favorites or folders before verification finishes.
       const kind = e instanceof HttpError ? e.kind : null;

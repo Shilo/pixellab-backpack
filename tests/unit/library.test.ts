@@ -1200,3 +1200,19 @@ describe('shared-key startup verification', () => {
     expect(lib.families.characters?.cards[0].id).toBe('b-characters-0');
   });
 });
+
+
+it('a late failed restore cannot clear a newer successfully connected key', async () => {
+  h.st.key = 'key-a';
+  h.st.kept = true;
+  const lib = await tab();
+  let rejectOld!: (error: Error) => void;
+  h.apiGet.mockImplementationOnce(() => new Promise((_, reject) => { rejectOld = reject; }));
+  const restoring = lib.start();
+  await vi.waitFor(() => expect(rejectOld).toBeTypeOf('function'));
+  fill('b');
+  expect(await lib.connect('key-b')).toBe('ok');
+  rejectOld(new h.HttpError('key-lost', 401));
+  await restoring;
+  expect([h.st.key, lib.hasKey, lib.restoreError]).toEqual(['key-b', true, '']);
+});
