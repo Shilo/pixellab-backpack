@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test';
 
-// channel 'msedge' uses the installed Microsoft Edge: no browser download.
-const use = { channel: 'msedge' };
+// Managed Chromium is reproducible locally and in CI. Set PLAYWRIGHT_CHANNEL=msedge for an optional installed-Edge check.
+const use = { channel: process.env.PLAYWRIGHT_CHANNEL };
 
 export default defineConfig({
   testDir: 'tests/e2e',

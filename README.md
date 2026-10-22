@@ -49,10 +49,10 @@ Details: [MVP plan](docs/plan/mvp-plan.md) and [review R6](docs/reviews/R6-api-m
 
 ## Run it
 
-Needs Node 22+.
+Use Node.js **24.22.1** (`.nvmrc`) and its bundled npm **11.19.1**.
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -64,9 +64,10 @@ npm run dev
 | `npm run preview` | Serves the build |
 | `npm run check` | Type check (svelte-check) |
 | `npm test` | Unit tests (Vitest) |
-| `npm run e2e` | End-to-end tests (Playwright, mocked PixelLab, desktop and phone) |
+| `npm run e2e` | Full end-to-end suite (Playwright, mocked PixelLab, desktop and phone) |
+| `npm run e2e:smoke` | Bounded CI checks: key/library, viewer deep link and 320 px layout |
 
-The end-to-end tests drive the installed Microsoft Edge (Playwright channel `msedge`), so no browser download is needed. Run only one Playwright run at a time: it serves the build on port 4291.
+Install the matching managed browser once with `npx playwright install chromium`, then run `npm run e2e -- --workers=2`. Chromium is the default locally and in CI. An optional installed-Edge check uses `PLAYWRIGHT_CHANNEL=msedge` (PowerShell: `$env:PLAYWRIGHT_CHANNEL='msedge'`). Run only one Playwright run at a time: it serves the build on port 4291. Chromium results do not establish Firefox or Safari compatibility.
 
 ## GitHub Pages
 
@@ -80,7 +81,7 @@ Every push to `main` is checked, built and published to <https://shilo.github.io
 
 ## Stack
 
-Svelte 5, Vite 8, TypeScript 6, plain CSS with a vendored GlassKit theme (MIT, see `public/licenses.txt`), `idb-keyval` for local data, Vitest and Playwright.
+Svelte `5.57.2`, Vite `8.3.4`, `@sveltejs/vite-plugin-svelte` `7.3.1`, TypeScript `6.0.3` (strict), `svelte-check` `4.7.7`, `@types/node` `24.19.2`, CSS-only `@jungherz-de/glasskit` `1.27.0` (MIT, see `public/licenses.txt`), `idb-keyval` `6.3.0`, Vitest `4.1.12` and `@playwright/test` `1.64.1`. Direct package versions are exact and the lockfile is committed. GlassKit is imported unchanged from npm; app overrides and the CSS-minification workaround remain in place.
 
 ## Design mockups
 

@@ -1,6 +1,6 @@
 # CI on every push to main and every PR (check, unit tests, build + dist guard); main (a push or a manual run) also deploys
 # dist/ to GitHub Pages. Enable Pages once: Settings > Pages > Source = "GitHub Actions". No secrets or env: the PixelLab key never touches CI.
-# ponytail: no Playwright e2e here: the full suite is slow and timing-sensitive on a loaded runner; run it locally (AGENTS.md).
+# The bounded mocked browser smoke runs here; the full suite remains a local release check (AGENTS.md).
 name: CI and Pages
 
 on:
@@ -26,12 +26,15 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v7
         with:
-          node-version: lts/*
+          node-version: '24.22.1'
           cache: npm
       - run: npm ci
       - run: npm run check
       - run: npm test
       - run: npm run build # includes scripts/dist-guard.mjs
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e:smoke
+        timeout-minutes: 5
       - if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v5
         with:

@@ -1,6 +1,6 @@
-/* The app's own sheet, after GlassKit v1.27.0 (vendored, unmodified). Ported from mockups/full/base/app.css:
+/* The app's own sheet, after GlassKit v1.27.0 (npm, unmodified). Ported from mockups/full/base/app.css:
    1. theme tokens  2. glass readability over art  3. layout  4. dock and notice  5. focus ring  6. phone (<= 600px). */
-@import './vendor/glasskit/glasskit.css';
+@import '@jungherz-de/glasskit/glasskit.css';
 
 /* 1. Theme tokens: GlassKit's re-brand path, declared on :root after the library. */
 :root, [data-theme="dark"] {
