@@ -341,7 +341,7 @@ test('the key lives in memory and sessionStorage; null clears both', async () =>
 
 test('Keep me signed in moves the key between the two stores, never both', async () => {
   const S = 'pixellab-backpack:key';
-  const L = 'pixellab-backpack:key-kept';
+  const L = 'pixellabApiKey';
   expect(http.keptSignedIn()).toBe(false);
   http.setKeepSignedIn(true);
   expect(http.keptSignedIn()).toBe(true);
@@ -375,7 +375,7 @@ test('I1: a memory-only key (the agent token) never reaches either store, even w
 });
 
 test('a kept key wins over a tab key on load', async () => {
-  local.set('pixellab-backpack:key-kept', 'kept-key-1234');
+  local.set('pixellabApiKey', 'kept-key-1234');
   session.set('pixellab-backpack:key', 'tab-key-5678');
   http = await loadModule();
   expect(http.getKey()).toBe('kept-key-1234');
@@ -392,7 +392,7 @@ test('setKey(null) clears both stores and sends no queued auth job', async () =>
   await tick(1000);
   expect(calls).toHaveLength(2);
   expect(calls.every((c) => (c.init?.headers as { Authorization: string }).Authorization === `Bearer ${KEY}`)).toBe(true);
-  expect([session.size, local.has('pixellab-backpack:key-kept')]).toEqual([0, false]);
+  expect([session.size, local.has('pixellabApiKey')]).toEqual([0, false]);
 });
 
 test('a job waiting to retry is dropped, not sent as "Bearer null", when the key is cleared', async () => {
@@ -409,11 +409,11 @@ test('turning Keep me signed in off removes the saved key even if the tab copy c
   http.setKeepSignedIn(true);
   vi.stubGlobal('sessionStorage', { ...storage(session), setItem: () => { throw new Error('full'); } });
   http.setKeepSignedIn(false);
-  expect([http.keptSignedIn(), local.has('pixellab-backpack:key-kept'), http.getKey()]).toEqual([false, false, KEY]);
+  expect([http.keptSignedIn(), local.has('pixellabApiKey'), http.getKey()]).toEqual([false, false, KEY]);
 });
 
 test('N1: replacing a kept key when the saved copy cannot be written never leaves the old key saved', async () => {
-  const L = 'pixellab-backpack:key-kept';
+  const L = 'pixellabApiKey';
   http.setKeepSignedIn(true);
   const kept = await loadModule(true); // another tab on the saved key
   vi.stubGlobal('localStorage', { ...storage(local), setItem: () => { throw new Error('full'); } });
@@ -427,7 +427,7 @@ test('N1: replacing a kept key when the saved copy cannot be written never leave
 });
 
 test('Forget key signs out every other tab, tab-only or kept, with a bare message; no tab answers', async () => {
-  const L = 'pixellab-backpack:key-kept';
+  const L = 'pixellabApiKey';
   const tabOnly = await loadModule(true); // a duplicated tab: same tab key
   http.setKeepSignedIn(true);
   const kept = await loadModule(true); // a new tab reads the kept key
@@ -445,7 +445,7 @@ test('Forget key signs out every other tab, tab-only or kept, with a bare messag
 });
 
 test('a kept tab follows the saved key: takes a replaced one, signs out when it goes; a tab-only tab ignores both', async () => {
-  const L = 'pixellab-backpack:key-kept';
+  const L = 'pixellabApiKey';
   const tabOnly = await loadModule(true);
   http.setKeepSignedIn(true);
   const kept = await loadModule(true);
@@ -839,3 +839,21 @@ test('agentKey: the kill switch sends no request; otherwise the dev endpoint ans
   expect(await http.agentKey()).toBe('{"ok":true}');
   expect(calls).toEqual([{ url: '/__dev/pixellab-key', init: { cache: 'no-store' } }]);
 });
+
+for (const initial of ['shared', 'legacy', 'both', 'quota'] as const) {
+  test(`remembered key ${initial}: shared name wins and legacy cannot return after Forget`, async () => {
+    session.clear();
+    local.clear();
+    if (initial === 'shared' || initial === 'both') local.set('pixellabApiKey', 'shared-key-1234');
+    if (initial !== 'shared') local.set('pixellab-backpack:key-kept', 'legacy-key-5678');
+    local.set('pixeldoll.apiKey', 'other-app-legacy');
+    if (initial === 'quota') vi.stubGlobal('localStorage', { ...storage(local), setItem: () => { throw new Error('full'); } });
+    http = await loadModule();
+    const expected = initial === 'legacy' || initial === 'quota' ? 'legacy-key-5678' : 'shared-key-1234';
+    expect([http.getKey(), http.keptSignedIn(), local.get('pixellabApiKey')]).toEqual([expected, true, initial === 'quota' ? undefined : expected]);
+    expect(local.has('pixellab-backpack:key-kept')).toBe(initial === 'quota');
+    http.forgetKey();
+    http = await loadModule();
+    expect([http.getKey(), http.keptSignedIn(), local.has('pixellabApiKey'), local.has('pixellab-backpack:key-kept'), local.has('pixeldoll.apiKey')]).toEqual([null, false, false, false, false]);
+  });
+}

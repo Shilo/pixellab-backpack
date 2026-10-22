@@ -34,7 +34,7 @@ function headersMeta(): Plugin {
   };
 }
 
-// AI-agent testing only (AGENTS.md "Agent testing"): serves PIXELLAB_TOKEN_AGENT_DEV from the repo-root .env at
+// AI-agent testing only (AGENTS.md "Agent testing"): serves PIXELLAB_API_KEY_AGENT_DEV from the repo-root .env at
 // /__dev/pixellab-key. Registered only for `npm run dev:agent`; read server-side per request, never through Vite's env.
 function agentKey(): Plugin {
   return {
@@ -48,7 +48,7 @@ function agentKey(): Plugin {
         }
         let key = '';
         try {
-          key = readFileSync(join(server.config.root, '.env'), 'utf8').match(/^PIXELLAB_TOKEN_AGENT_DEV=(.*)$/m)?.[1]?.trim() ?? '';
+          key = readFileSync(join(server.config.root, '.env'), 'utf8').match(/^PIXELLAB_API_KEY_AGENT_DEV=(.*)$/m)?.[1]?.trim() ?? '';
         } catch {
           /* no .env: 404 */
         }

@@ -21,7 +21,7 @@
   import Viewer from './lib/ui/Viewer.svelte';
 
   // Saved copy first (the key screen's "Welcome back" reads it); with a key this is also the one open check.
-  onMount(() => void library.openCheck());
+  onMount(() => void library.start());
   // Back to a hidden tab (P-21): the same open check, so within the hour it sends nothing (UX-8). Only with a verified key: during
   // a key test the key is set but the account is not decided yet, and connect runs its own check after.
   const onvisibilitychange = () => document.visibilityState === 'visible' && library.hasKey && void library.openCheck();

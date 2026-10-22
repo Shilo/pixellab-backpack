@@ -5,7 +5,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { GOOD_KEY, OTHER_KEY, connect, deviceStorage, mockPixelLab, settle, type Hit } from '../fixtures/pixellab-mock';
 
 const api = (hits: Hit[]) => hits.filter((h) => h.host === 'api');
-const keptKey = (page: Page) => page.evaluate(() => localStorage.getItem('pixellab-backpack:key-kept'));
+const keptKey = (page: Page) => page.evaluate(() => localStorage.getItem('pixellabApiKey'));
 
 async function open(page: Page) {
   await page.getByRole('button', { name: 'More' }).click();
@@ -260,7 +260,7 @@ test('Forget key in one tab signs out a second kept tab, which sends nothing wit
   await expect(page.getByRole('heading', { name: 'Keep your PixelLab art packed in one place' })).toBeVisible();
   await tab.bringToFront();
   await expect(tab.getByLabel('PixelLab API key')).toBeVisible();
-  expect(await tab.evaluate(() => [localStorage.getItem('pixellab-backpack:key-kept'), sessionStorage.length])).toEqual([null, 0]);
+  expect(await tab.evaluate(() => [localStorage.getItem('pixellabApiKey'), sessionStorage.length])).toEqual([null, 0]);
   // The second tab cannot bring the key back: a refresh there has no key to send.
   await tab.reload();
   await expect(tab.getByLabel('PixelLab API key')).toBeVisible();
@@ -324,3 +324,40 @@ test("another account's key in a fresh connect wipes the folders too", async ({ 
   expect(saved).not.toContain('"org"');
   expect(saved).not.toContain('Hero party');
 });
+
+for (const unknownFingerprint of [false, true]) {
+  test(`shared key changed with a fresh cache (unknown fingerprint: ${unknownFingerprint}) verifies the account on reload`, async ({ page, context }) => {
+    const mock = await mockPixelLab(context);
+    await page.goto('/');
+    await connect(page);
+    await settle(page, mock);
+    await addFolder(page, 'Account A only');
+    await (await open(page)).getByRole('switch', { name: 'Keep me signed in' }).check();
+    // A second app saves account B under the same origin. No live-tab synchronization is required.
+    await page.evaluate(async ({ key, unknownFingerprint }) => {
+      localStorage.setItem('pixellabApiKey', key);
+      if (!unknownFingerprint) return;
+      await new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open('pixellab-backpack');
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const db = request.result;
+          const tx = db.transaction('kv', 'readwrite');
+          tx.objectStore('kv').delete('meta:key-fingerprint');
+          tx.oncomplete = () => { db.close(); resolve(); };
+          tx.onerror = () => { db.close(); reject(tx.error); };
+        };
+      });
+    }, { key: OTHER_KEY, unknownFingerprint });
+    await page.reload();
+    await expect(page.getByRole('link', { name: 'Characters, 3', exact: true })).toBeVisible();
+    await settle(page, mock);
+    await expect(page.getByRole('link', { name: /^Account A only/ })).toHaveCount(0);
+    expect(await deviceStorage(page)).not.toContain('Account A only');
+    const at = mock.hits.length;
+    await page.reload();
+    await expect(page.getByRole('link', { name: 'Characters, 3', exact: true })).toBeVisible();
+    await settle(page, mock);
+    expect(api(mock.hits.slice(at))).toEqual([]); // unchanged verified key keeps the hourly cache behavior
+  });
+}
