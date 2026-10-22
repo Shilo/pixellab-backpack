@@ -19,7 +19,7 @@ The app is built and works against the real PixelLab API. Four phases are done; 
 | 3 | Search and All assets | [plan](docs/plan/phase3-plan.md) | [log](docs/plan/phase3-build-log.md) |
 | 4 | Favorites and folders, with the card menu | [plan](docs/plan/phase4-plan.md) | [log](docs/plan/phase4-build-log.md) |
 
-Next: the owner's checks, then the open decisions below.
+A full project review followed (2026-10-21). What comes next, owner to-dos and known small issues: the [roadmap](docs/plan/roadmap.md).
 
 ## What it does
 
@@ -101,7 +101,8 @@ Start with the [product brief](docs/design/01-product-brief.md), then the [decis
 
 | Doc | Purpose |
 |---|---|
-| [mvp-plan.md](docs/plan/mvp-plan.md) · [mvp-build-log.md](docs/plan/mvp-build-log.md) | The MVP: concerns, API strategy, module map, to-do list |
+| [roadmap.md](docs/plan/roadmap.md) | What comes next, owner to-dos, known small issues |
+| [mvp-plan.md](docs/plan/mvp-plan.md) · [mvp-build-log.md](docs/plan/mvp-build-log.md) | The MVP: concerns, API strategy, module map |
 | [phase2-plan.md](docs/plan/phase2-plan.md) · [phase2-build-log.md](docs/plan/phase2-build-log.md) | Settings and the viewer |
 | [phase3-plan.md](docs/plan/phase3-plan.md) · [phase3-build-log.md](docs/plan/phase3-build-log.md) | Search and All assets |
 | [phase4-plan.md](docs/plan/phase4-plan.md) · [phase4-build-log.md](docs/plan/phase4-build-log.md) | Favorites and folders |

@@ -76,7 +76,7 @@ Written from the build ledger when Phase 4 finished (on `main`). Rulings are dec
 - A tab still showing account 1 can save a fresh account-1 snapshot into account 2's store if the user favorites there (see Risks).
 - The folder "…" menu has no arrow keys, like the other "…" menus.
 - `Activity` and `MoreMenu` close on Esc without `preventDefault` (from Phase 3).
-- Owner-run checks (real phones: long press, sheets, search keyboard): moved to the MVP plan's [What the owner needs to do](mvp-plan.md#what-the-owner-needs-to-do).
+- Owner-run checks (real phones: long press, sheets, search keyboard): moved to the roadmap's [What the owner needs to do](roadmap.md#what-the-owner-needs-to-do).
 
 ## Leftovers sweep (after Phase 4)
 
@@ -94,10 +94,53 @@ A review of every plan, build log and doc found 39 actionable leftovers, 10 owne
 - **Keyboard:** ↑/↓/Home/End work in the "…" menus, the arrow keys move around the direction rose, and the More menu's Esc stays contained.
 - **Tests:** the mock now uses real PixelLab shapes (B12): the `usage` key, failed and review rows, "Idle" and "base" state names, and newest-first lists, so the Recently added order is now tested. A new check confirms the production CSP never blocks the app. No request count changed.
 - **Plan docs:** the Phase 0 results are recorded in [research 13](../research/13-phase0-results.md), the T7 owner checklist is written, and stale statuses are fixed.
-- **Still open (owner-only):** the real-phone checks, rotating the API key used in testing, repo visibility, the owner Phase 0 checks Q1, Q4 and Q6 with the T7 counts, and the six-question email to PixelLab (P-11). All are tracked in the MVP plan's [What the owner needs to do](mvp-plan.md#what-the-owner-needs-to-do). The git-ignored `.env` now holds the agent testing key (P-18), so it stays.
+- **Still open (owner-only):** the real-phone checks, rotating the API key used in testing, repo visibility, the owner Phase 0 checks Q1, Q4 and Q6 with the T7 counts, and the six-question email to PixelLab (P-11). All are tracked in the roadmap's [What the owner needs to do](roadmap.md#what-the-owner-needs-to-do). The git-ignored `.env` now holds the agent testing key (P-18), so it stays.
 - **Final verification of the sweep:** `npm run check` 0 errors, 311 unit tests, build OK. The first full double run had 5 failures, all test timing races exposed by heavy machine load, not app bugs. In each case the test now waits for the requests it owns; no count was loosened.
   - A count that started before the home's last paced picture request.
   - A test that held both request slots.
   - A second Esc that came before the viewer closed.
   - A crispness probe that measured a canvas before it was sized.
   - **Result:** after the fixes, the full suite run twice over passed 658, with 2 skipped (the phone-only test) and 0 failed.
+
+## Project review (2026-10-21)
+
+Four reviewers checked the whole project: product and docs, design and accessibility, code, and security and deploy. Each finding was argued to agreement, then built in two batches. Each batch was reviewed and fixed until clean. Decisions P-16 to P-21 are in the [decision log](../design/00-decision-log.md); what comes next is in the [roadmap](roadmap.md).
+
+- **Agent-only dev token:**
+  - `PIXELLAB_TOKEN_AGENT_DEV` in the git-ignored `.env` is served only by `npm run dev:agent`, through a localhost, same-origin, no-store endpoint. The app keeps it in memory only.
+  - `npm run dev` and every build have no access: `envDir: false`, an agent-mode build is refused, client code sits behind `MODE === 'agent'`, and `npm run build` ends with a dist guard (it also catches inline source maps).
+  - Checked in all three modes: agent dev signs in, with nothing in storage; human dev shows the key screen and sends no key request; production has no endpoint and passes the guard.
+- **GitHub Pages:**
+  - `base: './'`, and the CSP and referrer policy from `public/_headers` are written into `index.html` at build.
+  - `.github/workflows/pages.yml` checks, tests and builds every push and PR, and deploys `main`. The live site loads with no CSP errors.
+  - Pages can't send `frame-ancestors`; P-17 records that.
+- **Account check (fails closed):** it's the same account on any exact card match. The steps, in order:
+  1. Characters page 0;
+  2. a one-row check at offset (new total − saved total);
+  3. the other saved families, one at a time.
+
+  If a needed page fails, the key test fails, and nothing is wiped. Accounts with no saved characters are checked too.
+- **Network:**
+  - A hidden tab pauses its queue instead of cancelling it, and never holds the cross-tab check lock.
+  - Returning to a visible tab runs the normal open check, which sends 0 requests within the hour.
+  - Started requests finish and are cached, even when the viewer moves on.
+  - Answers for an old key are dropped.
+- **Design and accessibility:**
+  - white focus rings;
+  - readable blue and red text (overrides in `app.css`; GlassKit untouched);
+  - layers close when focus leaves them;
+  - dock titles truncate at 320 px;
+  - always-present status regions;
+  - Select hidden until Select mode ships;
+  - a heart on the empty Favorites tile;
+  - the same ✕ in Activity as in Settings.
+- **Simpler code:** one costly-picture wait rule, shared menu arrow keys, one group check and one image-host check. Dead store helpers are deleted, and saved records get stricter checks.
+- **Tests:**
+  - e2e runs on its own port (4291) and never reuses another app's server;
+  - viewport-independent specs run on desktop only;
+  - `fullyParallel` was tried and reverted (timing-flaky request counts).
+- **Final verification:**
+  - `npm run check`: 0 errors;
+  - 340 unit tests pass;
+  - the build passes the dist guard;
+  - the full e2e run: 276 passed, 1 skipped (the phone-only long-press test), 0 failed, in 14.2 min.

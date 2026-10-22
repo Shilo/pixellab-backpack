@@ -22,7 +22,7 @@ Questions come from the Phase 0 list in the [MVP plan](../plan/mvp-plan.md#phase
 
 ## Still to do (owner)
 
-Tracked in the MVP plan's [What the owner needs to do](../plan/mvp-plan.md#what-the-owner-needs-to-do). The steps:
+Tracked in the roadmap's [What the owner needs to do](../plan/roadmap.md#what-the-owner-needs-to-do). The steps:
 
 1. Q1: balance before and after one full session; expect no change.
 2. Q4: in a second session, open Tilesets & tiles and check that the Sidescroller and Isometric pictures show "Image host" in Activity.

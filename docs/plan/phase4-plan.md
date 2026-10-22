@@ -371,7 +371,7 @@ In Group E, Task 8 owns App's root `CardMenu` and listeners; Task 9 owns only Ap
 
 **Done when:** T6, security, visual and a11y pass with `--repeat-each=3 --workers=2` on both projects; the compare step and headed check find no unexplained differences; this plan's tasks are ticked.
 
-**Owner checks (owner-run, not a builder Done-when; the phone checks are tracked in the MVP plan's [owner list](mvp-plan.md#what-the-owner-needs-to-do)):**
+**Owner checks (owner-run, not a builder Done-when; the phone checks are tracked in the roadmap's [owner list](roadmap.md#what-the-owner-needs-to-do)):**
 - Real iPhone and Android phone: long press opens the card menu (no system link preview), a short tap opens the viewer, sheets sit above the home indicator; Phase 3's search keyboard check (field, ✕, Cancel and the first panel row stay visible with the keyboard open).
 - The live browser test with the owner's key through the dev-only `?devkey` sign-in: favorites and folders on real art, Forget key, reload.
 

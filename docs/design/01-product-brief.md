@@ -146,7 +146,7 @@ Tap counts use R2's first-run walkthrough (R2 §2: phone hobbyist, landing → w
 | Download integrity | 1× PNG byte-identical to source; GIF total duration within 10 ms of the effective timing (the current playback speed); partial failures listed in `manifest.json` | Unit tests |
 | Bundle | Initial JS ≤ 60 KB gz; download code lazy-loaded ≤ 10 KB gz | CI bundle budget |
 
-The owner runs every measurement that needs the real API key or a real device (the real-key first run, device traces, the manual screen-reader passes) from checklists the builder writes (B-2). **Status 2026-10-21:** none of these targets is measured yet, in CI or by hand. The device checks are optional and unscheduled ([MVP plan, What the owner needs to do](../plan/mvp-plan.md#what-the-owner-needs-to-do)).
+The owner runs every measurement that needs the real API key or a real device (the real-key first run, device traces, the manual screen-reader passes) from checklists the builder writes (B-2). **Status 2026-10-21:** none of these targets is measured yet, in CI or by hand. The device checks are optional and unscheduled ([MVP plan, What the owner needs to do](../plan/roadmap.md#what-the-owner-needs-to-do)).
 
 ## 10. Risks and dependencies
 
