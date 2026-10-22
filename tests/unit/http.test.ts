@@ -840,21 +840,23 @@ test('agentKey: the kill switch sends no request; otherwise the dev endpoint ans
   expect(calls).toEqual([{ url: '/__dev/pixellab-key', init: { cache: 'no-store' } }]);
 });
 
-for (const initial of ['shared', 'legacy', 'both', 'quota'] as const) {
-  test(`remembered key ${initial}: shared name wins and legacy cannot return after Forget`, async () => {
+for (const initial of ['shared', 'old-only', 'both'] as const) {
+  test(`remembered key ${initial}: only the shared name is used, including after Forget`, async () => {
     session.clear();
     local.clear();
-    if (initial === 'shared' || initial === 'both') local.set('pixellabApiKey', 'shared-key-1234');
+    if (initial !== 'old-only') local.set('pixellabApiKey', 'shared-key-1234');
     if (initial !== 'shared') local.set('pixellab-backpack:key-kept', 'legacy-key-5678');
     local.set('pixeldoll.apiKey', 'other-app-legacy');
-    if (initial === 'quota') vi.stubGlobal('localStorage', { ...storage(local), setItem: () => { throw new Error('full'); } });
     http = await loadModule();
-    const expected = initial === 'legacy' || initial === 'quota' ? 'legacy-key-5678' : 'shared-key-1234';
-    expect([http.getKey(), http.keptSignedIn(), local.get('pixellabApiKey')]).toEqual([expected, true, initial === 'quota' ? undefined : expected]);
-    expect(local.has('pixellab-backpack:key-kept')).toBe(initial === 'quota');
+    const expected = initial === 'old-only' ? null : 'shared-key-1234';
+    expect([http.getKey(), http.keptSignedIn(), local.get('pixellabApiKey')]).toEqual([expected, !!expected, expected ?? undefined]);
+    expect(local.get('pixellab-backpack:key-kept')).toBe(initial === 'shared' ? undefined : 'legacy-key-5678');
+    expect(local.get('pixeldoll.apiKey')).toBe('other-app-legacy');
     http.forgetKey();
     http = await loadModule();
-    expect([http.getKey(), http.keptSignedIn(), local.has('pixellabApiKey'), local.has('pixellab-backpack:key-kept'), local.has('pixeldoll.apiKey')]).toEqual([null, false, false, false, false]);
+    expect([http.getKey(), http.keptSignedIn(), local.has('pixellabApiKey')]).toEqual([null, false, false]);
+    expect(local.get('pixellab-backpack:key-kept')).toBe(initial === 'shared' ? undefined : 'legacy-key-5678');
+    expect(local.get('pixeldoll.apiKey')).toBe('other-app-legacy');
   });
 }
 

@@ -4,7 +4,7 @@ Owner request: 2026-10-22. Applies to PixelDoll and PixelLab Backpack.
 
 - Remembered browser credentials use `localStorage["pixellabApiKey"]` on both apps. Session-only credentials retain each app's existing behavior.
 - Agent development uses `PIXELLAB_API_KEY_AGENT_DEV` in each ignored repo-root `.env`. Agent credentials remain in memory; no build or CI receives them.
-- Each app migrates its previous saved name on load. An existing shared credential wins. Failed migration writes retain readable credentials. Forget and disabling persistence remove the shared name and both known legacy names.
+- Use only the shared saved name. Old app-specific API-key entries are ignored, never migrated, and left untouched. Forget and disabling persistence remove only the shared saved name.
 - Other apps adopt saved credential changes on reload. Live synchronization between apps is outside this change.
 
 ## Cached account ownership
@@ -26,6 +26,6 @@ No new host, method, background polling or paid-generation request is added. Nor
 
 ## Review and validation
 
-An independent sub-agent challenged both implementations. Valid findings fixed: warm-cache account mismatch, legacy-token resurrection after Forget, full-storage migration failures, transient restore failures deleting shared authentication, a failed wipe certifying stale data, and a duplicate daily-cap recovery allowance.
+The owner explicitly rejects old-key compatibility. Neither app reads or migrates old saved API-key names. Existing account-ownership and authentication recovery fixes remain in place: warm-cache isolation, temporary verification recovery, failed-wipe handling, and the daily-cap allowance.
 
-Coverage includes shared/legacy precedence, quota failures, both legacy names during Forget, changed and missing cache fingerprints, temporary verification failures and retry, invalid-key rejection, and failed cache wipe. A synthetic integration check serves both production builds under one loopback origin and exercises sharing, account switching and Forget in both directions. Real credentials are tested only through localhost agent mode and never displayed, persisted by tests, or committed.
+Coverage includes old-only entries remaining signed out, the shared key working alongside ignored old entries, Forget never reviving an old key, saved-key storage failures, changed and missing cache fingerprints, temporary verification failures and retry, invalid-key rejection, and failed cache wipe. A synthetic integration check serves both production builds under one loopback origin and exercises sharing, account switching and Forget in both directions. Real credentials are tested only through localhost agent mode and never displayed, persisted by tests, or committed.

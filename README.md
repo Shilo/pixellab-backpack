@@ -36,8 +36,8 @@ A full project review followed (2026-10-21). What comes next, owner to-dos and k
 Not built yet: Creator-gallery Images, Maps, downloads, backup, and animated previews on cards.
 
 Remembered keys use `localStorage['pixellabApiKey']`, shared with PixelDoll and other apps on the same origin
-(including other `https://shilo.github.io/` project paths). Existing `pixellab-backpack:key-kept` entries move to this name
-on load; an existing shared key takes priority. Forget removes the shared saved key. Other open apps read it on their next load.
+(including other `https://shilo.github.io/` project paths). Only this name is used; older saved names are ignored and are
+not migrated. Forget removes the shared saved key. Other open apps read it on their next load.
 
 The gallery verifies the account again when the shared key changes or its cache has no recorded key fingerprint (the first load after upgrading). Unchanged verified keys retain the hourly cache.
 
