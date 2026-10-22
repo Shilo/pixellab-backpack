@@ -47,3 +47,18 @@ Final clean-install verification used an isolated archive of commit 37743e2 with
 Unrelated owner edits appeared in the shared checkout during final validation. They were preserved and excluded from these commits. Production CSS/JavaScript parity measurements above describe this migration's before/after checkout, and the final clean-install result is scoped to the committed migration rather than the concurrently edited worktree.
 
 The browser fixtures mock PixelLab; no real API key, paid generation or user artwork was needed. Browser output stays in ignored test directories. No push or deployment is part of this change.
+
+## Publication integration — 2026-10-22
+
+Subsequent validation preserved the published authentication commits acb6738, 50bc801 and 0e8637c in a normal merge. A second actual merge, 25ff64b, also preserved the original standardization branch tip f38f6b9 and integration tip 4249f50 as ancestors. That history-only merge left the entire validated tree unchanged: edca2bd7768d38549539815f972fda7c0ad568ab. Both contributors' code and instructions remain intact.
+
+OBSERVED, local, on the combined publication tree using Node.js 24.22.1 and npm 11.19.1:
+
+- Clean npm ci and audit passed with zero known advisories; strict type checking reported zero errors and warnings.
+- All 368 unit tests in 17 files passed, including the published authentication additions. The earlier 353-test counts above describe the historical standardization-only revision.
+- The production build and dist guard passed.
+- The complete browser matrix enumerated 280 cases: 279 passed and one desktop-only touch case was intentionally skipped, in 15.3 minutes with two workers. Playwright Test 1.64.1 used its managed Chromium browser.
+- An ignored test-config override changed only the preview/base URL to localhost port 4293, with equivalent test and artifact paths, because another contributor used port 4291. Projects, assertions, timeouts and browser settings were preserved; no contributor server was stopped or reused.
+- After the identical-tree history merge, type checking, all 368 unit tests and the production build/dist guard passed again. The following evidence-only documentation update does not change application or test source.
+
+The outgoing application change remains the reviewed stack standardization; published authentication code matches its remote baseline. No reset, force push or discarded contributor edits were used. Browser verification remains Chromium with desktop/phone emulation, rather than a real-device or cross-engine claim.
