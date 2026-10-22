@@ -2,6 +2,9 @@
   "name": "pixellab-backpack",
   "private": true,
   "version": "0.2.0",
+  "description": "Keep your PixelLab art packed in one place. Browse, search, play and organize images.",
+  "license": "MIT",
+  "repository": "github:Shilo/pixellab-backpack",
   "type": "module",
   "scripts": {
     "dev": "vite",

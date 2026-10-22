@@ -1,8 +1,5 @@
-# Earlier mockup explorations: kept locally, not published.
-# Only the final full mockup (mockups/full/) and its sample data (mockups/shared/) are committed.
-mockups/option-*/
-mockups/recommended/
-mockups/simple/
+# Design mockups (they hold PixelLab art and screenshots of it): kept locally, not published. Earlier commits still have them.
+mockups/
 
 # OS and editor files
 .DS_Store

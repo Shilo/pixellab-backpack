@@ -1,6 +1,7 @@
 # PixelLab Backpack
 
-Unofficial, view-only, client-side gallery for PixelLab art (Svelte 5, Vite 8, TypeScript). Overview: [README.md](README.md).
+Keep your PixelLab art packed in one place. Browse, search, play and organize images. An unofficial, view-only, client-side
+app (Svelte 5, Vite 8, TypeScript), MIT-licensed, live at https://shilo.github.io/pixellab-backpack/. Overview: [README.md](README.md).
 
 ## Validate
 
@@ -22,5 +23,5 @@ there. The e2e tests mock PixelLab and stay keyless.
 
 ## GitHub Pages
 
-`.github/workflows/pages.yml` checks and builds every PR and push to `main`, and deploys `main` to Pages. Owner step, once the
-repo is on GitHub: Settings → Pages → Source = "GitHub Actions". No secrets: the key never reaches CI.
+`.github/workflows/pages.yml` checks and builds every PR and push to `main`, and deploys `main` to Pages
+(github.com/Shilo/pixellab-backpack). No secrets: the key never reaches CI. `mockups/` is gitignored (it holds PixelLab art).

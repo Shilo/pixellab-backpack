@@ -118,6 +118,7 @@
         <span class="txt"><b>{APP_NAME}</b><span class="sub">Version {__APP_VERSION__}</span></span>
       </div>
       <div class="row prose">
+        <p>Keep your PixelLab art packed in one place. Browse, search, play and organize images.</p>
         <p>{APP_NAME} is an unofficial gallery for your PixelLab assets. It isn't made by, affiliated with, or endorsed by PixelLab.</p>
         <p>No analytics, no tracking, no servers. {APP_NAME} talks only to PixelLab's API and image host.</p>
       </div>

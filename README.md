@@ -2,7 +2,7 @@
 
 **Keep your PixelLab art packed in one place. Browse, search, play and organize images.**
 
-An unofficial, view-only gallery that runs entirely in your browser with your own API key. Repository description and topics: [docs/github-repo.md](docs/github-repo.md).
+**[Open the app](https://shilo.github.io/pixellab-backpack/)** · An unofficial, view-only gallery that runs entirely in your browser with your own API key. Open source under the [MIT License](LICENSE).
 
 > **Unofficial.** PixelLab Backpack is not made by, affiliated with, or endorsed by PixelLab. It uses no PixelLab logo, mascot, colors or screenshots.
 
@@ -70,7 +70,7 @@ The end-to-end tests drive the installed Microsoft Edge (Playwright channel `mse
 
 ## GitHub Pages
 
-Every push to `main` is checked, built and published by `.github/workflows/pages.yml`. One owner step, once the repo is on GitHub: **Settings → Pages → Source: GitHub Actions**. The app works under the `/<repo-name>/` path.
+Every push to `main` is checked, built and published to <https://shilo.github.io/pixellab-backpack/> by `.github/workflows/pages.yml` (Pages source: GitHub Actions). Pull requests are checked and built only. Repository description and topics: [docs/github-repo.md](docs/github-repo.md).
 
 ## Privacy and safety
 
@@ -82,18 +82,14 @@ Every push to `main` is checked, built and published by `.github/workflows/pages
 
 Svelte 5, Vite 8, TypeScript 6, plain CSS with a vendored GlassKit theme (MIT, see `public/licenses.txt`), `idb-keyval` for local data, Vitest and Playwright.
 
-## Design mockup
+## Design mockups
 
-[mockups/full/](mockups/full/base/README.md) shows the chosen design: 87 screens at desktop 1440×900 and phone 390×844. Open `mockups/full/gallery.html` to flip through them, or `mockups/full/base/index.html#<screen-id>` for a live screen. Its sample data is in [mockups/shared/](mockups/shared/README.md).
-
-Earlier mockup explorations are kept locally only and are not in this repository.
+The design mockups (87 screens of the chosen design, plus earlier explorations) are kept locally and not tracked, because they hold PixelLab art and screenshots of it. Older docs still link to `mockups/`; earlier commits have those files.
 
 ## Open decisions (owner)
 
-- Where to host it and the public URL (it must send real headers; the build is plain static files).
 - Contacting PixelLab under their terms of service (section 2.2) before any public launch.
-- Source licence and repository visibility. Before a public push, review `mockups/shared/assets/`, which holds PixelLab sample art.
-- Whether to ship a PWA manifest, and whether to automate deploys.
+- Whether to ship a PWA manifest.
 
 Every ruling so far is in the [decision log](docs/design/00-decision-log.md).
 
@@ -149,9 +145,6 @@ Start with the [product brief](docs/design/01-product-brief.md), then the [decis
 
 **Reviews** (`docs/reviews/`): [R1](docs/reviews/R1-research-cross-review.md) research cross-review · [R2](docs/reviews/R2-design-spec-review.md) design spec review · [R3a](docs/reviews/R3a-mockup-ux-review.md) mockup UX review · [R3b](docs/reviews/R3b-mockup-visual-a11y-review.md) visual and accessibility review · [R4](docs/reviews/R4-builder-check.md) builder check · [R5](docs/reviews/R5-final-qa.md) final QA · [R6](docs/reviews/R6-api-minimization-review.md) API minimization review.
 
-**Mockups**
+## License
 
-| Path | Purpose |
-|---|---|
-| [mockups/full/](mockups/full/base/README.md) | The full mockup of the chosen design, with screenshots |
-| [mockups/shared/](mockups/shared/README.md) | Sample dataset, pixel utilities, image provenance |
+[MIT](LICENSE). PixelLab is a trademark of its owners; this project is not affiliated with PixelLab.
