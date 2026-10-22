@@ -5,7 +5,7 @@ It runs entirely in the browser: no backend, no accounts, no telemetry. It never
 Live at https://shilo.github.io/pixellab-backpack/ (GitHub Pages, deployed from main). MIT license. Not affiliated with or endorsed by PixelLab.
 Features: key screen, library home with category tiles, category grids and All assets, search, viewer (animation player, Info, zoom, backdrops), favorites and folders, Settings, Activity panel (every request the app sends), Refresh.
 Design: iOS-like simplicity with progressive disclosure. One dock, few visible controls, everything else in menus and sheets. Pixel art is drawn crisp at whole-pixel sizes. Keyboard, screen reader, 4.5:1 text contrast and 44 px touch targets are required.
-Stack: Node.js 24.22.1 / npm 11.19.1; Svelte 5.57.2 runes, Vite 8.3.4, TypeScript 6.0.3 strict, plain CSS on the npm GlassKit 1.27.0 theme, idb-keyval 6.3.0 (IndexedDB), Vitest 4.1.12, Playwright Test 1.64.1 with managed Chromium by default.
+Stack: Node.js 24.22.1 / npm 11.19.1; strict TypeScript 6.0.3; Svelte 5.57.2 (not SvelteKit); Vite 8.3.4 / @sveltejs/vite-plugin-svelte 7.3.1; @jungherz-de/glasskit 1.27.0 / custom CSS; idb-keyval 6.3.0; Vitest 4.1.12 / @playwright/test 1.64.1 (managed Chromium).
 
 ## Rules
 
