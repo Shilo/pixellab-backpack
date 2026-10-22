@@ -60,7 +60,8 @@
   }
 
   const hint = $derived(library.hasKey ? library.keyHint() : null); // keyHint() is not reactive: hasKey re-reads it after a connect
-  // Every GitHub Pages site of one account shares the <account>.github.io origin, and so its browser storage.
+  // Every GitHub Pages site of one account shares the <account>.github.io origin, and so all of its browser storage: the saved
+  // library, favorites and folders, and this tab's key too, whatever Keep me signed in says.
   const sharedOrigin = location.hostname.endsWith('.github.io');
 </script>
 
@@ -78,7 +79,7 @@
   <div class="scroll">
     <header>
       <h2 id="st-title">Settings</h2>
-      <button type="button" class="x" aria-label="Close settings" onclick={() => sheet?.close()}>
+      <button type="button" class="vt-x" aria-label="Close settings" onclick={() => sheet?.close()}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
       </button>
     </header>
@@ -99,8 +100,8 @@
               ? "Saved in this browser so you don't need to paste it again. Anyone using this browser profile could use it, so don't turn this on for shared computers."
               : "Kept in this tab only. You'll paste it again in a new tab."}
           </span>
-          {#if library.keepSignedIn && sharedOrigin}
-            <span class="sub warn" id="st-keep-warn">Other GitHub Pages sites from the same account share this browser storage, so they could read your saved key and library.</span>
+          {#if sharedOrigin}
+            <span class="sub warn" id="st-keep-warn">Other pages on this github.io address can read what this app saves here, including your key while it's saved.</span>
           {/if}
         </span>
         <span class="sw">
@@ -163,7 +164,6 @@
   header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 6px; padding-inline: 4px; }
   h2 { font-size: 22px; font-weight: 600; }
   h3 { margin: 18px 6px 8px; font-size: 13px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; color: var(--gl-color-text-muted); }
-  .x { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--gl-border-medium); background: var(--gl-surface-2); cursor: pointer; }
   .card { border-radius: 20px; border: 1px solid var(--gl-border-subtle); background: var(--gl-surface-1); overflow: hidden; }
   .row { display: flex; align-items: center; justify-content: space-between; gap: 14px; box-sizing: border-box; width: 100%; min-height: 56px; padding: 10px 18px; border: 0; background: none; text-align: start; font-size: 15px; }
   .row + .row { border-top: 1px solid var(--gl-border-subtle); }
@@ -173,7 +173,7 @@
   .sub { font-size: 13.5px; color: var(--gl-color-text-muted); overflow-wrap: anywhere; }
   .status { display: flex; align-items: center; gap: 8px; }
   .status i { width: 10px; height: 10px; border-radius: 50%; background: var(--gl-color-success, #34c759); }
-  .danger { color: var(--gl-color-error); font-weight: 600; }
+  .danger { color: var(--gl-color-error-on-surface); font-weight: 600; }
   .warn { color: var(--gl-color-warning-on-surface); }
   .sw { position: relative; flex: none; display: flex; }
   .sw .glass-toggle__input { top: 0; left: 0; margin: 0; }
@@ -187,8 +187,8 @@
   dialog.glass-modal-overlay { background: rgba(8, 10, 16, .6); }
   .glass-modal { background: linear-gradient(var(--gl-surface-3), var(--gl-surface-3)), #14161e; }
   .cache { margin-top: 10px; font-size: 13px; }
-  .err { margin-top: 10px; color: var(--gl-color-error); }
-  :is(.x, .row, a):focus-visible, .sw :focus-visible + .glass-toggle__track { outline: 2px solid #fff; outline-offset: -2px; }
+  .err { margin-top: 10px; color: var(--gl-color-error-on-surface); }
+  :is(.row, a):focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
   a:focus-visible { outline-offset: 2px; }
 
   @media (max-width: 600px) {

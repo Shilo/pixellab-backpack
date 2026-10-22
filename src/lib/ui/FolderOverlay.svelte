@@ -8,6 +8,7 @@
   import { pathOf, router } from '../router.svelte';
   import AssetCell from './AssetCell.svelte';
   import FolderDialog from './FolderDialog.svelte';
+  import { leaves, moveFocus } from './keys';
 
   // App looks the folder up once and mounts this only while it exists.
   let { folder, reveal = null, onClose }: { folder: Folder; reveal?: string | null; onClose: () => void } = $props();
@@ -15,7 +16,6 @@
   // ponytail: every cell is rendered (no virtual rows, R8); pictures load only on screen. Add virtual rows if folders get huge.
   const picked = $derived(library.pick(folder.items));
   const n = $derived(picked.items.length);
-  const idle = $derived(library.categories.find((c) => c.mosaic.length)?.mosaic[0]);
 
   let heading = $state<HTMLElement>();
   let more = $state<HTMLButtonElement>();
@@ -73,16 +73,7 @@
     dialog = { kind, folder };
   }
 
-  // ↑/↓/Home/End move between the items (as CardMenu).
-  function menuKeys(e: KeyboardEvent & { currentTarget: HTMLElement }) {
-    const items = [...e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]')];
-    const i = items.indexOf(document.activeElement as HTMLElement);
-    const n = items.length;
-    const next = { ArrowDown: (i + 1) % n, ArrowUp: i < 0 ? n - 1 : (i - 1 + n) % n, Home: 0, End: n - 1 }[e.key];
-    if (next === undefined) return;
-    e.preventDefault();
-    items[next].focus();
-  }
+  const menuKeys = (e: KeyboardEvent & { currentTarget: HTMLElement }) => moveFocus(e, [...e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]')]);
 
   // Esc: the menu first; the overlay only when nothing above it handled it (the viewer, a menu or a dialog).
   function onkeydown(e: KeyboardEvent) {
@@ -112,7 +103,7 @@
         </button>
         {#if menu}
           <button type="button" class="backdrop" tabindex="-1" aria-label="Close menu" onclick={closeMenu}></button>
-          <div class="glass-popover is-open vt-scrim menu vt-grip" role="menu" aria-label="Folder actions" onkeydown={menuKeys}>
+          <div class="glass-popover is-open vt-scrim menu vt-grip" role="menu" aria-label="Folder actions" tabindex="-1" onkeydown={menuKeys} onfocusout={(e) => menu && leaves(e) && closeMenu()}>
             <button type="button" role="menuitem" class="glass-list__item glass-list__item--interactive" bind:this={first} onclick={() => pick('rename')}>
               <span class="glass-list__content"><span class="glass-list__title">Rename…</span></span>
               <span class="glass-list__trailing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 19.5l1-4L15.8 5.2a2 2 0 0 1 2.9 0l.1.1a2 2 0 0 1 0 2.9L8.5 18.5z" /><path d="M13.8 7.2l3 3" /></svg></span>
@@ -136,11 +127,11 @@
                 {picked.gone.length === 1 ? "1 item in this folder isn't in your PixelLab library anymore." : `${picked.gone.length} items in this folder aren't in your PixelLab library anymore.`}
                 {#if removeFailed}<b>Couldn't save. Try again.</b>{/if}
               </span>
-              <button type="button" class="glass-btn glass-btn--tertiary glass-btn--sm glass-btn--auto" onclick={removeGone}>Remove them</button>
+              <button type="button" class="glass-btn glass-btn--tertiary glass-btn--sm glass-btn--auto" onclick={removeGone}>{picked.gone.length === 1 ? 'Remove it' : 'Remove them'}</button>
             </div>
           {/if}
           {#each picked.items as it (it.card.key)}
-            <AssetCell card={it.card} familyId={it.familyId} href={pathOf({ name: 'folder', id: folder.id, key: it.card.key })} costly={library.family(it.familyId).artCostsApi} />
+            <AssetCell card={it.card} familyId={it.familyId} href={pathOf({ name: 'folder', id: folder.id, key: it.card.key })} />
           {/each}
         </div>
       </div>
@@ -149,7 +140,7 @@
       <div class="glass-card glass-card--glow fpanel emptyp">
         <div class="glass-empty">
           <span class="idle" aria-hidden="true">
-            {#if idle}{#await library.art(idle.card, idle.familyId) then blob}<PixelArt {blob} alt="" trim fill />{/await}{/if}
+            {#if library.idle}{#await library.art(library.idle.card, library.idle.familyId) then blob}<PixelArt {blob} alt="" trim fill />{/await}{/if}
           </span>
           <p class="glass-empty__title">This folder is empty.</p>
           <p class="glass-empty__text">Open an asset's menu in your library and choose Add to folder.</p>
@@ -204,7 +195,7 @@
   /* The "…" popover (MoreMenu's look), under the pill; a bottom sheet on phones. */
   .backdrop { position: fixed; inset: 0; z-index: 3; border: 0; padding: 0; background: none; cursor: default; } /* the overlay is dim already (g4-folder-menu) */
   .menu { position: absolute; z-index: 4; top: calc(100% + 10px); left: calc(50% - 135px); bottom: auto; width: 270px; padding: 6px 0; border-radius: 20px; transform: none;
-    background: linear-gradient(var(--gl-surface-3), var(--gl-surface-3)), var(--vt-scrim); overflow: hidden; --gl-list-item-min-height: 44px; --gl-list-item-padding-y: 9px; }
+    background: linear-gradient(var(--gl-surface-3), var(--gl-surface-3)), var(--vt-scrim); overflow: hidden; --gl-list-item-min-height: 44px; --gl-list-item-padding-y: 9px; outline: none; }
   .menu .glass-list__item { cursor: pointer; }
   .glass-list__content { display: block; flex: 1; min-width: 0; }
   .glass-list__trailing svg { width: 19px; height: 19px; }

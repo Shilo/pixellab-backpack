@@ -1,4 +1,5 @@
-// T7 Settings (mocked PixelLab): menu, key hint, Keep me signed in, Forget key, About, no sideways scroll, keyboard.
+// T7 Settings (mocked PixelLab): menu, key hint, Keep me signed in, Forget key, About, the github.io warning. Desktop only (K3):
+// the sheet's layout, sideways scroll and keyboard reach on phone are in t12-edges.spec.ts.
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 import { GOOD_KEY, OTHER_KEY, connect, deviceStorage, mockPixelLab, settle, type Hit } from '../fixtures/pixellab-mock';
@@ -164,38 +165,21 @@ test('About shows the version and the outbound links, all safe', async ({ page }
   expect(await licences.text()).toMatch(/Svelte [\d.]+[\s\S]*MIT License[\s\S]*Svelte Contributors/); // the bundled runtime
 });
 
-test("a click in the sheet's own padding keeps Settings open; a click outside it closes", async ({ page }) => {
+test('the github.io warning shows on any *.github.io address whatever Keep me signed in says, and nowhere else', async ({ page, context, baseURL }) => {
+  const warning = "Other pages on this github.io address can read what this app saves here, including your key while it's saved.";
   await start(page);
+  await expect((await open(page)).getByText(warning)).toHaveCount(0);
+  // The same build served as a GitHub Pages address.
+  await context.route('https://tester.github.io/**', async (route) => route.fulfill({ response: await route.fetch({ url: route.request().url().replace('https://tester.github.io', baseURL!) }) }));
+  await page.goto('https://tester.github.io/');
+  await connect(page);
   const dialog = await open(page);
-  const box = (await dialog.boundingBox())!;
-  await page.mouse.click(box.x + 6, box.y + box.height / 2); // the side padding: the dialog itself is the target
-  await expect(dialog).toBeVisible();
-  await page.mouse.click(2, 2);
-  await expect(dialog).toBeHidden();
-});
-
-test('no sideways scroll, and the keyboard reaches every control', async ({ page }) => {
-  await start(page);
-  const dialog = await open(page);
-  const fits = await page.evaluate(() => {
-    const d = document.querySelector('dialog[open] .scroll')!; // the sheet's scroller
-    return d.scrollWidth <= d.clientWidth && document.documentElement.scrollWidth <= innerWidth;
-  });
-  expect(fits).toBe(true);
-  const seen: string[] = [];
-  for (let i = 0; i < 12; i++) {
-    await page.keyboard.press('Tab');
-    seen.push(
-      await page.evaluate(() => {
-        const el = document.activeElement as HTMLInputElement;
-        return (el.getAttribute('aria-label') ?? el.labels?.[0]?.innerText ?? el.innerText).trim();
-      }),
-    );
-  }
-  for (const name of ['Close settings', 'Keep me signed in', 'Forget key', 'Generate a new API key', 'Fonts', 'Effects', 'Portraits', 'Talking animations', 'Licences']) {
-    expect(seen.some((t) => t.startsWith(name)), `${name} in ${JSON.stringify(seen)}`).toBe(true);
-  }
-  await expect(dialog.getByRole('switch', { name: 'Keep me signed in' })).toBeVisible();
+  const keep = dialog.getByRole('switch', { name: 'Keep me signed in' });
+  await expect(keep).not.toBeChecked();
+  await expect(dialog.getByText(warning)).toBeVisible(); // this tab's key, the saved library and folders are origin-wide too
+  await keep.check();
+  await expect(dialog.getByText(warning)).toBeVisible();
+  await expect(keep).toHaveAccessibleDescription(new RegExp(warning.replace(/[.?]/g, '\\$&')));
 });
 
 test('Forget key: a failed wipe says so and keeps the confirm open; Forget key again clears it', async ({ page }) => {

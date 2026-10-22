@@ -6,6 +6,7 @@
 :root, [data-theme="dark"] {
   --gl-color-primary: #0a6cdc;            /* white label 5.01:1 at the lightest gradient stop */
   --gl-color-primary-dark: #0050b4;
+  --gl-color-primary-text: #8dbbff;       /* blue text (modal Create/Save): 6.1:1 on dialogs, 4.7:1 on the Settings card (U2) */
   --gl-color-bg-light: #181b28; --gl-color-bg-mid: #12141d; --gl-color-bg-dark: #0c0e14;   /* neutral, not GlassKit teal */
   --gl-bg-aurora-1: rgba(98, 96, 196, .16); --gl-bg-aurora-2: rgba(34, 118, 132, .10); --gl-bg-aurora-3: rgba(98, 96, 196, .10);
   --gl-bg-light-streak-1: transparent; --gl-bg-light-streak-2: transparent; --gl-bg-warm-glow: transparent;
@@ -36,6 +37,10 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 svg.dots, svg.solid { fill: currentColor; stroke: none; }
 .vt-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .vt-text-2 { color: var(--vt-text-2); }
+/* Red text reads at 4.5:1 or more on dialogs and cards with GlassKit's light error tone; --gl-color-error stays for borders and badges (U2). */
+.glass-modal__action--danger, .glass-list__item--danger { color: var(--gl-color-error-on-surface); }
+/* A titled sheet's ✕ (Settings, Activity). */
+.vt-x { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--gl-border-medium); background: var(--gl-surface-2); cursor: pointer; }
 
 /* Screens scroll inside themselves; the page never does. Home's bottom padding clears the dock (26 + 64 px) plus one 26 px gap, no more,
    so a library that fits does not scroll. */
@@ -74,14 +79,14 @@ svg.dots, svg.solid { fill: currentColor; stroke: none; }
 /* 4. Dock: GlassKit's floating tab bar, items in a row at 48px */
 .vt-dock { --gl-control-height: 48px; --gl-btn-height: 48px; --gl-radius-btn: 24px; --gl-font-size-btn: 15px; white-space: nowrap; }
 .vt-dock .glass-tab-bar__item { flex-direction: row; gap: 8px; height: 48px; padding: 0 18px; color: var(--gl-color-text); }
-.vt-dock .glass-tab-bar__item[aria-disabled="true"] { cursor: default; }
 .vt-dock .glass-tab-bar__label { font-size: 15px; letter-spacing: 0; color: var(--gl-color-text); }
 .vt-dock .glass-tab-bar__icon, .vt-dock .glass-tab-bar__icon svg { width: 20px; height: 20px; }
 .glass-tab-bar__item.vt-icon { width: 48px; padding: 0; justify-content: center; }
 .vt-dock .vt-back { padding: 0 16px 0 10px; gap: 2px; }
 .vt-dock .vt-back .glass-tab-bar__icon, .vt-dock .vt-back .glass-tab-bar__icon svg { width: 22px; height: 22px; }
-.crumb { display: inline-flex; align-items: baseline; gap: 8px; padding: 0 14px 0 6px; font-size: 15px; font-weight: 600; }
+.crumb { display: inline-flex; align-items: baseline; gap: 8px; min-width: 0; overflow: hidden; padding: 0 14px 0 6px; font-size: 15px; font-weight: 600; }
 .crumb span { color: var(--vt-text-2); font-weight: 400; font-variant-numeric: tabular-nums; }
+.crumb .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: inherit; font-weight: inherit; } /* the title gives way, the count stays (U4) */
 .vr { width: 1px; height: 24px; background: var(--gl-border-subtle); }
 /* Home search pill: a button that looks like GlassKit's search field, with the "/" hint (desktop). */
 .vt-search { display: flex; align-items: center; gap: 10px; width: 300px; height: 48px; padding: 0 16px; border: 1px solid var(--gl-border-subtle); border-radius: 24px;
@@ -100,7 +105,9 @@ mark { background: none; color: var(--gl-color-text); font-weight: 650; }
 .vt-notice .glass-btn { height: 32px; padding: 0 14px; font-size: 13.5px; border-radius: 12px; flex: none; }
 
 /* 5. A visible keyboard focus ring: GlassKit removes the outline on these and draws none back. */
-:is(.glass-btn, .glass-pill, .glass-tab-bar__item, .vt-search, .tile):focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+:is(.glass-btn, .glass-pill, .glass-tab-bar__item, .vt-search, .tile, .vt-x):focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+/* GlassKit rings checkboxes, switches and segments in 30% blue, lost on glass and on a checked box (U1). */
+.glass-checkbox__input:focus-visible + .glass-checkbox__box, .glass-toggle__input:focus-visible + .glass-toggle__track, .glass-segmented__item:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
 /* 6. Phone portrait (<= 600px): 12px margins, full-width icon dock, safe areas, every target >= 44px. */
 @media (max-width: 600px) {
@@ -123,7 +130,6 @@ mark { background: none; color: var(--gl-color-text); font-weight: 650; }
   .vt-dock .glass-tab-bar__icon + .glass-tab-bar__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .vr { display: none; }
   .vt-dock .glass-tab-bar__item:has(.glass-tab-bar__icon + .glass-tab-bar__label), .vt-dock .vt-back { width: 48px; padding: 0; justify-content: center; flex: none; }
-  .vt-dock .glass-tab-bar__item { padding: 0 14px; }
   .vt-search { width: auto; flex: 1; min-width: 0; }
   .vt-search kbd { display: none; }
   .crumb { flex: 1; padding: 0 4px; }

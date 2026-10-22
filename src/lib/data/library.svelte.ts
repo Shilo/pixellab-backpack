@@ -29,6 +29,8 @@ import { loadDetail, loadFamilies, saveDetail, saveFamily, wipe } from './store'
 export type LibraryStatus = 'idle' | 'checking' | Status;
 
 export const REFRESH_GAP = 60_000;
+/** Costly art waits this long on screen before it is asked for (artWait); the viewer's detail waits the same (R7). */
+export const COSTLY_WAIT_MS = 300;
 
 const adapters = createFamilies({ apiGet, publicGet });
 const byId = Object.fromEntries(adapters.map((f) => [f.id, f])) as Record<FamilyId, Family>;
@@ -67,6 +69,8 @@ class Library {
       mosaic: this.items(c.id).slice(0, 4),
     })),
   );
+  /** The sprite empty states show (Favorites, a folder, no search results): the first shown card. */
+  idle = $derived(this.categories.find((c) => c.mosaic.length)?.mosaic[0] ?? null);
 
   /** The cards screens show: done only, one card per character group, and a top-down tileset that is also in the sidescroller list is shown once (there). */
   shown = (id: FamilyId): Card[] => {
@@ -244,6 +248,14 @@ class Library {
     return running;
   };
 
+  /** Try again: first pages through the open check (failed ones are not fresh), then the next pages that failed, once. Never a
+   * next page behind a first page that failed, before or in this check (K4). */
+  recheck = async (): Promise<void> => {
+    const next = (Object.keys(this.errors) as FamilyId[]).filter((id) => !unchecked.has(id));
+    await this.openCheck();
+    await Promise.all(next.filter((id) => !unchecked.has(id)).map(this.loadMore));
+  };
+
   /** Next page, starting one row back; a shifted list reloads the family from page 0. */
   loadMore = async (id: FamilyId): Promise<void> => {
     while (running) await running; // build on the checked page 0 (K6); no caller runs inside the open check
@@ -260,6 +272,10 @@ class Library {
       await put(id, next === 'reload' ? applyCheck(top, await f.list(0), Date.now()) : next, key);
     });
   };
+
+  /** How long a cell or the viewer waits on screen before asking for art (K9): only a costly family's link not resolved yet waits;
+   * a saved link costs no API request, and a session miss is cached by art(). */
+  artWait = (card: Card, familyId: FamilyId): number => (byId[familyId].artCostsApi && !card.thumb ? COSTLY_WAIT_MS : 0);
 
   /** One picture, cached for the session; a costly family's resolved link is saved so it is asked once per device. */
   art = (card: Card, familyId: FamilyId, signal?: AbortSignal): Promise<Blob | null> => {

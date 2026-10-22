@@ -146,7 +146,7 @@ for (const dpr of [1, 1.5, 2.625]) {
 
       // The offline notice gives way to the search panel.
       await context.setOffline(true);
-      const offline = page.getByRole('status').filter({ hasText: "You're offline." });
+      const offline = page.locator('.vt-notice').filter({ hasText: "You're offline." });
       await expect(offline).toBeVisible();
       await openSearch();
       await expect(panel).toBeVisible();

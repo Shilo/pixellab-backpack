@@ -39,12 +39,12 @@ describe('infoRows', () => {
     expect(JSON.stringify(rows)).not.toMatch(/GROUP-ID|c0000000/);
   });
 
-  it('character with detail: direction names, one row per animation, style, guidance, Updated when different', () => {
+  it('character with detail: direction names, one Animations row listing each animation, style, guidance, Updated when different', () => {
     const rows = infoRows('characters', card({ ...knight.meta, state_name: 'Armed', updated_at: '2026-02-04T10:00:00Z' }), detail, TZ);
     expect(get(rows, 'State')).toBe('Armed');
     expect(get(rows, 'Directions')).toBe('4 · S, E, N, W');
-    expect(rows.filter((r) => r.label === 'Animation').map((r) => r.value)).toEqual(['Walk · 8 frames · 4 directions', 'Idle · 8–9 frames · 2 directions']);
-    expect(labels(rows)).not.toContain('Animations');
+    expect(get(rows, 'Animations')).toBe('Walk · 8 frames · 4 directions\nIdle · 8–9 frames · 2 directions');
+    expect(labels(rows).filter((l) => l.startsWith('Animation'))).toEqual(['Animations']); // one row, never two labelled alike
     expect(get(rows, 'Outline')).toBe('Single color black outline');
     expect(get(rows, 'Guidance')).toBe('7.5');
     expect(get(rows, 'AI freedom')).toBe('1,200');
@@ -63,14 +63,14 @@ describe('infoRows', () => {
     const d: Detail = { rotations: { unknown: 'u' }, extra: {}, animations: [{ name: 'Snap shut', type: null, description: 'The lid snaps shut', frames: { unknown: frames(9) } }] };
     const rows = infoRows('objects', card({ ...o.meta, state_name: 'open' }), d, TZ);
     expect(get(rows, 'Directions')).toBe('1 (single view)');
-    expect(get(rows, 'Animation')).toBe('Snap shut · 9 frames · 1 direction\nThe lid snaps shut');
+    expect(get(rows, 'Animations')).toBe('Snap shut · 9 frames · 1 direction\nThe lid snaps shut');
     expect(get(rows, 'State')).toBe('open');
   });
 
   it('tileset families', () => {
     const t = card({ lower_description: 'dirt', upper_description: 'grass', tile_size: { width: 16, height: 16 }, view: 'high top-down', created_at: '2026-01-01T00:00:00Z' });
     expect(infoRows('tilesets', t, null, TZ)).toEqual([
-      { label: 'Tile size', value: '16 × 16 px', mono: true }, { label: 'View', value: 'High top-down' }, { label: 'Created', value: 'Jan 1, 2026, 00:00' },
+      { label: 'Tile size', value: '16 × 16 px' }, { label: 'View', value: 'High top-down' }, { label: 'Created', value: 'Jan 1, 2026, 00:00' },
     ]);
     expect(textBlock('tilesets', t)).toEqual({ label: 'Terrains', text: 'Dirt → Grass' });
     const s = card({ lower_description: 'stone', transition_description: 'moss', tile_size: { width: 32, height: 32 }, created_at: '2026-01-01T00:00:00Z' });

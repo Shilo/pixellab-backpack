@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { GOOD_KEY, ageSaved, connect, mockPixelLab, settle, type Hit } from '../fixtures/pixellab-mock';
 
 const lists = (hits: Hit[]) => hits.filter((h) => h.list);
-const tryAgainNotice = (page: Page) => page.getByRole('status').filter({ hasText: 'Try again' });
+const tryAgainNotice = (page: Page) => page.locator('.vt-notice').filter({ hasText: 'Try again' });
 
 async function refresh(page: Page) {
   await page.getByRole('button', { name: 'More' }).click();
@@ -22,7 +22,7 @@ test('mid-session 429: "slowed" shows, then the check continues once the pause i
   });
   await page.goto('/');
   await connect(page);
-  const slowed = page.getByRole('status').filter({ hasText: 'PixelLab asked us to slow down.' });
+  const slowed = page.locator('.vt-notice').filter({ hasText: 'PixelLab asked us to slow down.' });
   await expect(slowed).toBeVisible();
   const at = mock.hits.length;
   await page.clock.fastForward('01:05');
@@ -40,7 +40,7 @@ test('mid-session daily cap: "Paused" shows, and Keep loading finishes the check
   // http.ts's own counter, full for today: the next request is over the cap.
   await page.evaluate(() => localStorage.setItem('pixellab-backpack:api-count', JSON.stringify({ t: Array(1000).fill(Date.now()), taps: [] })));
   await refresh(page);
-  const paused = page.getByRole('status').filter({ hasText: "Paused to go easy on PixelLab's servers." });
+  const paused = page.locator('.vt-notice').filter({ hasText: "Paused to go easy on PixelLab's servers." });
   await expect(paused).toBeVisible();
   await settle(page, mock);
   const at = mock.hits.length;
@@ -95,7 +95,7 @@ test('every family failing with nothing saved shows the error card; Try again lo
   const card = page.getByRole('heading', { name: "Couldn't reach PixelLab." });
   await expect(card).toBeVisible();
   await expect(page.getByRole('link', { name: /^Characters, / })).toHaveCount(0);
-  await expect(page.getByRole('status').filter({ hasText: "Some assets didn't load" })).toHaveCount(0); // the card replaces the notice
+  await expect(page.locator('.vt-notice').filter({ hasText: "Some assets didn't load" })).toHaveCount(0); // the card replaces the notice
   mock.fail = [];
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(page.getByRole('link', { name: 'Characters, 250' })).toBeVisible();

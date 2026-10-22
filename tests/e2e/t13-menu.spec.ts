@@ -189,7 +189,7 @@ test('the viewer over a filled folder: Esc, then Esc again; Back, then Back agai
   await expect(page).toHaveURL(/#\/$/);
 });
 
-test('an item gone from PixelLab: the folder says so and Remove them clears it; Favorites hides it', async ({ page }) => {
+test('an item gone from PixelLab: the folder says so and Remove it clears it; Favorites hides it', async ({ page }) => {
   const mock = await start(page);
   await newFolder(page, 'Hero party');
   await objects(page);
@@ -208,7 +208,7 @@ test('an item gone from PixelLab: the folder says so and Remove them clears it; 
   await page.getByRole('link', { name: 'Hero party, 0' }).click();
   const ov = overlay(page, 'Hero party');
   await expect(ov.getByText("1 item in this folder isn't in your PixelLab library anymore.")).toBeVisible();
-  await ov.getByRole('button', { name: 'Remove them' }).click();
+  await ov.getByRole('button', { name: 'Remove it', exact: true }).click();
   await expect(ov.getByText("isn't in your PixelLab library anymore.")).toHaveCount(0);
   await expect(said(page, 'Removed from Hero party.')).toBeAttached();
   await expect(ov.getByText('This folder is empty.')).toBeVisible();

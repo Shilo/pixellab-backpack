@@ -7,7 +7,7 @@ const h = vi.hoisted(() => ({
   openCheck: vi.fn(),
   counters: { sessionApi: 7, todayApi: 9, dailyCap: 1000, imageHost: 3, status: 'ok' },
 }));
-vi.mock('../../src/lib/data/library.svelte', () => ({ library: { openCheck: h.openCheck, avoided: 0 } }));
+vi.mock('../../src/lib/data/library.svelte', () => ({ library: { openCheck: h.openCheck, avoided: 0 }, REFRESH_GAP: 60_000 }));
 vi.mock('../../src/lib/api/http', () => ({
   onActivity: (cb: (e: unknown) => void) => ((h.emit = cb), () => {}),
   getCounters: () => h.counters,

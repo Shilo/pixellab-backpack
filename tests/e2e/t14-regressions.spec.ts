@@ -1,4 +1,4 @@
-// T14 Phase 4 heavy-test regressions (mocked PixelLab): each test pins a bug found while testing favorites and folders hard.
+// T14 regressions (mocked PixelLab): each test pins a bug found while testing favorites and folders hard, or a review fix.
 import { expect, test, type Page } from '@playwright/test';
 import { ageSaved, connect, mockPixelLab, seedOrg, settle } from '../fixtures/pixellab-mock';
 
@@ -136,7 +136,7 @@ test('a 401 keeps favorites and folders on the device; reconnecting the same key
   await expect(page.getByRole('link', { name: 'Favorites, 1' })).toBeVisible();
 });
 
-test('C10: a category dock keeps Select while its first check runs; only empty Favorites drops it', async ({ page }) => {
+test('P3: no dock shows Select until Select mode ships: home, a category while its check runs and after, All assets, Favorites', async ({ page }) => {
   const mock = await mockPixelLab(page);
   let release!: () => void;
   const held = new Promise<void>((r) => (release = r));
@@ -144,19 +144,25 @@ test('C10: a category dock keeps Select while its first check runs; only empty F
     await held; // the UI family's first page answers only when released: its count is 0 until then
     await route.fallback();
   });
+  const select = page.locator('.vt-dock').getByText(/Select/);
   await page.goto('/');
   await connect(page);
+  await expect(select).toHaveCount(0);
   await page.goto('/#/c/ui');
   await expect(page.locator('.crumb')).toContainText('UI');
-  await expect(page.getByRole('button', { name: 'Select, coming soon' })).toBeVisible();
+  await expect(select).toHaveCount(0);
   release();
   await expect(page.locator('.crumb')).toHaveText('UI6');
-  await expect(page.getByRole('button', { name: 'Select, coming soon' })).toBeVisible();
+  await expect(page.locator('.vt-dock button')).toHaveText(['Library', '', 'More']); // ‹ Library, the Search icon, More
+  await expect(select).toHaveCount(0);
+  await page.goto('/#/all');
+  await expect(page.locator('.crumb')).toContainText('All assets');
+  await expect(select).toHaveCount(0);
   await page.getByRole('button', { name: 'Library' }).click();
   await settle(page, mock, 600);
   await page.getByRole('link', { name: 'Favorites, 0' }).click();
   await expect(page.getByText('No favorites yet.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Select, coming soon' })).toHaveCount(0);
+  await expect(select).toHaveCount(0);
 });
 
 test('C4: deleting an empty folder (or one with only gone items) never says "The 0 assets…"', async ({ page }) => {

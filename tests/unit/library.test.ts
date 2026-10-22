@@ -466,6 +466,37 @@ describe('races (code review K5-K7)', () => {
     expect(lists()).toContain('/characters?limit=100&offset=99');
   });
 
+  it('K4: Try again never sends a next page for a family whose first page failed, before or now', async () => {
+    fill('a', { characters: 250 });
+    const lib = await tab();
+    await lib.connect('key');
+    later(HOUR + 1);
+    h.st.failOn = '/characters';
+    await lib.openCheck(); // the saved partial copy's first page fails
+    h.apiGet.mockClear();
+    await lib.recheck(); // fails again: no next page behind it
+    expect(lists()).toEqual(['/characters?limit=100&offset=0']);
+    h.st.failOn = null;
+    h.apiGet.mockClear();
+    await lib.recheck(); // answers now: still only the first page (the grid asks the next on scroll)
+    expect(lists()).toEqual(['/characters?limit=100&offset=0']);
+    expect(lib.errors).toEqual({});
+  });
+
+  it('K4: Try again re-asks a failed next page once, with no first page for a fresh family', async () => {
+    fill('a', { characters: 250 });
+    const lib = await tab();
+    await lib.connect('key');
+    h.st.failOn = '/characters?limit=100&offset=99';
+    await lib.loadMore('characters');
+    expect(lib.errors.characters).toBeTruthy();
+    h.st.failOn = null;
+    h.apiGet.mockClear();
+    await lib.recheck();
+    expect(lists()).toEqual(['/characters?limit=100&offset=99']);
+    expect(lib.errors).toEqual({});
+  });
+
   it("K7: a tab takes another tab's longer saved list when both were checked at the same time", async () => {
     fill('a', { characters: 250 });
     const a = await tab();
@@ -601,6 +632,26 @@ describe('art', () => {
     expect(await next.art(next.families['tiles-pro']!.cards[0], 'tiles-pro')).toBeInstanceOf(Blob);
     expect(h.apiGet).not.toHaveBeenCalled();
     expect(h.publicGet).toHaveBeenCalledWith(h.img('a-tiles-pro-0'), expect.anything());
+  });
+});
+
+describe('art wait and idle sprite (K9, K11)', () => {
+  it('only a costly family whose picture link is not saved yet waits before its art is asked', async () => {
+    const lib = await tab();
+    await lib.connect('key');
+    const pro = lib.families['tiles-pro']!.cards[0];
+    expect(lib.artWait(lib.families.characters!.cards[0], 'characters')).toBe(0);
+    expect(lib.artWait(pro, 'tiles-pro')).toBe(300);
+    await lib.art(pro, 'tiles-pro');
+    expect(lib.artWait(lib.families['tiles-pro']!.cards[0], 'tiles-pro')).toBe(0); // the link is saved now
+  });
+
+  it('idle is the first shown card of the first category with one, else null', async () => {
+    const lib = await tab();
+    expect(lib.idle).toBeNull();
+    await lib.connect('key');
+    expect(lib.idle?.familyId).toBe('characters');
+    expect(lib.idle?.card.key).toBe(lib.categories[0].mosaic[0].card.key);
   });
 });
 

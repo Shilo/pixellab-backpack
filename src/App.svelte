@@ -22,6 +22,9 @@
 
   // Saved copy first (the key screen's "Welcome back" reads it); with a key this is also the one open check.
   onMount(() => void library.openCheck());
+  // Back to a hidden tab (P-21): the same open check, so within the hour it sends nothing (UX-8). Only with a verified key: during
+  // a key test the key is set but the account is not decided yet, and connect runs its own check after.
+  const onvisibilitychange = () => document.visibilityState === 'visible' && library.hasKey && void library.openCheck();
 
   const route = $derived(router.route);
   const screen = $derived(screenOf(route));
@@ -203,22 +206,14 @@
       }),
   );
 
-  /** Re-asks what failed: first pages through the open check (failed families are not fresh), then failed next pages, once. */
-  async function recheck() {
-    await library.openCheck();
-    for (const id of Object.keys(library.errors) as FamilyId[]) {
-      const s = library.families[id];
-      if (s && s.cards.length < s.total) void library.loadMore(id);
-    }
-  }
   // Every Try again lifts a stop first, so a halted network module always recovers without a reload.
   const tryAgain = () => {
     library.recover();
-    void recheck();
+    void library.recheck();
   };
   const keepLoading = () => {
     library.keepLoading();
-    void recheck();
+    void library.recheck();
   };
 
   type Note = { text: string; action?: string; on?: () => void; tone?: 'warn' };
@@ -236,8 +231,11 @@
     if (!failedHere.length || fav) return null;
     return { text: grid ? "Couldn't load more" : "Some assets didn't load", action: 'Try again', on: tryAgain, tone: 'warn' };
   });
+  // The search shows its own note; the error card and a folder replace the pill.
+  const shownNote = $derived(library.hasKey && notice && !errorCard && !searching && !inFolder && library.status !== 'blocked' ? notice : null);
 </script>
 
+<svelte:document {onvisibilitychange} />
 <svelte:window {onkeydown} {onpopstate} {oncontextmenu} {onpointerdown} {onpointermove} onpointerup={endPress} onpointercancel={endPress} onscrollcapture={endPress} {onclickcapture} />
 
 {#if import.meta.env.DEV && import.meta.env.MODE === 'agent'}
@@ -294,7 +292,7 @@
   {:else if fav && !org.ready}
     <!-- A direct load: nothing until the device's favorites are read (no empty grid or "0" flash). -->
   {:else if fav && !favs.length}
-    {@const idle = library.categories.find((c) => c.mosaic.length)?.mosaic[0]}
+    {@const idle = library.idle}
     <main class="vt-page">
       <div class="glass-empty">
         <span class="idle" aria-hidden="true">
@@ -315,15 +313,15 @@
     <FolderOverlay {folder} reveal={viewing ? null : lastShown} onClose={leaveFolder} />
   {/if}
 
-  {#if notice && !errorCard && !searching && !inFolder && library.status !== 'blocked'}
-    <Notice text={notice.text} actionLabel={notice.action} onAction={notice.on} tone={notice.tone} />
+  {#if shownNote}
+    <Notice text={shownNote.text} actionLabel={shownNote.action} onAction={shownNote.on} tone={shownNote.tone} />
   {/if}
   {#if searching}
     <Search {screen} note={['slowed', 'paused', 'stopped', 'offline'].includes(library.status) ? (notice?.text ?? null) : null} reveal={viewing ? null : lastShown} onClose={closeSearch} onGo={goFromSearch} bind:results />
   {:else if inFolder}
     <!-- No dock under a folder: its overlay has its own controls. -->
   {:else if grid}
-    <Dock mode="category" {title} count={fav ? (org.ready ? favs.length : undefined) : library.count(scope)} select={!fav || favs.length > 0} onBack={() => go('#/')} onSearch={openSearch} onMore={() => (menu = true)} />
+    <Dock mode="category" {title} count={fav ? (org.ready ? favs.length : undefined) : library.count(scope)} onBack={() => go('#/')} onSearch={openSearch} onMore={() => (menu = true)} />
   {:else}
     <Dock mode="home" onSearch={openSearch} onMore={() => (menu = true)} />
   {/if}
@@ -339,8 +337,9 @@
 <Activity open={activity || router.activity} onClose={closeAct} />
 <!-- Never under an inert wrapper; focus returns to the cell. -->
 <CardMenu item={card?.item ?? null} rect={card?.rect ?? null} href={card?.href ?? ''} start="menu" onClose={() => ((card = null), (swallow = null))} />
-<!-- The one live region (R10): outside every inert layer and closing dialog, so each change is read. -->
+<!-- The live regions (R10, U5): always mounted, outside every inert layer and closing dialog, so each change is read. -->
 <span class="vt-sr" role="status">{org.said}</span>
+<span class="vt-sr" role="status">{shownNote?.text ?? ''}</span>
 
 <style>
   /* Favorites' empty screen (mockup frames-g2.css .g2-page, .g2-empty, .g2-idle): no card, a crisp idle sprite. */

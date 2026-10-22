@@ -14,6 +14,7 @@
   import { NEW_TAB } from '../app';
   import { DEFAULT_FPS, MAX_FPS, MIN_FPS } from '../render/player';
   import type { createPlayer } from '../render/player.svelte';
+  import { leaves, moveFocus } from './keys';
 
   // The viewer's "..." menu: a glass popover under the capsule (desktop) or bottom sheet (phone). No player = a still picture.
   // zoomIn / zoomOut: the next step each way, undefined at the limit (the button is disabled).
@@ -34,16 +35,7 @@
     if (btn.disabled) readout?.focus();
   }
 
-  // ↑/↓/Home/End move between the menu's controls (as CardMenu).
-  function onkeydown(e: KeyboardEvent) {
-    const items = [...(panel?.querySelectorAll<HTMLElement>('button:not(:disabled), a, input') ?? [])];
-    const i = items.indexOf(document.activeElement as HTMLElement);
-    const n = items.length;
-    const next = { ArrowDown: (i + 1) % n, ArrowUp: i < 0 ? n - 1 : (i - 1 + n) % n, Home: 0, End: n - 1 }[e.key];
-    if (next === undefined) return;
-    e.preventDefault();
-    items[next].focus();
-  }
+  const onkeydown = (e: KeyboardEvent) => moveFocus(e, [...(panel?.querySelectorAll<HTMLElement>('button:not(:disabled), a, input') ?? [])]);
 
   // Focus moves in and returns to the opener on close; Esc closes only this layer (capture phase keeps it from the viewer).
   $effect(() => {
@@ -71,8 +63,7 @@
 
 {#if open}
   <button type="button" class="backdrop" tabindex="-1" aria-label="Close menu" onclick={onClose}></button>
-  <!-- svelte-ignore a11y_interactive_supports_focus (the controls inside hold the focus) -->
-  <div class="glass-popover is-open vt-scrim menu vt-grip" role="dialog" aria-label="Viewer options" bind:this={panel} {onkeydown}>
+  <div class="glass-popover is-open vt-scrim menu vt-grip" role="dialog" aria-label="Viewer options" tabindex="-1" bind:this={panel} {onkeydown} onfocusout={(e) => open && leaves(e) && onClose()}>
     {#if player}
       <div class="row">
         <span class="title">Playback</span>
@@ -133,7 +124,7 @@
 <style>
   .backdrop { position: fixed; inset: 0; z-index: 1000; border: 0; padding: 0; background: rgba(8, 10, 16, .25); cursor: default; }
   .menu { position: fixed; z-index: 1010; top: 92px; right: calc(24px + var(--side, 0px)); left: auto; bottom: auto; width: 340px; padding: 6px 20px; border-radius: 20px; transform: none;
-    background: linear-gradient(var(--gl-surface-3), var(--gl-surface-3)), var(--vt-scrim); max-height: calc(100dvh - 110px); overflow-y: auto; }
+    background: linear-gradient(var(--gl-surface-3), var(--gl-surface-3)), var(--vt-scrim); max-height: calc(100dvh - 110px); overflow-y: auto; outline: none; }
   .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 56px; border-bottom: 1px solid var(--gl-border-subtle); }
   .title { font-size: 15px; }
   .ctl { display: flex; align-items: center; gap: 6px; }

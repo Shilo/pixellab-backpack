@@ -6,7 +6,7 @@
 <script lang="ts">
   import { tick, untrack } from 'svelte';
   import type { Scope } from '../categories';
-  import { library } from '../data/library.svelte';
+  import { COSTLY_WAIT_MS, library } from '../data/library.svelte';
   import { isIn, org, setFavorite } from '../data/org.svelte';
   import { kicker, pixellabLink } from '../info';
   import PixelArt from '../render/PixelArt.svelte';
@@ -17,7 +17,6 @@
   import type { Detail, Dir, Item } from '../types';
   import { chipLabel, chipVisible, defaultAnim, dirsFor, pickDir } from '../viewer';
   import AnimPicker from './AnimPicker.svelte';
-  import { COSTLY_WAIT_MS } from './AssetCell.svelte';
   import CardMenu from './CardMenu.svelte';
   import InfoPanel from './InfoPanel.svelte';
   import ViewerMenu, { BACKDROPS } from './ViewerMenu.svelte';
@@ -82,8 +81,7 @@
       const fade = setTimeout(() => (titleOn = false), 2000);
       // ponytail: costly art (tilesets...) never resolved yet waits 0.3 s like the grid, so flipping past sends nothing.
       // No abort signal: a cancelled costly picture would be dropped from the cache and asked a second time.
-      const costly = library.family(familyId).artCostsApi && !card.thumb;
-      const artT = setTimeout(() => library.art(card, familyId).then((b) => cur === key && (art = b)), costly ? COSTLY_WAIT_MS : 0);
+      const artT = setTimeout(() => library.art(card, familyId).then((b) => cur === key && (art = b)), library.artWait(card, familyId));
       let detT: ReturnType<typeof setTimeout> | undefined;
       if (hasDetail) {
         detailState = 'loading';
@@ -291,9 +289,9 @@
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
   </button>
 
-  {#if !hit}
-    <span class="vt-sr" role="status">Loading…</span>
-  {:else}
+  <!-- The viewer's one live region (U5): mounted with the viewer, so a failure that comes later is read. The pills below are visual. -->
+  <span class="vt-sr" role="status">{hit ? (failText ?? '') : 'Loading…'}</span>
+  {#if hit}
     {@const { card, familyId } = hit}
     <!-- Space is the keyboard path for play/pause (window listener). -->
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
@@ -321,12 +319,12 @@
     </nav>
 
     {#if detail && total && loaded < total && !framesFailed}
-      <div class="glass-popover is-open vt-scrim card hud" role="status">
+      <div class="glass-popover is-open vt-scrim card hud">
         <svg class="ring" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="8.5" pathLength="8" stroke-dasharray="3 8" /></svg>
         <span>Loading frames {loaded}/{total}</span>
       </div>
     {:else if failText}
-      <div class="glass-popover is-open vt-scrim card msg" role="status">
+      <div class="glass-popover is-open vt-scrim card msg">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.6v5.2M12 16.3v.1" /></svg>
         <span>{failText}</span>
         {#if library.status !== 'offline'}

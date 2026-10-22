@@ -1,10 +1,3 @@
-<script lang="ts" module>
-  /** Costly art waits this long on screen before it is asked for. */
-  export const COSTLY_WAIT_MS = 300;
-  // ponytail: cards whose costly art was already asked this session skip the wait on a second visit (the answer is cached, no request).
-  const asked = new Set<string>();
-</script>
-
 <script lang="ts">
   import { untrack } from 'svelte';
   import { library } from '../data/library.svelte';
@@ -13,7 +6,7 @@
   import { fullName, highlight, snippetFrom, stateName as stateOf } from '../search';
   import type { Card, FamilyId } from '../types';
 
-  let { card, familyId, costly, href, terms = [] }: { card: Card; familyId: FamilyId; costly: boolean; href: string; terms?: string[] } = $props();
+  let { card, familyId, href, terms = [] }: { card: Card; familyId: FamilyId; href: string; terms?: string[] } = $props();
 
   // "Name · state" (R6): the state name of the card this cell opens, only when it has sibling states on this device.
   // Search results show the whole name, so a match past the 60-character cut is visible; grid cells keep card.name.
@@ -45,14 +38,12 @@
       untrack(() => library.art(card, familyId)).then((b) => {
         if (card.key === key) blob = b; // a failed picture stays a placeholder; scrolling back in tries again
       });
-    if (!costly || asked.has(key)) {
+    const wait = untrack(() => library.artWait(card, familyId));
+    if (!wait) {
       load();
       return;
     }
-    const t = setTimeout(() => {
-      asked.add(key);
-      load();
-    }, COSTLY_WAIT_MS);
+    const t = setTimeout(load, wait);
     return () => clearTimeout(t); // left the screen within 0.3 s: no request
   });
 </script>

@@ -205,20 +205,25 @@ test("a detail that fails shows the error with Try again, which loads it", async
   const mock = await openGrid(page, /^Characters, /);
   mock.fail = ['/v2/characters/a-characters-0'];
   const v = await open(page, 'Character 1');
-  const msg = v.getByRole('status').filter({ hasText: "Couldn't load this asset's animations." });
+  const msg = v.locator('.msg').filter({ hasText: "Couldn't load this asset's animations." });
+  const said = v.getByRole('status'); // U5: the viewer's one region, there before the failure; the pill is not one
+  await expect(said).toHaveCount(1);
   await expect(msg).toBeVisible();
+  await expect(said).toHaveText("Couldn't load this asset's animations.");
+  await expect(msg).not.toHaveAttribute('role');
   await expect(v.locator('canvas')).toBeVisible(); // the static picture stays
   mock.fail = [];
   await msg.getByRole('button', { name: 'Try again' }).click();
   await expect(v.locator('.vt-chip')).toHaveText('Breathing idle · South');
   await expect(msg).toHaveCount(0);
+  await expect(said).toHaveText('');
 });
 
 test("after three 503s stop the network, the viewer's Try again lifts the stop and loads; offline, it comes back once online", async ({ page, context }) => {
   const mock = await openGrid(page, /^Characters, /);
   mock.mode = 'down';
   const v = await open(page, 'Character 1');
-  const msg = v.getByRole('status').filter({ hasText: "Couldn't load this asset's animations." });
+  const msg = v.locator('.msg').filter({ hasText: "Couldn't load this asset's animations." });
   await expect(msg).toBeVisible({ timeout: 15_000 }); // first try + 2 retries with backoff
   expect(mock.hits.filter((h) => h.detail)).toHaveLength(3);
   mock.mode = 'ok';
@@ -230,7 +235,7 @@ test("after three 503s stop the network, the viewer's Try again lifts the stop a
   await context.setOffline(true);
   await page.keyboard.press('ArrowRight');
   const next = viewer(page, 'Character 2');
-  const off = next.getByRole('status').filter({ hasText: "This animation isn't saved on this device. Connect to the internet to see it." });
+  const off = next.locator('.msg').filter({ hasText: "This animation isn't saved on this device. Connect to the internet to see it." });
   await expect(off).toBeVisible();
   await expect(off.getByRole('button', { name: 'Try again' })).toHaveCount(0);
   await context.setOffline(false);
@@ -249,7 +254,7 @@ test("during PixelLab's 429 pause the viewer's Try again keeps the pause, and a 
   await page.route('https://api.pixellab.ai/v2/characters/a-characters-1', (route) =>
     route.request().method() === 'GET' && asked++ < 2 ? route.fulfill({ status: 429, headers: cors }) : route.fallback(),
   );
-  const failed = (name: string) => viewer(page, name).getByRole('status').filter({ hasText: "Couldn't load this asset's animations." });
+  const failed = (name: string) => viewer(page, name).locator('.msg').filter({ hasText: "Couldn't load this asset's animations." });
 
   await open(page, 'Character 1');
   await expect(failed('Character 1')).toBeVisible();

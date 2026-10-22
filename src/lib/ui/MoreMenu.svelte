@@ -1,5 +1,6 @@
 <script lang="ts" module>
-  import { library } from '../data/library.svelte';
+  import { library, REFRESH_GAP } from '../data/library.svelte';
+  import { leaves, moveFocus } from './keys';
 
   // Survives the menu closing and reopening: Refresh stays disabled for 60 s after use (the library enforces it too).
   let cooling = $state(false);
@@ -8,7 +9,7 @@
   export function runRefresh(): void {
     if (cooling) return;
     cooling = true;
-    setTimeout(() => (cooling = false), 60_000);
+    setTimeout(() => (cooling = false), REFRESH_GAP);
     void library.openCheck({ force: true });
   }
 </script>
@@ -24,16 +25,7 @@
     onClose();
   }
 
-  // ↑/↓/Home/End move between the items (as CardMenu).
-  function onkeydown(e: KeyboardEvent & { currentTarget: HTMLElement }) {
-    const items = [...e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]')];
-    const i = items.indexOf(document.activeElement as HTMLElement);
-    const n = items.length;
-    const next = { ArrowDown: (i + 1) % n, ArrowUp: i < 0 ? n - 1 : (i - 1 + n) % n, Home: 0, End: n - 1 }[e.key];
-    if (next === undefined) return;
-    e.preventDefault();
-    items[next].focus();
-  }
+  const onkeydown = (e: KeyboardEvent & { currentTarget: HTMLElement }) => moveFocus(e, [...e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]')]);
 
   // Focus moves into the menu and returns to the dock button on close; Esc closes only this layer (capture phase keeps it from the rest).
   $effect(() => {
@@ -56,8 +48,7 @@
 
 {#if open}
   <button type="button" class="backdrop" tabindex="-1" aria-label="Close menu" onclick={onClose}></button>
-  <!-- svelte-ignore a11y_interactive_supports_focus (the items inside hold the focus) -->
-  <div class="glass-popover is-open vt-scrim menu vt-grip" role="menu" aria-label="More" {onkeydown}>
+  <div class="glass-popover is-open vt-scrim menu vt-grip" role="menu" aria-label="More" tabindex="-1" {onkeydown} onfocusout={(e) => open && leaves(e) && onClose()}>
     <button type="button" role="menuitem" class="glass-list__item glass-list__item--interactive" aria-disabled={cooling} bind:this={first} onclick={refresh}>
       <span class="glass-list__content">
         <span class="glass-list__title">Refresh</span>
@@ -81,7 +72,7 @@
 <style>
   .backdrop { position: fixed; inset: 0; z-index: 1000; border: 0; padding: 0; background: rgba(8, 10, 16, .25); cursor: default; }
   .menu { position: fixed; z-index: 1010; top: auto; bottom: 100px; left: calc(50% - 30px); width: 270px; padding: 6px 0; border-radius: 20px; transform: none;
-    background: linear-gradient(var(--gl-surface-3), var(--gl-surface-3)), var(--vt-scrim); --gl-list-item-min-height: 44px; --gl-list-item-padding-y: 9px; }
+    background: linear-gradient(var(--gl-surface-3), var(--gl-surface-3)), var(--vt-scrim); --gl-list-item-min-height: 44px; --gl-list-item-padding-y: 9px; outline: none; }
   .menu :global(.glass-list__item) { cursor: pointer; }
   .menu :global(.glass-list__item[aria-disabled='true']) { opacity: .5; cursor: default; }
   .glass-list__content { display: block; flex: 1; min-width: 0; }

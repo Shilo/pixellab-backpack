@@ -72,7 +72,6 @@
 
   // As the viewer's wait: a 429 pause ('slowed') is still the check running (its retries are queued).
   const checking = $derived(['idle', 'checking', 'slowed'].includes(library.status) && coverage === 'missing');
-  const idleSprite = $derived(library.categories.find((c) => c.mosaic.length)?.mosaic[0] ?? null);
   // R15: a status note (slowed, paused, stopped, offline) wins; else a failed family in scope. Idle and typed.
   const hint = $derived(note ?? (familiesOf(scope).some((id) => library.errors[id]) ? "Some assets didn't load, so they can't be searched." : null));
   const hasPanel = $derived(!idle || recent.length > 0 || gotos.length > 0 || added.length > 0 || showAll || !!hint);
@@ -131,7 +130,7 @@
 {#snippet runs(text: string)}{#each highlight(text, ts) as r, i (i)}{#if r.mark}<mark>{r.text}</mark>{:else}{r.text}{/if}{/each}{/snippet}
 {#snippet cells(list: Item[])}
   {#each list as it (it.card.key)}
-    <AssetCell card={it.card} familyId={it.familyId} costly={library.family(it.familyId).artCostsApi} href={pathOf({ ...screen, key: it.card.key })} terms={ts} />
+    <AssetCell card={it.card} familyId={it.familyId} href={pathOf({ ...screen, key: it.card.key })} terms={ts} />
   {/each}
 {/snippet}
 {#snippet art(it: Item | null)}
@@ -161,7 +160,7 @@
         <input
           class="glass-input"
           type="search"
-          placeholder="Search assets and types"
+          placeholder="Search assets, types and folders"
           aria-label="Search"
           autocomplete="off"
           spellcheck="false"
@@ -246,7 +245,7 @@
             <div class="glass-empty none"><p class="glass-empty__text">Checking for new assets…</p></div>
           {:else}
             <div class="glass-empty none">
-              <span class="idle" aria-hidden="true">{@render art(idleSprite)}</span>
+              <span class="idle" aria-hidden="true">{@render art(library.idle)}</span>
               {#if all}
                 <h2 class="glass-empty__title">No matches for "{q.trim()}".</h2>
                 <p class="glass-empty__text">Try fewer words.</p>
@@ -265,10 +264,11 @@
             <p class="hint">Looking for fonts or effects? They aren't in PixelLab's public API yet.</p>
           {/if}
         {/if}
-        <!-- A status note or a failed family speaks here, as the saved-only advice cannot come true then (R1, R9, R15). -->
+        <!-- A status note or a failed family speaks here, as the saved-only advice cannot come true then (R1, R9, R15).
+             The saved-only advice goes with results only: no results already says what to try (U11). -->
         {#if hint}
           <p class="hint">{hint}</p>
-        {:else if !idle && coverage === 'partial'}
+        {:else if found.length && coverage === 'partial'}
           <p class="hint">Only assets saved on this device are searched. Scroll through {label} to load the rest.</p>
         {/if}
       </div>

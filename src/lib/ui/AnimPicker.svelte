@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Anim, Dir } from '../types';
   import { animLabel, COMPASS, dirLabel } from '../viewer';
+  import { leaves } from './keys';
 
   // The viewer's "Walk · East ▾" chip and its popover (desktop) or bottom sheet (phone): Animation, State, Direction.
   let { label, loading, anims, anim, dirs, allDirs, dir, states, stateKey, onAnim, onDir, onState }: {
@@ -56,7 +57,7 @@
 
 {#if open}
   <button type="button" class="backdrop" tabindex="-1" aria-label="Close menu" onclick={close}></button>
-  <div class="glass-popover is-open vt-scrim pick vt-grip" role="dialog" aria-label="Animation, state and direction" bind:this={panel}>
+  <div class="glass-popover is-open vt-scrim pick vt-grip" role="dialog" aria-label="Animation, state and direction" tabindex="-1" bind:this={panel} onfocusout={(e) => open && leaves(e) && close()}>
     <p class="head">Animation</p>
     <ul class="glass-list glass-list--bare">
       {#each [-1, ...anims.keys()] as i (i)}
@@ -110,7 +111,7 @@
   .chev { width: 15px; height: 15px; opacity: .7; stroke-width: 2.2; }
   .backdrop { position: fixed; inset: 0; z-index: 1000; border: 0; padding: 0; background: rgba(8, 10, 16, .25); cursor: default; }
   .pick { position: fixed; z-index: 1010; top: auto; bottom: 100px; left: calc(var(--cx, 50%) - 160px); width: 320px; padding: 8px 0 14px; border-radius: 20px; transform: none;
-    background: linear-gradient(var(--gl-surface-3), var(--gl-surface-3)), var(--vt-scrim); --gl-list-item-min-height: 44px; --gl-list-item-padding-y: 9px; max-height: calc(100dvh - 120px); overflow-y: auto; }
+    background: linear-gradient(var(--gl-surface-3), var(--gl-surface-3)), var(--vt-scrim); --gl-list-item-min-height: 44px; --gl-list-item-padding-y: 9px; max-height: calc(100dvh - 120px); overflow-y: auto; outline: none; }
   .pick :global(.glass-list__item) { width: 100%; cursor: pointer; text-align: left; }
   .glass-list__content { display: block; flex: 1; min-width: 0; }
   .glass-list__title { display: block; }

@@ -144,7 +144,7 @@
   {:else}
     {#if range[0] > 0}<div class="pad" style:height="{spacer(range[0], m)}px"></div>{/if}
     {#each shown as it (it.card.key)}
-      <AssetCell card={it.card} familyId={it.familyId} href={pathOf({ ...screen, key: it.card.key })} costly={library.family(it.familyId).artCostsApi} />
+      <AssetCell card={it.card} familyId={it.familyId} href={pathOf({ ...screen, key: it.card.key })} />
     {/each}
     {#if rows > range[1]}<div class="pad" style:height="{spacer(rows - range[1], m)}px"></div>{/if}
     {#if screen.name === 'all' && library.coverage('all') === 'full'}

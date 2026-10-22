@@ -117,25 +117,19 @@ test('the keyboard reaches every working control; inert controls cause no reques
   const cat = await tabStops(page);
   for (const name of ['Library', 'More']) expect(cat).toContain(name);
 
-  const inCategory = mock.hits.length;
   await expect(page.getByRole('button', { name: 'Search, coming soon' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Search', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Select, coming soon', exact: true }).click({ force: true });
-  await page.waitForTimeout(600);
-  await expect(page).toHaveURL(/#\/c\/objects$/);
-  expect(mock.hits.length).toBe(inCategory);
 
   await page.getByRole('button', { name: 'Library' }).focus();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/#\/$/);
 
-  // Favorites: opening it asks nothing; empty, it has no Select (mockup g2-favorites-empty).
+  // Favorites: opening it asks nothing.
   await settle(page, mock);
   const atHome = mock.hits.length;
   await page.getByRole('link', { name: 'Favorites, 0' }).click();
   await expect(page).toHaveURL(/#\/fav$/);
   await expect(page.locator('.crumb')).toHaveText('Favorites0');
-  await expect(page.getByRole('button', { name: 'Select, coming soon', exact: true })).toHaveCount(0);
   await page.waitForTimeout(600);
   expect(mock.hits.length).toBe(atHome);
 });
@@ -145,8 +139,11 @@ test('failed lists show a notice with Try again, which asks again once', async (
   mock.fail = ['/v2/objects?'];
   await page.goto('/');
   await connect(page);
-  const partial = page.getByRole('status').filter({ hasText: "Some assets didn't load" });
+  const partial = page.locator('.vt-notice').filter({ hasText: "Some assets didn't load" });
   await expect(partial).toBeVisible();
+  // U5: read by App's always-mounted live region, which the pill itself is not.
+  await expect(page.getByRole('status').filter({ hasText: "Some assets didn't load" })).toHaveClass('vt-sr');
+  await expect(partial).not.toHaveAttribute('role');
   await expect(page.getByRole('link', { name: /^Objects, / })).toHaveCount(0);
   mock.fail = [];
   await partial.getByRole('button', { name: 'Try again' }).click();
@@ -157,7 +154,7 @@ test('failed lists show a notice with Try again, which asks again once', async (
   mock.fail = ['/v2/characters?limit=100&offset=99'];
   await page.getByRole('link', { name: 'Characters, 250' }).click();
   await toBottom(page);
-  const more = page.getByRole('status').filter({ hasText: "Couldn't load more" });
+  const more = page.locator('.vt-notice').filter({ hasText: "Couldn't load more" });
   await expect(more).toBeVisible();
   await settle(page, mock);
   const asked = mock.hits.length;
@@ -179,7 +176,7 @@ test('a stop shows Try again, survives going offline and back, and Try again rec
   await settle(page, mock);
   mock.mode = 'down';
   await toBottom(page);
-  const stopped = page.getByRole('status').filter({ hasText: "PixelLab isn't answering right now." });
+  const stopped = page.locator('.vt-notice').filter({ hasText: "PixelLab isn't answering right now." });
   await expect(stopped).toBeVisible({ timeout: 20_000 });
   // Offline, open Objects (pictures not seen yet fail), then come back online. Mocked routes still answer while
   // offline, so the picture failures are made explicit.
@@ -198,7 +195,7 @@ test('a stop shows Try again, survives going offline and back, and Try again rec
   await stopped.getByRole('button', { name: 'Try again' }).click();
   await expect(stopped).toHaveCount(0);
   await expect.poll(() => mock.hits.slice(asked).some((h) => h.url.includes('/v2/characters?limit=100&offset=99'))).toBe(true);
-  await expect(page.getByRole('status').filter({ hasText: 'Try again' })).toHaveCount(0);
+  await expect(page.locator('.vt-notice').filter({ hasText: 'Try again' })).toHaveCount(0);
 });
 
 test('one failed picture leaves the library on screen', async ({ page }) => {

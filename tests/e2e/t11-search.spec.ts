@@ -294,15 +294,17 @@ test('→ steps through the shown results and stops at the last one, with no lis
   expect(mock.hits.slice(at).filter((h) => h.list)).toEqual([]);
 });
 
-test('saved-only note: shown while a family is only partly saved', async ({ page }) => {
+test('saved-only note: shown with results while a family is only partly saved; no results show one hint only (U11)', async ({ page }) => {
   await start(page); // 250 characters, 100 saved
   const note = () => panel(page).getByText('Only assets saved on this device are searched. Scroll through All assets to load the rest.');
   await openSearch(page);
+  await expect(field(page)).toHaveAttribute('placeholder', 'Search assets, types and folders');
   await field(page).fill('character 1');
   await expect(results(page).first()).toBeVisible();
   await expect(note()).toBeVisible();
   await field(page).fill('slime');
-  await expect(note()).toBeVisible();
+  await expect(panel(page).getByRole('heading', { name: 'No matches for "slime".' })).toBeVisible();
+  await expect(panel(page).locator('.hint')).toHaveText(["Looking for fonts or effects? They aren't in PixelLab's public API yet."]);
 });
 
 test('saved-only note: absent when a family has nothing saved (its first page failed)', async ({ page }) => {
@@ -334,7 +336,7 @@ test('while searching offline, the offline notice replaces the saved-only advice
   await page.getByRole('link', { name: 'Characters, 250' }).click();
   await context.setOffline(true);
   await page.locator('main.grid').evaluate((el) => el.scrollTo(0, el.scrollHeight)); // a next page, asked offline
-  await expect(page.getByRole('status').filter({ hasText: "You're offline." })).toBeVisible();
+  await expect(page.locator('.vt-notice').filter({ hasText: "You're offline." })).toBeVisible();
   await openSearch(page);
   await field(page).fill('character 1');
   await expect(results(page).first()).toBeVisible();

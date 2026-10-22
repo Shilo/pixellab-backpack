@@ -71,6 +71,74 @@ test('reload within the hour sends 0 API requests; Activity counts the 7 avoided
   await expect(page).toHaveURL(/#\/$/);
 });
 
+type Vis = { tab: (s: DocumentVisibilityState) => void };
+/** Lets a test hide and show the tab (before its first load): `show(page, 'hidden' | 'visible')`. */
+const fakeVisibility = (p: Page) =>
+  p.addInitScript(() => {
+    let state: DocumentVisibilityState = 'visible';
+    Object.defineProperty(document, 'visibilityState', { get: () => state, configurable: true });
+    (window as unknown as Vis).tab = (s) => ((state = s), document.dispatchEvent(new Event('visibilitychange')));
+  });
+const show = (p: Page, s: DocumentVisibilityState) => p.evaluate((s) => (window as unknown as Vis).tab(s), s);
+
+test('UX-8: back to the tab within the hour sends 0 API requests; after the hour, the normal open check (7)', async ({ page }) => {
+  await page.clock.install(); // time flows normally; fastForward jumps past the hour
+  await fakeVisibility(page);
+  const mock = await openFirst(page);
+  const tab = (s: DocumentVisibilityState) => show(page, s);
+  let at = mock.hits.length;
+  await tab('hidden');
+  await tab('visible');
+  await settle(page, mock);
+  expect(api(mock.hits.slice(at))).toEqual([]);
+
+  await tab('hidden');
+  await page.clock.fastForward('01:01:00');
+  at = mock.hits.length;
+  await tab('visible');
+  await expect.poll(() => lists(mock.hits.slice(at)).length).toBe(7);
+  await settle(page, mock);
+  expect(lists(mock.hits.slice(at))).toHaveLength(7);
+});
+
+test('UX-8: back to the tab during a key test runs no open check before the account decision: exactly 7 first pages', async ({ page, context }) => {
+  const mock = await mockPixelLab(context);
+  await page.goto('/');
+  await connect(page);
+  await homeDrawn(page);
+  await settle(page, mock);
+  for (const fam of ['characters', 'objects', 'ui', 'tilesets', 'tilesets-side', 'isometric', 'tiles-pro'] as const) await ageSaved(page, fam, { checkedMs: 2 * 3_600_000 });
+  // A new tab ("this tab only": the key is asked again) whose key test is held while the user switches away and back.
+  const tab = await context.newPage();
+  await fakeVisibility(tab);
+  let release!: () => void;
+  const held = new Promise<void>((r) => (release = r));
+  let asked = 0; // held here, so not yet in mock.hits
+  await tab.route('https://api.pixellab.ai/v2/characters?**', async (route) => {
+    if (route.request().method() === 'GET') {
+      asked++;
+      await held;
+    }
+    await route.fallback();
+  });
+  await tab.goto('/');
+  await tab.getByLabel('PixelLab API key').fill(GOOD_KEY);
+  const at = mock.hits.length;
+  await tab.getByRole('button', { name: 'Test key' }).click();
+  await expect.poll(() => asked).toBe(1); // the key test's Characters page, held
+  await show(tab, 'hidden');
+  await show(tab, 'visible');
+  await tab.waitForTimeout(800);
+  expect(asked).toBe(1); // nothing else before the account decision
+  expect(lists(mock.hits.slice(at))).toHaveLength(0);
+  release();
+  await tab.getByRole('link', { name: /^Characters, / }).waitFor();
+  await settle(tab, mock);
+  const sent = lists(mock.hits.slice(at)).map((h) => new URL(h.url).pathname);
+  expect(sent).toHaveLength(7);
+  expect(new Set(sent).size).toBe(7); // each family once: no second Characters page 0
+});
+
 test('a key pasted in a new tab within the hour sends 1 API request', async ({ page, context }) => {
   const mock = await mockPixelLab(context);
   await page.goto('/');
@@ -123,7 +191,7 @@ test('at the daily cap the "Paused" notice appears and Keep loading continues', 
   await page.evaluate(() => localStorage.setItem('pixellab-backpack:api-count', JSON.stringify({ t: Array(999).fill(Date.now()), taps: [] })));
   await page.getByLabel('PixelLab API key').fill(GOOD_KEY);
   await page.getByRole('button', { name: 'Test key' }).click();
-  const notice = page.getByRole('status').filter({ hasText: "Paused to go easy on PixelLab's servers." });
+  const notice = page.locator('.vt-notice').filter({ hasText: "Paused to go easy on PixelLab's servers." });
   await expect(notice).toBeVisible();
   await settle(page, mock);
   expect(api(mock.hits)).toHaveLength(1);

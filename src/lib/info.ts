@@ -6,7 +6,6 @@ import type { Card, Detail, Dir, FamilyId } from './types';
 export interface InfoRow {
   label: string;
   value: string;
-  mono?: boolean;
 }
 
 export const PLAYBACK_NOTE = "PixelLab doesn't say how fast animations play. 8 fps matches PixelLab's character and Creator players.";
@@ -62,9 +61,9 @@ function directions(card: Card, detail: Detail | null): string | null {
 
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
 
-/** One line per animation: "Walk · 8–9 frames · 4 directions", plus the object's description when it adds something. */
-function animationRows(detail: Detail): InfoRow[] {
-  return detail.animations.map((a) => {
+/** One "Animations" row, a line per animation: "Walk · 8–9 frames · 4 directions", plus the object's description when it adds something. */
+function animationsRow(detail: Detail): InfoRow | null {
+  const lines = detail.animations.map((a) => {
     const lists = Object.values(a.frames);
     const counts = lists.map((l) => l?.length ?? 0);
     const lo = Math.min(...counts);
@@ -72,12 +71,13 @@ function animationRows(detail: Detail): InfoRow[] {
     const parts = [a.name];
     if (lists.length) parts.push(lo === hi ? plural(lo, 'frame') : `${lo}–${hi} frames`, plural(lists.length, 'direction'));
     const more = a.description && a.description !== a.name ? `\n${a.description}` : '';
-    return { label: 'Animation', value: parts.join(' · ') + more };
+    return parts.join(' · ') + more;
   });
+  return row('Animations', lines.join('\n'));
 }
 
 const present = (r: InfoRow | null): r is InfoRow => r !== null;
-const row = (label: string, value: string | null, mono?: boolean): InfoRow | null => (value ? { label, value, ...(mono && { mono }) } : null);
+const row = (label: string, value: string | null): InfoRow | null => (value ? { label, value } : null);
 
 function styleRows(detail: Detail | null): (InfoRow | null)[] {
   const s = rec(detail?.extra.style_settings);
@@ -93,7 +93,7 @@ export function infoRows(familyId: FamilyId, card: Card, detail: Detail | null, 
   const updated = formatDate(m.updated_at, timeZone);
   const same = text(m.created_at) && Date.parse(String(m.created_at)) === Date.parse(String(m.updated_at));
   const count = num(m.animation_count);
-  const animations: (InfoRow | null)[] = detail ? animationRows(detail) : [row('Animations', count ? String(count) : null, true)];
+  const animations = detail ? animationsRow(detail) : row('Animations', count ? String(count) : null);
   const hasAnimations = detail ? detail.animations.length > 0 : !!count;
   const playback = hasAnimations ? row('Playback', '8 fps (default)') : null;
   const tagRow = row('Tags', tagsOf(card).join(', '));
@@ -103,35 +103,35 @@ export function infoRows(familyId: FamilyId, card: Card, detail: Detail | null, 
   switch (familyId) {
     case 'characters':
       rows = [
-        row('State', text(m.state_name) ?? 'Base'), row('Canvas', px(m.size), true), row('Directions', directions(card, detail)), row('View', sentence(m.view)),
-        ...animations, ...styleRows(detail), row('Guidance', grouped(fixed.guidance), true),
-        row('AI freedom', grouped(fixed.ai_freedom), true), row('Template', sentence(m.template_id)),
+        row('State', text(m.state_name) ?? 'Base'), row('Canvas', px(m.size)), row('Directions', directions(card, detail)), row('View', sentence(m.view)),
+        animations, ...styleRows(detail), row('Guidance', grouped(fixed.guidance)),
+        row('AI freedom', grouped(fixed.ai_freedom)), row('Template', sentence(m.template_id)),
         tagRow, row('Created', created), row('Updated', same ? null : updated), playback,
       ];
       break;
     case 'objects':
       rows = [
-        row('State', text(m.state_name)), row('Canvas', px(m.size), true), row('Directions', directions(card, detail)), row('View', sentence(m.view)),
-        ...animations, ...styleRows(detail), tagRow, row('Created', created), playback,
+        row('State', text(m.state_name)), row('Canvas', px(m.size)), row('Directions', directions(card, detail)), row('View', sentence(m.view)),
+        animations, ...styleRows(detail), tagRow, row('Created', created), playback,
       ];
       break;
     case 'tilesets':
-      rows = [row('Tile size', px(m.tile_size), true), row('View', sentence(m.view)), row('Created', created)];
+      rows = [row('Tile size', px(m.tile_size)), row('View', sentence(m.view)), row('Created', created)];
       break;
     case 'tilesets-side':
-      rows = [row('Top edge', text(m.transition_description) && title(text(m.transition_description)!)), row('Tile size', px(m.tile_size), true), row('View', 'Side (platformer)'), row('Created', created)];
+      rows = [row('Top edge', text(m.transition_description) && title(text(m.transition_description)!)), row('Tile size', px(m.tile_size)), row('View', 'Side (platformer)'), row('Created', created)];
       break;
     case 'isometric':
-      rows = [row('Size', num(m.size) === null ? null : `${num(m.size)} px`, true), row('Shape', sentence(m.tile_shape)), row('Created', created)];
+      rows = [row('Size', num(m.size) === null ? null : `${num(m.size)} px`), row('Shape', sentence(m.tile_shape)), row('Created', created)];
       break;
     case 'tiles-pro':
       rows = [
-        row('Tile type', sentence(m.tile_type)), row('Tile size', px(m.tile_size), true), row('Variations', grouped(m.n_tiles), true),
+        row('Tile type', sentence(m.tile_type)), row('Tile size', px(m.tile_size)), row('Variations', grouped(m.n_tiles)),
         row('View', sentence(m.tile_view)), row('Created', created),
       ];
       break;
     case 'ui':
-      rows = [row('Size', px(m.size), true), row('Created', created)];
+      rows = [row('Size', px(m.size)), row('Created', created)];
       break;
   }
   return rows.filter(present);

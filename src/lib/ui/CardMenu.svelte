@@ -8,6 +8,7 @@
   import PixelArt from '../render/PixelArt.svelte';
   import type { Item } from '../types';
   import FolderDialog from './FolderDialog.svelte';
+  import { moveFocus } from './keys';
 
   let { item, rect, href, start, onClose }: { item: Item | null; rect: DOMRect | null; href: string; start: 'menu' | 'folders'; onClose: () => void } = $props();
 
@@ -75,13 +76,7 @@
   // Keys stay in the dialog (Esc must not also close the search or the viewer); ↑/↓/Home/End move between the items.
   function onkeydown(e: KeyboardEvent) {
     e.stopPropagation();
-    const items = [...(panel?.querySelectorAll<HTMLElement>('[data-nav]') ?? [])];
-    const i = items.indexOf(document.activeElement as HTMLElement);
-    const n = items.length;
-    const next = { ArrowDown: (i + 1) % n, ArrowUp: i < 0 ? n - 1 : (i - 1 + n) % n, Home: 0, End: n - 1 }[e.key];
-    if (next === undefined || !n) return;
-    e.preventDefault();
-    items[next].focus();
+    moveFocus(e, [...(panel?.querySelectorAll<HTMLElement>('[data-nav]') ?? [])]);
   }
 
   // The dialog covers the window and is see-through: a click on it is a click outside the panel. It must also start there, so the

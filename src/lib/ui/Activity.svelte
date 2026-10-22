@@ -65,6 +65,7 @@
   // The Activity panel: every request this tab sent to PixelLab, live. Reads the network module's counters and log,
   // plus the library's count of requests the saved copy made unnecessary.
   import { library } from '../data/library.svelte';
+  import { leaves } from './keys';
 
   let { open, onClose }: { open: boolean; onClose: () => void } = $props();
 
@@ -107,13 +108,15 @@
 
 {#if open}
   <button type="button" class="backdrop" tabindex="-1" aria-label="Close activity" onclick={onClose}></button>
-  <div class="glass-popover is-open vt-scrim panel vt-grip" role="dialog" aria-label="Activity" tabindex="-1" bind:this={panel}>
+  <div class="glass-popover is-open vt-scrim panel vt-grip" role="dialog" aria-label="Activity" tabindex="-1" bind:this={panel} onfocusout={(e) => open && leaves(e) && onClose()}>
     <header>
       <div>
         <h2>Activity</h2>
         <p class="sub">Every request this tab sends to PixelLab. Never your key, ids or links.</p>
       </div>
-      <button type="button" class="glass-btn glass-btn--tertiary glass-btn--sm glass-btn--auto" onclick={onClose}>Close</button>
+      <button type="button" class="vt-x" aria-label="Close activity" onclick={onClose}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+      </button>
     </header>
 
     <dl class="counters">

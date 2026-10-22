@@ -487,15 +487,15 @@ Closes the one known way to lose favorites and folders. No new API requests, exc
 - [ ] **Backup export and import** (Settings › Folders & favorites): download a versioned JSON file of favorites and folders (keys, names, order). Never in it: the key, PixelLab ids, picture links or card snapshots (Phase 4 R2). Import merges folders by name (UX-12) and says how many items will appear as their categories load. 0 API requests.
 - [x] **Ask the browser to keep the data**: call `navigator.storage.persist()` once, when the first favorite or folder is created. 0 API requests. Safari mostly ignores it outside an installed web app, so the backup still matters. (review-fix batch)
 - [x] **Better account check** (product review P2): it's the same account if any family's first page shares a card with that family's saved cards. Decide before favorites and folders load, in this order: (1) Characters first; (2) when Characters shares nothing and PixelLab now has more characters than the saved total, ask for one row at offset (new total − saved total): it's the same account if that row is the saved newest character (the one-row offset step, code review K2); (3) then the other saved families' first pages, one family at a time, stopping at the first that shares a card. Step 3 also runs when no character is saved; only when no family has any saved card is the copy kept as it is (nothing to compare). Only exact card matches count as the same account. Every page read is saved and reused. Fail closed: if a needed page fails and nothing matched, the key test ends with "PixelLab isn't answering" (the key is not kept), favorites and folders stay hidden, nothing is wiped and nothing is decided; the next key test asks again. Budget: the same account costs at most 1 extra request within the hour (plus the 1-row step when it applies) and 0 after the hour (that page is part of the normal open check); another account costs 0 extra, because its pages are reused after the wipe. **Test:** a failed fallback page leaves favorites and folders hidden and intact, with no burst of requests. (review-fix batch)
-- [ ] **Check again on return** (P-21): when a hidden tab becomes visible again, run the normal open check under the 1-hour rule. (review-fix batch)
-- [ ] **Hide Select** in every dock until Select mode ships (P-20). (review-fix batch)
-- [ ] **Design and accessibility fixes U1–U5** (review-fix batch):
+- [x] **Check again on return** (P-21): when a hidden tab becomes visible again, run the normal open check under the 1-hour rule. (review-fix batch)
+- [x] **Hide Select** in every dock until Select mode ships (P-20). (review-fix batch)
+- [x] **Design and accessibility fixes U1–U5** (review-fix batch):
   - U1: a white focus outline on checkboxes, switches and segmented buttons, visible on blue and glass;
   - U2: readable blue and red text on dialogs and the Settings card;
   - U3: menus and panels close when keyboard focus leaves them;
   - U4: the dock title shrinks with an ellipsis at 320 px wide;
   - U5: status messages sit in always-present live regions, so screen readers read them.
-- [ ] **Small design fixes** (review-fix batch): an empty Favorites tile shows the heart icon, not a folder; Activity closes with the ✕ button that Settings uses, not a "Close" text button.
+- [x] **Small design fixes** (review-fix batch): an empty Favorites tile shows the heart icon, not a folder; Activity closes with the ✕ button that Settings uses, not a "Close" text button. Also: "Remove it" for one gone item, "Prompt copied" / "Asset ID copied" in Info, the search placeholder names folders, no results show one hint, and Info drops the monospace values, lists animations in one "Animations" row and shows "Open in PixelLab" in normal text.
 
 #### Phase 6: Downloads from the device
 

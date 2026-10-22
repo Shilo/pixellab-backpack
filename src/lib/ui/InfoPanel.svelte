@@ -73,7 +73,7 @@
             {#if r.label === 'Tags'}
               <dd class="chips">{#each tags as t}<span class="chip">{t}</span>{/each}</dd>
             {:else}
-              <dd class:mono={r.mono}>{r.value}</dd>
+              <dd>{r.value}</dd>
             {/if}
           </div>
         {/each}
@@ -111,7 +111,7 @@
       Open in PixelLab ↗<span class="vt-sr">{NEW_TAB}</span>
     </a>
   </footer>
-  <span class="vt-sr" role="status">{copied ? 'Copied' : ''}</span>
+  <span class="vt-sr" role="status">{copied === 'id' ? 'Asset ID copied' : copied ? `${block?.label} copied` : ''}</span>
 </aside>
 
 <style>
@@ -157,7 +157,7 @@
   /* The footer reserves the same scrollbar gutter as the body, so its button lines up with the cards above. */
   footer { flex: none; padding: 12px 25px max(16px, env(safe-area-inset-bottom)); overflow: hidden; scrollbar-gutter: stable; }
   footer p { font-size: 13.5px; text-align: center; margin-bottom: 8px; }
-  footer .glass-btn { display: flex; width: 100%; justify-content: center; text-decoration: none; box-sizing: border-box; }
+  footer .glass-btn { display: flex; width: 100%; justify-content: center; text-decoration: none; box-sizing: border-box; color: var(--gl-color-text); }
 
   /* Wide landscape windows: a floating side panel instead of the sheet. */
   @media (orientation: landscape) and (min-width: 840px) {

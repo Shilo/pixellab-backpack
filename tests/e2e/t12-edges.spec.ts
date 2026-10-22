@@ -1,6 +1,7 @@
 // T12 Phase 3 edge cases (mocked PixelLab): search under a slow or failed check, Forget key in another tab and Refresh,
-// odd names, deep links and history, Esc order, All assets with a failed family, and design sizes.
-import { expect, test, type Page } from '@playwright/test';
+// odd names, deep links and history, Esc order, All assets with a failed family, design sizes, the 320 px dock and the
+// Settings sheet's layout and keyboard reach (both projects).
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { connect, mockPixelLab, settle, type Mock } from '../fixtures/pixellab-mock';
 
 const field = (page: Page) => page.getByRole('searchbox', { name: 'Search' });
@@ -305,6 +306,79 @@ test('design sizes: Open in PixelLab is a small button (44 px); the phone field 
   await field(page).fill('object');
   await expect(page.locator('search .clear')).toBeVisible();
   await expect.poll(pad).toBe(isMobile ? '50px' : '90px');
+});
+
+test('U4: at 320 px a long title gives way with an ellipsis; the count, Search, More, a folder\'s "…" and ✕ stay on screen', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await start(page);
+  const inside = async (els: Locator[]) => {
+    for (const el of els) {
+      const box = (await el.boundingBox())!;
+      expect(box.x + box.width).toBeLessThanOrEqual(320);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+  };
+  const cut = (el: Locator) => el.evaluate((e) => e.scrollWidth > e.clientWidth);
+
+  // Today's longest title fits at 320 px, so the dock gets a longer one (a future type or translation) to overflow it.
+  await page.getByRole('link', { name: /^Tilesets & tiles, / }).click();
+  const title = page.locator('.crumb .t');
+  await expect(title).toHaveText('Tilesets & tiles');
+  await title.evaluate((el) => (el.textContent = 'Tilesets, tiles and terrain pieces'));
+  expect(await cut(title)).toBe(true);
+  await inside([page.locator('.crumb > span:last-child'), page.getByRole('button', { name: 'Search', exact: true }), page.locator('.vt-dock').getByRole('button', { name: 'More' })]);
+
+  // A folder's title row: a long name is cut, its "…" and the overlay's ✕ stay on screen.
+  await page.locator('.vt-dock').getByRole('button', { name: 'Library' }).click();
+  await page.getByRole('button', { name: 'New folder' }).click();
+  await page.getByRole('textbox', { name: 'Folder name' }).fill('Heroes, villains and everyone in between');
+  await page.getByRole('button', { name: 'Create' }).click();
+  await expect(page.locator('#fo-title')).toHaveText('Heroes, villains and everyone in between');
+  expect(await cut(page.locator('#fo-title'))).toBe(true);
+  await inside([page.getByRole('button', { name: 'Folder actions' }), page.getByRole('button', { name: 'Close folder' })]);
+});
+
+/** Opens Settings from the dock's "…". */
+async function settings(page: Page) {
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitem', { name: /Settings/ }).click();
+  const dialog = page.getByRole('dialog', { name: 'Settings' });
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+
+test("Settings: a click in the sheet's own padding keeps it open; a click outside it closes", async ({ page }) => {
+  await start(page);
+  const dialog = await settings(page);
+  const box = (await dialog.boundingBox())!;
+  await page.mouse.click(box.x + 6, box.y + box.height / 2); // the side padding: the dialog itself is the target
+  await expect(dialog).toBeVisible();
+  await page.mouse.click(2, 2);
+  await expect(dialog).toBeHidden();
+});
+
+test('Settings: no sideways scroll, and the keyboard reaches every control', async ({ page }) => {
+  await start(page);
+  const dialog = await settings(page);
+  const fits = await page.evaluate(() => {
+    const d = document.querySelector('dialog[open] .scroll')!; // the sheet's scroller
+    return d.scrollWidth <= d.clientWidth && document.documentElement.scrollWidth <= innerWidth;
+  });
+  expect(fits).toBe(true);
+  const seen: string[] = [];
+  for (let i = 0; i < 12; i++) {
+    await page.keyboard.press('Tab');
+    seen.push(
+      await page.evaluate(() => {
+        const el = document.activeElement as HTMLInputElement;
+        return (el.getAttribute('aria-label') ?? el.labels?.[0]?.innerText ?? el.innerText).trim();
+      }),
+    );
+  }
+  for (const name of ['Close settings', 'Keep me signed in', 'Forget key', 'Generate a new API key', 'Fonts', 'Effects', 'Portraits', 'Talking animations', 'Licences']) {
+    expect(seen.some((t) => t.startsWith(name)), `${name} in ${JSON.stringify(seen)}`).toBe(true);
+  }
+  await expect(dialog.getByRole('switch', { name: 'Keep me signed in' })).toBeVisible();
 });
 
 test('Back closes a search opened over a leftover search entry (after Go to and Back, or a reload)', async ({ page }) => {

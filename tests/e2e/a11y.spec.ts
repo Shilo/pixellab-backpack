@@ -99,7 +99,7 @@ test('keyboard reaches every control with a visible focus ring; phone targets ar
   mock.fail = ['/v2/ui-assets?']; // home also shows a notice with its Try again button
   await connect(page);
   await settle(page, mock);
-  await expect(page.getByRole('status').filter({ hasText: "Some assets didn't load" })).toBeVisible();
+  await expect(page.locator('.vt-notice').filter({ hasText: "Some assets didn't load" })).toBeVisible();
   await check(page, phone, 'home');
 
   // Objects: a short grid that fits on screen, so Tab can come round to the dock.
@@ -230,6 +230,9 @@ test('Favorites, folders, the card menu, Add to folder and the folder dialogs: T
   await page.getByRole('button', { name: 'Folder actions' }).click();
   await opened(page.getByRole('menu', { name: 'Folder actions' }));
   await check(page, phone, 'folder menu', '.ov [role="menu"]');
+  // Tabbing round the page left the menu, which closed it (U3).
+  await expect(page.getByRole('menu', { name: 'Folder actions' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Folder actions' }).click();
   await page.getByRole('menuitem', { name: 'Rename…' }).click();
   await opened(page.getByRole('dialog', { name: 'Rename folder' }));
   await check(page, phone, 'folder name dialog', 'dialog[open]');
@@ -277,10 +280,83 @@ test('Favorites, folders, the card menu, Add to folder and the folder dialogs: T
   for (let i = 0; i < 3; i++) {
     await page.keyboard.press('ArrowDown');
     await expect(boxes.nth(i)).toBeFocused();
-    const look = await boxes.nth(i).evaluate((el) => ({ ring: getComputedStyle(el.nextElementSibling!).boxShadow, row: el.closest('label')!.getBoundingClientRect().height }));
-    expect.soft(look.ring, `checkbox ${i}: no visible focus`).not.toBe('none');
-    if (phone) expect.soft(look.row, `checkbox ${i}: row under 44 px`).toBeGreaterThanOrEqual(44);
+    // GlassKit animates the box, so the ring settles shortly after focus.
+    const ring = () => boxes.nth(i).evaluate((el) => ((cs) => `${cs.outlineStyle} ${cs.outlineColor}`)(getComputedStyle(el.nextElementSibling!)));
+    await expect.poll(ring, `checkbox ${i}: no white focus outline (U1)`).toBe('solid rgb(255, 255, 255)');
+    const row = await boxes.nth(i).evaluate((el) => el.closest('label')!.getBoundingClientRect().height);
+    if (phone) expect.soft(row, `checkbox ${i}: row under 44 px`).toBeGreaterThanOrEqual(44);
   }
   await page.keyboard.press('Escape');
   await expect(atf).toHaveCount(0);
+});
+
+test('U3: a menu or panel closes when focus leaves it; a click on its blank space keeps it open', async ({ page }) => {
+  const mock = await mockPixelLab(page);
+  await page.goto('/');
+  await connect(page);
+  await settle(page, mock, 600);
+  const more = page.locator('.vt-dock').getByRole('button', { name: 'More' });
+
+  // The dock's "…": a click on its own padding focuses the menu itself; Shift+Tab off the first item closes it.
+  await more.click();
+  const menu = page.getByRole('menu', { name: 'More' });
+  const box = (await menu.boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + 3);
+  await expect(menu).toBeFocused();
+  await page.getByRole('menuitem', { name: /Refresh/ }).focus();
+  await page.keyboard.press('Shift+Tab');
+  await expect(menu).toHaveCount(0);
+  await expect(more).toBeFocused();
+
+  // Activity: blank space keeps it; Shift+Tab off its ✕ closes it.
+  await more.click();
+  await page.getByRole('menuitem', { name: /Activity/ }).click();
+  const activity = page.getByRole('dialog', { name: 'Activity' });
+  await activity.locator('.note').click();
+  await expect(activity).toBeVisible();
+  await activity.getByRole('button', { name: 'Close activity' }).focus();
+  await page.keyboard.press('Shift+Tab');
+  await expect(activity).toHaveCount(0);
+  await expect(more).toBeFocused();
+  // Closed from inside (its ✕), focus goes back to the opener too, not to <body>.
+  await more.click();
+  await page.getByRole('menuitem', { name: /Activity/ }).click();
+  await activity.getByRole('button', { name: 'Close activity' }).click();
+  await expect(activity).toHaveCount(0);
+  await expect(more).toBeFocused();
+
+  // The viewer's "…" and the picker.
+  await page.getByRole('link', { name: /^Characters, / }).click();
+  await page.getByRole('link', { name: 'Character 1', exact: true }).click();
+  const v = page.getByRole('dialog', { name: 'Character 1', exact: true });
+  await expect(v.locator('.vt-chip')).toHaveText('Breathing idle · South');
+  await v.getByRole('button', { name: 'More' }).click();
+  const options = page.getByRole('dialog', { name: 'Viewer options' });
+  await options.getByText('Backdrop', { exact: true }).click();
+  await expect(options).toBeVisible();
+  await options.getByRole('button', { name: 'Step back' }).focus();
+  await page.keyboard.press('Shift+Tab');
+  await expect(options).toHaveCount(0);
+  await v.locator('.vt-chip').click();
+  const pick = page.getByRole('dialog', { name: 'Animation, state and direction' });
+  await pick.getByText('Direction', { exact: true }).click();
+  await expect(pick).toBeVisible();
+  await pick.getByRole('button', { name: 'Rotations' }).focus();
+  await page.keyboard.press('Shift+Tab');
+  await expect(pick).toHaveCount(0);
+  await expect(v.locator('.vt-chip')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(v).toHaveCount(0);
+
+  // A folder's "…".
+  await page.getByRole('button', { name: 'Library' }).click();
+  await page.getByRole('button', { name: 'New folder' }).click();
+  await page.getByRole('textbox', { name: 'Folder name' }).fill('Shelf');
+  await page.getByRole('button', { name: 'Create' }).click();
+  await page.getByRole('button', { name: 'Folder actions' }).click();
+  const actions = page.getByRole('menu', { name: 'Folder actions' });
+  await page.getByRole('menuitem', { name: 'Rename…' }).focus();
+  await page.keyboard.press('Shift+Tab');
+  await expect(actions).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Folder actions' })).toBeFocused();
 });
