@@ -5,6 +5,8 @@ const use = { channel: process.env.PLAYWRIGHT_CHANNEL };
 
 export default defineConfig({
   testDir: 'tests/e2e',
+  forbidOnly: !!process.env.CI,
+  workers: 2,
   webServer: { command: 'npm run build && npm run preview -- --port 4291 --strictPort', url: 'http://localhost:4291', reuseExistingServer: false },
   use: { baseURL: 'http://localhost:4291' },
   projects: [

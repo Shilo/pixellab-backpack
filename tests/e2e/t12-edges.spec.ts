@@ -187,7 +187,8 @@ test('deep links: bad and unknown keys on every screen, reloaded, land on the sc
     ['#/all/a/0123456789ab', 'All assets283'],
     ['#/c/objects/a/0123456789ab', 'Objects12'],
   ] as const) {
-    await page.evaluate((h) => (location.hash = h), hash);
+    // Set the cold-load URL without racing an in-flight same-document hash navigation.
+    await page.evaluate((h) => history.replaceState(history.state, '', h), hash);
     await page.reload();
     await settle(page, mock, 400);
     await expect(page.getByRole('dialog')).toHaveCount(0);
