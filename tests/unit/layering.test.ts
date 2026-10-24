@@ -20,9 +20,9 @@ test('only http.ts calls fetch', () => {
   expect(['// fetch(u)', '/* fetch(u) */', '<!-- fetch(u) -->', 'cache.fetch(u)', 'prefetch(u)'].filter((t) => FETCH.test(code(t)))).toEqual([]);
 });
 
-test('only http.ts and store.ts touch device storage', () => {
+test('only the credential holder, shared-auth protocol and data store touch device storage', () => {
   expect(
-    offenders(/localStorage|sessionStorage|indexedDB|idb-keyval/, ['src/lib/api/http.ts', 'src/lib/data/store.ts']),
+    offenders(/localStorage|sessionStorage|indexedDB|idb-keyval/, ['src/lib/api/http.ts', 'src/lib/shared-auth.ts', 'src/lib/data/store.ts']),
   ).toEqual([]);
 });
 

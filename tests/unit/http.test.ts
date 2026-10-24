@@ -436,7 +436,7 @@ test('Forget key signs out every other tab, tab-only or kept, with a bare messag
   tabOnly.onSignedOut(out[0]);
   kept.onSignedOut(out[1]);
   http.forgetKey();
-  expect(posts).toEqual(['signed-out']); // one message, from this tab only; never the key
+  expect(posts).toEqual([{ type: 'signed-out', id: expect.any(String) }]); // one message, from this tab only; never the key
   expect([http.getKey(), tabOnly.getKey(), kept.getKey(), kept.keptSignedIn()]).toEqual([null, null, null, false]);
   expect(out.map((f) => f.mock.calls.length)).toEqual([1, 1]);
   expect([session.size, local.has(L)]).toEqual([0, false]);
@@ -444,7 +444,7 @@ test('Forget key signs out every other tab, tab-only or kept, with a bare messag
   expect(calls).toHaveLength(0);
 });
 
-test('a kept tab follows the saved key: takes a replaced one, signs out when it goes; a tab-only tab ignores both', async () => {
+test('a kept tab retains its account as session-only when another app replaces the saved key', async () => {
   const L = 'pixellabApiKey';
   const tabOnly = await loadModule(true);
   http.setKeepSignedIn(true);
@@ -454,11 +454,10 @@ test('a kept tab follows the saved key: takes a replaced one, signs out when it 
   posts = [];
   http.setKey('replaced-key-456');
   expect(posts).toEqual(['key-changed']);
-  expect([kept.getKey(), tabOnly.getKey()]).toEqual(['replaced-key-456', KEY]);
+  expect([kept.getKey(), tabOnly.getKey(), kept.keptSignedIn()]).toEqual([KEY, KEY, false]);
   http.setKeepSignedIn(false); // the saved key is deleted: kept tabs sign out (no "stopped working")
-  expect([kept.getKey(), kept.keptSignedIn(), kept.getCounters().status, tabOnly.getKey(), out.mock.calls.length]).toEqual([null, false, 'ok', KEY, 1]);
+  expect([kept.getKey(), kept.keptSignedIn(), kept.getCounters().status, tabOnly.getKey(), out.mock.calls.length]).toEqual([KEY, false, 'ok', KEY, 0]);
   expect(posts).toEqual(['key-changed', 'key-changed']); // neither receiver answered
-  kept.setKeepSignedIn(true); // nothing to write back
   expect(local.has(L)).toBe(false);
 });
 
@@ -582,8 +581,9 @@ test('identical in-flight requests share one fetch', async () => {
 });
 
 test('waiting work waits while hidden and goes out when visible; running work finishes', async () => {
-  let onChange = () => {};
-  const doc = { visibilityState: 'visible', addEventListener: (_: string, cb: () => void) => (onChange = cb) };
+  const listeners: (() => void)[] = [];
+  const onChange = () => listeners.forEach((cb) => cb());
+  const doc = { visibilityState: 'visible', addEventListener: (_: string, cb: () => void) => listeners.push(cb) };
   vi.stubGlobal('document', doc);
   http = await loadModule();
   http.setKey(KEY);
@@ -621,7 +621,7 @@ test('whenVisible resolves at once while visible, else on the first change to vi
   await http.whenVisible(); // visible: at once
 });
 
-test('M-1: a keyed request in flight is not shared with the next key; each answer reaches its own caller', async () => {
+test('M-1: replacement never shares an old request or returns its old-account payload', async () => {
   const a = outcome(http.apiGet('/objects?limit=100&offset=0'));
   await tick();
   http.setKey('other-key-456');
@@ -631,7 +631,7 @@ test('M-1: a keyed request in flight is not shared with the next key; each answe
   expect(pending[1].init?.headers).toEqual({ Authorization: 'Bearer other-key-456' });
   pending[0].reply(200, { who: 'a' });
   pending[1].reply(200, { who: 'b' });
-  expect((await a).value).toEqual({ who: 'a' });
+  expect((await a).err?.kind).toBe('cancelled');
   expect((await b).value).toEqual({ who: 'b' });
 });
 
@@ -871,9 +871,49 @@ for (const oldStatus of [200, 401, 429, 500]) {
     pending[1].reply();
     expect((await current).err).toBeUndefined();
     pending[0].reply(oldStatus);
-    expect((await old).err?.kind).toBe(oldStatus === 200 ? undefined : 'cancelled');
+    expect((await old).err?.kind).toBe('cancelled');
     expect([http.getKey(), http.getCounters().status]).toEqual(['new-key-456', 'ok']);
     await tick(10_000);
     expect(calls).toHaveLength(2); // the stale response never schedules another request
   });
 }
+
+
+test('same-key Forget/reconnect discards late successes and never retries old work', async () => {
+  const old = outcome(http.apiGet('/old'));
+  await tick();
+  http.forgetKey(); http.setKey(KEY);
+  pending[0].reply(200, { stale: true });
+  expect((await old).err?.kind).toBe('cancelled');
+  await tick(10000);
+  expect(calls).toHaveLength(1);
+});
+
+test('a saved replacement keeps this tab on its original account without overwriting the new saved key', async () => {
+  http.setKeepSignedIn(true);
+  const changed = vi.fn(); http.onKeyModeChanged(changed);
+  local.set('pixellabApiKey', 'synthetic-other-account');
+  const external = new FakeChannel('pixellab-auth'); external.postMessage('key-changed');
+  expect(http.getKey()).toBe(KEY);
+  expect(http.keptSignedIn()).toBe(false);
+  expect(session.get('pixellab-backpack:key')).toBe(KEY);
+  expect(local.get('pixellabApiKey')).toBe('synthetic-other-account');
+  expect(changed).toHaveBeenCalledOnce();
+  const reload = await loadModule(true);
+  expect(reload.getKey()).toBe('synthetic-other-account');
+});
+
+test('an inactive tab cannot restore its session token after another app forgot it', async () => {
+  expect(session.get('pixellab-backpack:key')).toBe(KEY);
+  local.set('pixellabAuthForget', 'synthetic-new-forget');
+  http = await loadModule();
+  expect(http.getKey()).toBeNull();
+  expect(session.has('pixellab-backpack:key')).toBe(false);
+});
+
+test('authenticated requests omit cookies, avoid HTTP caching and refuse redirects', async () => {
+  const answer = outcome(http.apiGet('/characters'));
+  await tick();
+  expect(pending[0].init).toMatchObject({credentials:'omit', cache:'no-store', redirect:'error'});
+  pending[0].reply(); await answer;
+});

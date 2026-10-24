@@ -2,7 +2,7 @@
 // sessionStorage (this-tab mode). Never in a URL, another header, a body, localStorage, IndexedDB, cookies, the console,
 // the Activity panel or its copied log, or the DOM (only the "••••" + last 4 hint in Settings).
 import { expect, test, type Page, type Request } from '@playwright/test';
-import { GOOD_KEY, connect, deviceStorage, mockPixelLab, settle } from '../fixtures/pixellab-mock';
+import { GOOD_KEY, OTHER_KEY, connect, deviceStorage, mockPixelLab, settle } from '../fixtures/pixellab-mock';
 
 const PARTS = [GOOD_KEY, GOOD_KEY.slice(0, 12), GOOD_KEY.slice(-5)]; // the whole key, its start, and more than the 4-character hint
 
@@ -323,4 +323,63 @@ test('a normal session under the production CSP causes no policy violation', asy
   // The listener works: an inline style is a violation, once per policy (the _headers header and the build's <meta> copy).
   await page.evaluate(() => document.head.append(Object.assign(document.createElement('style'), { textContent: 'a{}' })));
   await expect.poll(hits).toEqual([expect.stringMatching(/^style-src-elem inline/), expect.stringMatching(/^style-src-elem inline/)]);
+});
+
+
+for (const remembered of [true, false]) {
+  test('shared token: another app forgets a ' + (remembered ? 'remembered' : 'session-only, channel-unavailable') + ' connection', async ({ page, context }) => {
+    if (!remembered) await context.addInitScript(() => Object.defineProperty(window, 'BroadcastChannel', { value: undefined }));
+    const mock = await mockPixelLab(context);
+    await context.route('**/__auth-peer', route => route.fulfill({contentType:'text/html', body:'<!doctype html><title>Another app</title>'}));
+    await page.goto('/'); await connect(page); await settle(page, mock);
+    if (remembered) {
+      await page.getByRole('button', {name:'More'}).click();
+      await page.getByRole('menuitem', {name:/Settings/}).click();
+      await page.getByRole('dialog', {name:'Settings'}).getByRole('switch', {name:'Keep me signed in'}).check();
+      await page.getByRole('button', {name:'Close settings'}).click();
+    }
+    const peer=await context.newPage(); await peer.goto(new URL('/__auth-peer',page.url()).href);
+    expect(await peer.evaluate(() => localStorage.getItem('pixellabApiKey'))).toBe(remembered ? GOOD_KEY : null);
+    await peer.evaluate(() => {
+      localStorage.removeItem('pixellabApiKey');
+      const id=crypto.randomUUID(); localStorage.setItem('pixellabAuthForget',id);
+      if(typeof BroadcastChannel!=='undefined'){const c=new BroadcastChannel('pixellab-auth'); c.postMessage({type:'signed-out',id}); c.close();}
+    });
+    await page.bringToFront();
+    await expect(page.getByLabel('PixelLab API key')).toBeVisible();
+    expect(await page.evaluate(() => sessionStorage.getItem('pixellab-backpack:key'))).toBeNull();
+    await page.reload(); await expect(page.getByLabel('PixelLab API key')).toBeVisible();
+  });
+}
+
+test('shared token: a saved replacement retains the current account until reload', async ({ page, context }) => {
+  const mock = await mockPixelLab(context);
+  const authorizations:string[]=[];
+  context.on('request',request=>{if(request.url().startsWith('https://api.pixellab.ai/')) {const auth=request.headers().authorization; if(auth)authorizations.push(auth);}});
+  await context.route('**/__auth-peer', route=>route.fulfill({contentType:'text/html',body:'<!doctype html><title>Another app</title>'}));
+  await page.goto('/'); await connect(page); await settle(page,mock);
+  await page.getByRole('button',{name:'More'}).click(); await page.getByRole('menuitem',{name:/Settings/}).click();
+  const settings=page.getByRole('dialog',{name:'Settings'});
+  await settings.getByRole('switch',{name:'Keep me signed in'}).check();
+  const peer=await context.newPage(); await peer.goto(new URL('/__auth-peer',page.url()).href);
+  await peer.evaluate(key=>localStorage.setItem('pixellabApiKey',key),OTHER_KEY);
+  await expect(settings.getByRole('switch',{name:'Keep me signed in'})).not.toBeChecked();
+  expect(await page.evaluate(()=>sessionStorage.getItem('pixellab-backpack:key'))).toBe(GOOD_KEY);
+  expect(await peer.evaluate(()=>localStorage.getItem('pixellabApiKey'))).toBe(OTHER_KEY);
+  expect(authorizations.every(value=>value==='Bearer '+GOOD_KEY)).toBe(true);
+  await page.reload(); await expect.poll(()=>authorizations.at(-1)).toBe('Bearer '+OTHER_KEY);
+});
+
+test('framed app never initializes its credential or API clients', async ({page,context,baseURL}) => {
+  const mock=await mockPixelLab(context);
+  // Model GitHub Pages: its HTML has meta CSP but no response-header frame-ancestors.
+  await context.route(new URL('/',baseURL!).href,async route=>{
+    const response=await route.fetch(); const headers={...response.headers()}; delete headers['content-security-policy'];
+    await route.fulfill({response,headers});
+  });
+  await context.addInitScript(key=>localStorage.setItem('pixellabApiKey',key),GOOD_KEY);
+  await context.route('**/__frame-host',route=>route.fulfill({contentType:'text/html',body:'<iframe src="/"></iframe>'}));
+  await page.goto('/__frame-host');
+  await expect(page.frameLocator('iframe').getByRole('link',{name:'Open PixelLab Backpack in its own tab'})).toBeVisible();
+  expect(mock.hits).toHaveLength(0);
 });

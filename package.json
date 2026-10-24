@@ -14,7 +14,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
     "e2e": "playwright test",
-    "e2e:smoke": "playwright test --project=desktop --workers=1 --grep \"good key opens the library|a deep link reload opens the viewer|U4: at 320 px\""
+    "e2e:smoke": "playwright test --project=desktop --workers=1 --grep \"good key opens the library|a deep link reload opens the viewer|U4: at 320 px|shared token:|framed app\""
   },
   "dependencies": {
     "@jungherz-de/glasskit": "1.27.0",

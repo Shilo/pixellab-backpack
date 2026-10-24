@@ -70,6 +70,12 @@ Single-asset downloads built from bytes the viewer already has. No new API reque
 
 ### Later
 
+- [ ] **Deferred: reassess encryption of `pixellabApiKey`.** User decision (2026-10-23): keep optional plaintext
+  Remember storage shared with every app on this origin, without a passphrase or extra unlock step. A bundled key or
+  locally saved automatic-decryption key does not protect against same-origin malicious code; a passphrase adds
+  unwanted friction. Revisit only with a concrete threat model and convenient independent unlock or scoped provider
+  credentials. See [shared token contract](../shared-token-security.md).
+
 - [ ] **Images and Maps**: blocked on PixelLab's answer to question 2 (is `get_image` read-only?) and owner approval A1. They need the MCP client and their own rate caps (R6 §4.2).
 - [ ] **Built tileset picture links**: only with PixelLab's written OK (R6 §4.1).
 - [ ] **Play previews in the grid**: only with a budget rule. Frames need one detail request per character or object, and P-2 forbids detail requests just to draw a card. A rule to start from: play only cards whose detail is already saved on this device (0 requests), with no grid-wide autoplay.

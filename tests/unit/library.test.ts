@@ -18,6 +18,8 @@ const h = vi.hoisted(() => {
     kept: false,
     statusCb: null as ((s: string) => void) | null,
     signedOutCb: null as (() => void) | null,
+    keyModeChangedCb: null as (() => void) | null,
+    revision: 0,
     fail: null as HttpError | null,
     /** API paths starting with this answer 500 (one family failing while the others answer). */
     failOn: null as string | null,
@@ -57,7 +59,7 @@ const h = vi.hoisted(() => {
     }),
     publicGet: vi.fn(async () => new Response(new Blob(['png']), { status: 200 })),
     // Like http.ts: clearing the key ends Keep me signed in; a 401 does not.
-    setKey: vi.fn((k: string | null, _o?: { memoryOnly?: boolean }) => void ((st.key = k || null), st.key || (st.kept = false))),
+    setKey: vi.fn((k: string | null, _o?: { memoryOnly?: boolean }) => void ((st.key = k || null), st.revision++, st.key || (st.kept = false))),
     setKeepSignedIn: vi.fn((on: boolean) => void (st.kept = on)),
     forgetKey: vi.fn(() => void Object.assign(st, { key: null, kept: false })),
     retry: vi.fn(),
@@ -79,6 +81,8 @@ vi.mock('../../src/lib/api/http', () => ({
   isImageUrl: (u: string) => /^https:\/\/backblaze\.pixellab\.ai\//.test(u),
   onSignedOut: (cb: () => void) => ((h.st.signedOutCb = cb), () => {}),
   getKey: () => h.st.key,
+  getKeyRevision: () => h.st.revision,
+  onKeyModeChanged: (cb: () => void) => ((h.st.keyModeChangedCb = cb), () => {}),
   onStatus: (cb: (s: string) => void) => ((h.st.statusCb = cb), () => {}),
   keptSignedIn: () => h.st.kept && !!h.st.key,
   keyHint: () => null,
@@ -1215,4 +1219,16 @@ it('a late failed restore cannot clear a newer successfully connected key', asyn
   rejectOld(new h.HttpError('key-lost', 401));
   await restoring;
   expect([h.st.key, lib.hasKey, lib.restoreError]).toEqual(['key-b', true, '']);
+});
+
+
+it('a remote saved replacement changes persistence without switching the visible account', async () => {
+  const lib = await tab();
+  expect(await lib.connect('synthetic-a')).toBe('ok');
+  h.st.kept = false;
+  h.st.keyModeChangedCb!();
+  expect(lib.hasKey).toBe(true);
+  expect(lib.keepSignedIn).toBe(false);
+  expect(h.st.key).toBe('synthetic-a');
+  expect(lib.families.characters?.cards.every(card => card.id.startsWith('a-'))).toBe(true);
 });

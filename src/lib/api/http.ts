@@ -1,12 +1,14 @@
 // The only door to PixelLab: view-only guard, key holder and the API safety net
 // (docs/plan/mvp-plan.md "The safety net"). Nothing else in the app calls fetch.
 import { APP_ID } from '../app';
+import { SAVED_KEY, readForgetMarker, readSavedKey, watchSharedAuth } from '../shared-auth';
 
 const API = 'https://api.pixellab.ai/v2';
 const API_HOST = 'api.pixellab.ai';
 const IMAGE_HOST = 'backblaze.pixellab.ai';
 const KEY_NAME = `${APP_ID}:key`; // sessionStorage: this tab only
-const KEPT_NAME = 'pixellabApiKey'; // shared across apps on this origin; only while "Keep me signed in" is on
+const KEPT_NAME = SAVED_KEY; // shared across apps on this origin; only while "Keep me signed in" is on
+const SESSION_GENERATION = `${APP_ID}:key-generation`;
 const COUNT_NAME = `${APP_ID}:api-count`; // localStorage: request times only, no data
 
 const CONCURRENCY = 2;
@@ -63,18 +65,33 @@ let key: string | null = null;
 let kept = false;
 /** The agent token (I1): held in memory only, never written to either store, Keep me signed in included. */
 let memoryOnly = false;
+let keyRevision = 0;
 try {
   key = localStorage.getItem(KEPT_NAME);
   kept = !!key;
 } catch {
   /* no localStorage */
 }
+const saveSessionKey = () => {
+  try {
+    sessionStorage.setItem(KEY_NAME, key!);
+    sessionStorage.setItem(SESSION_GENERATION, readForgetMarker());
+    return true;
+  } catch {
+    try { sessionStorage.removeItem(KEY_NAME); sessionStorage.removeItem(SESSION_GENERATION); } catch { /* storage unavailable */ }
+    return false;
+  }
+};
+if (kept) {
+  try { sessionStorage.removeItem(KEY_NAME); sessionStorage.removeItem(SESSION_GENERATION); } catch { /* storage unavailable */ }
+}
 const clearSavedKey = () => {
   try { localStorage.removeItem(KEPT_NAME); } catch { /* no localStorage */ }
 };
 if (!key) {
   try {
-    key = sessionStorage.getItem(KEY_NAME);
+    if ((sessionStorage.getItem(SESSION_GENERATION) ?? '') === readForgetMarker()) key = sessionStorage.getItem(KEY_NAME);
+    else { sessionStorage.removeItem(KEY_NAME); sessionStorage.removeItem(SESSION_GENERATION); }
   } catch {
     /* no sessionStorage: memory only */
   }
@@ -83,6 +100,7 @@ if (!key) {
 export function getKey(): string | null {
   return key;
 }
+export const getKeyRevision = () => keyRevision;
 
 /** True while the key lives in localStorage. */
 export function keptSignedIn(): boolean {
@@ -96,25 +114,26 @@ export function keyHint(): string | null {
 
 /** Put the key in the store `on` picks and clear the other. No-op without a key. */
 function store(on: boolean): void {
+  sharedAuth.acknowledge();
   if (!key || memoryOnly) return;
   const was = kept;
   let ok = false;
   try {
-    (on ? localStorage : sessionStorage).setItem(on ? KEPT_NAME : KEY_NAME, key);
-    ok = true;
+    if (on) { localStorage.setItem(KEPT_NAME, key); ok = true; }
+    else ok = saveSessionKey();
   } catch {
     /* memory only */
   }
   // Clear the other store. A saved copy that was turned off, or could not be written, is removed either way, so a replaced
   // key never stays in the saved copy (the new one stays in memory, and in the tab copy if that still holds it).
   try {
-    if (on && ok) sessionStorage.removeItem(KEY_NAME);
+    if (on && ok) { sessionStorage.removeItem(KEY_NAME); sessionStorage.removeItem(SESSION_GENERATION); }
     else clearSavedKey();
   } catch {
     /* memory only */
   }
   kept = on && ok;
-  if (was || kept) post('key-changed'); // the saved key was written, replaced or removed
+  if (was || kept) sharedAuth.changed();
 }
 
 export function setKeepSignedIn(on: boolean): void {
@@ -123,7 +142,9 @@ export function setKeepSignedIn(on: boolean): void {
 
 export function setKey(k: string | null, o: { memoryOnly?: boolean } = {}): void {
   if (k) {
-    if (k !== key) dropKeyed();
+    const wasKept = kept;
+    dropKey(false); // old queued and retrying requests must not start under the replacement credential
+    kept = wasKept;
     key = k;
     memoryOnly = !!o.memoryOnly;
     store(kept);
@@ -131,23 +152,24 @@ export function setKey(k: string | null, o: { memoryOnly?: boolean } = {}): void
   } else {
     const was = kept;
     dropKey();
-    if (was) post('key-changed'); // kept tabs re-read the saved key and sign out
+    if (was) sharedAuth.changed();
   }
 }
 
 /** Forget key: this tab and every other tab of this browser, kept or tab-only, drop the key. */
 export function forgetKey(): void {
   dropKey();
-  post('signed-out');
+  sharedAuth.forget();
 }
 
 /** Clears the key from memory and both stores and fails waiting jobs that need it. Tells no other tab. */
-function dropKey(): void {
+function dropKey(clearSaved = true): void {
+  keyRevision++;
   dropKeyed();
   key = null;
   kept = false;
   memoryOnly = false;
-  for (const s of [clearSavedKey, () => sessionStorage.removeItem(KEY_NAME)]) {
+  for (const s of [...(clearSaved ? [clearSavedKey] : []), () => sessionStorage.removeItem(KEY_NAME), () => sessionStorage.removeItem(SESSION_GENERATION)]) {
     try {
       s();
     } catch {
@@ -156,6 +178,7 @@ function dropKey(): void {
   }
   // Waiting jobs would otherwise go out as "Bearer null".
   for (let i = queue.length - 1; i >= 0; i--) if (queue[i].auth) fail(queue.splice(i, 1)[0], new HttpError('key-lost'));
+  for (const job of retrying) if (job.auth) { retrying.delete(job); fail(job, new HttpError('key-lost')); }
   if (status === 'key-lost') setStatus('ok'); // a new key starts clean: the key screen is the plain one
 }
 
@@ -355,6 +378,8 @@ function netKind(e: unknown): 'cancelled' | 'offline' | 'blocked' {
 async function attempt(job: Job): Promise<void> {
   const t0 = Date.now();
   const requestKey = key;
+  const revision = keyRevision;
+  const stale = () => job.auth && (requestKey !== key || revision !== keyRevision);
   running++;
   sessionApi++;
   const c = readCount();
@@ -362,13 +387,13 @@ async function attempt(job: Job): Promise<void> {
   if (used() >= limit()) setStatus('paused');
   try {
     // K8: the caller's signal only takes a job out of the queue (submit); a request that went out finishes, so its answer is kept.
-    const init: RequestInit = { method: 'GET', signal: timed() };
+    const init: RequestInit = { method: 'GET', signal: timed(), credentials: 'omit', ...(job.auth ? { cache: 'no-store' as const, redirect: 'error' as const } : {}) };
     if (job.auth) init.headers = { Authorization: `Bearer ${requestKey}` };
     let res: Response | undefined;
     try {
       res = await fetch(job.url, init);
     } catch (e) {
-      if (job.auth && requestKey !== key) return fail(job, new HttpError(key ? 'cancelled' : 'key-lost'), t0);
+      if (stale()) return fail(job, new HttpError(key ? 'cancelled' : 'key-lost'), t0);
       // Offline and aborts end here. A failure while online may be an outage answering without CORS
       // headers, so it is treated like a 5xx below: retried, counted, and 'blocked' only at the end.
       const kind = netKind(e);
@@ -376,7 +401,7 @@ async function attempt(job: Job): Promise<void> {
       if (kind !== 'blocked') return fail(job, new HttpError(kind), t0);
     }
     // A response to a previous credential cannot reject or throttle the new connection.
-    if (job.auth && requestKey !== key && !res?.ok) return fail(job, new HttpError(key ? 'cancelled' : 'key-lost'), t0, res?.status);
+    if (stale()) return fail(job, new HttpError(key ? 'cancelled' : 'key-lost'), t0, res?.status);
     if (res && (status === 'offline' || status === 'blocked')) setStatus('ok');
     const s = res ? res.status : 0;
     if (res?.ok) {
@@ -387,6 +412,7 @@ async function attempt(job: Job): Promise<void> {
       } catch {
         return fail(job, new HttpError('http', s), t0, s);
       }
+      if (stale()) return fail(job, new HttpError(key ? 'cancelled' : 'key-lost'), t0, s);
       record('api', job, 'ok', t0, s, out.bytes);
       return job.ok(out.value);
     }
@@ -427,7 +453,7 @@ async function attempt(job: Job): Promise<void> {
     setTimeout(() => {
       if (!retrying.delete(job)) return; // a stop already failed it
       if (job.signal?.aborted) return fail(job, new HttpError('cancelled'));
-      if (job.auth && !key) return fail(job, new HttpError('key-lost')); // forgotten while it waited to retry
+      if (stale() || job.auth && !key) return fail(job, new HttpError(key ? 'cancelled' : 'key-lost'));
       queue.unshift(job);
       pump();
     }, delay);
@@ -583,15 +609,12 @@ globalThis.addEventListener?.('online', () => status === 'offline' && setStatus(
 globalThis.addEventListener?.('offline', () => setStatus('offline'));
 
 // ---- other tabs ----
-// One channel to this browser's other tabs. Messages are bare words, never the key: 'signed-out' (Forget key: every tab
-// drops its key and library) and 'key-changed' (the saved key was written, replaced or removed: a kept tab re-reads it).
-// A tab never answers a message with one of its own.
-type Message = 'signed-out' | 'key-changed';
-const channel = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(APP_ID);
-function post(m: Message): void {
-  channel?.postMessage(m);
-}
 const signedOutListeners = new Set<() => void>();
+const keyModeListeners = new Set<() => void>();
+export function onKeyModeChanged(cb: () => void): () => void {
+  keyModeListeners.add(cb);
+  return () => keyModeListeners.delete(cb);
+}
 
 /** Another tab signed this one out: the key is gone, the screen should drop what it holds. */
 export function onSignedOut(cb: () => void): () => void {
@@ -600,20 +623,17 @@ export function onSignedOut(cb: () => void): () => void {
 }
 
 function signedOut(): void {
-  dropKey();
+  dropKey(false); // receiving an old event must not delete a newer saved key
   signedOutListeners.forEach((cb) => cb());
 }
 
-if (channel)
-  channel.onmessage = (e: MessageEvent) => {
-    if (e.data === 'signed-out') return signedOut();
-    if (e.data !== 'key-changed' || !kept) return;
-    let saved: string | null = null;
-    try {
-      saved = localStorage.getItem(KEPT_NAME);
-    } catch {
-      /* unreadable: sign out */
-    }
-    if (saved) key = saved;
-    else signedOut();
-  };
+const sharedAuth = watchSharedAuth(signedOut, () => {
+  if (!kept) return;
+  const saved = readSavedKey();
+  if (saved === key) return;
+  if (!saved) return signedOut();
+  kept = false; // retain this tab's account; the replacement is used only on the next app load
+  saveSessionKey();
+  keyModeListeners.forEach((cb) => cb());
+});
+import.meta.hot?.dispose(() => sharedAuth.close());

@@ -12,7 +12,7 @@ Stack: Node.js 24.22.1 / npm 11.19.1; strict TypeScript 6.0.3; Svelte 5.57.2 (no
 API budget: every request costs PixelLab. Opening the app costs 7 first-page GETs (one per asset family), at most once an hour. Next pages load only on scroll. Costly pictures are fetched after 0.3 s on screen, once per device. Safety net: 2 requests at a time, 2 per second, 1,000 per day. Any new request needs a budget in its plan (decision P-16).
 Network: only src/lib/api/http.ts calls fetch; a unit test enforces it.
 Key: sent only as a Bearer header to api.pixellab.ai, never in URLs, logs or exports. It is stored in sessionStorage, or in localStorage only while "Keep me signed in" is on.
-Remembered keys use localStorage pixellabApiKey, shared with PixelDoll on the same origin. Use only this saved name; do not read, migrate, write or remove old app-specific API-key entries. Other open apps read the saved key on their next load.
+Remembered keys remain plaintext in optional localStorage pixellabApiKey, intentionally shared with every app on this origin. Use only this saved name; do not read, migrate, write or remove old app-specific API-key entries. Never broadcast credentials. Follow docs/shared-token-security.md for credential-free Forget/replacement events. Do not add encryption or an extra unlock step; the roadmap records encryption as deferred.
 Local data: the saved library, favorites and folders live in IndexedDB. Forget key and switching accounts wipe them.
 Privacy and security: no new hosts and no analytics. The CSP lives in public/_headers and is copied into index.html at build.
 GlassKit: import @jungherz-de/glasskit/glasskit.css unchanged; override it in src/app.css. Keep the existing cssMinify workaround until independently verified.

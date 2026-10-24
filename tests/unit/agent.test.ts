@@ -12,7 +12,8 @@ async function boot(env: { MODE: string; DEV?: boolean }, hasKey = false, framed
   h.agentKey.mockClear();
   h.connect.mockClear();
   h.hasKey = hasKey;
-  vi.stubGlobal('document', { getElementById: () => ({}) });
+  vi.stubGlobal('document', { getElementById: () => ({ replaceChildren: vi.fn() }), createElement: () => ({}) });
+  vi.stubGlobal('location', { href: 'https://example.test/backpack/' });
   const win: { top?: unknown } = {};
   win.top = framed ? {} : win;
   vi.stubGlobal('window', win);

@@ -7,12 +7,14 @@ import {
   apiGet,
   forgetKey,
   getKey,
+  getKeyRevision,
   HttpError,
   isImageUrl,
   keepLoading,
   keptSignedIn,
   keyHint,
   onSignedOut,
+  onKeyModeChanged,
   onStatus,
   publicGet,
   recordCached,
@@ -168,23 +170,26 @@ class Library {
     if (this.restoring) return;
     this.restoring = true;
     this.restoreError = '';
+    const revision = getKeyRevision();
     try {
       const key = getKey();
       if (!key) return await this.openCheck();
       this.hasKey = false; // visibility events must wait for the account decision
       const fingerprint = await keyFingerprint(key);
       const saved = await loadKeyFingerprint().catch(() => undefined);
-      if (getKey() !== key) return;
+      if (getKeyRevision() !== revision || getKey() !== key) return;
       if (saved !== fingerprint) {
         const result = await this.connect(key, { restoring: true });
-        if (getKey() === key && result !== 'ok' && result !== 'wrong-key') this.restoreError = result;
+        if (getKeyRevision() === revision && getKey() === key && result !== 'ok' && result !== 'wrong-key') this.restoreError = result;
       } else {
         this.hasKey = true;
         await this.openCheck();
       }
     } catch {
-      this.hasKey = false;
-      if (getKey()) this.restoreError = 'server';
+      if (getKeyRevision() === revision) {
+        this.hasKey = false;
+        if (getKey()) this.restoreError = 'server';
+      }
     } finally {
       this.restoring = false;
     }
@@ -195,12 +200,13 @@ class Library {
   connect = async (key: string, o: { memoryOnly?: boolean; restoring?: boolean } = {}): Promise<'ok' | 'wrong-key' | 'offline' | 'blocked' | 'server' | 'paused'> => {
     this.restoreError = '';
     if (!o.restoring) setKey(key, { memoryOnly: !!o.memoryOnly });
+    const revision = getKeyRevision();
     await adopt();
     let check: Awaited<ReturnType<typeof accountCheck>>;
     try {
       check = await accountCheck(await byId.characters.list(0), this.families);
     } catch (e) {
-      if (getKey() !== key) return 'server'; // a late failure from an older login must not clear the new one
+      if (getKeyRevision() !== revision || getKey() !== key) return 'server'; // a late failure must not clear a new login
       // A newly pasted, unverified key is discarded. A saved key survives temporary verification failures;
       // neither path exposes the old account's favorites or folders before verification finishes.
       const kind = e instanceof HttpError ? e.kind : null;
@@ -210,7 +216,7 @@ class Library {
       this.keepSignedIn = keptSignedIn();
       return kind === 'key-lost' ? 'wrong-key' : kind === 'offline' || kind === 'blocked' ? kind : kind === 'cap' ? 'paused' : 'server';
     }
-    if (getKey() !== key) return 'server'; // signed out (another tab's Forget) or replaced while the check ran: that wins (M-2)
+    if (getKeyRevision() !== revision || getKey() !== key) return 'server';
     if (check.other) {
       // Another account's saved copy: wipe it with its favorites and folders (R4), then the check below runs for every family.
       clearOrg();
@@ -222,9 +228,9 @@ class Library {
       this.errors = {};
     }
     const fingerprint = await keyFingerprint(key);
-    if (getKey() !== key) return 'server';
+    if (getKeyRevision() !== revision || getKey() !== key) return 'server';
     await saveKeyFingerprint(fingerprint).catch(() => {});
-    if (getKey() !== key) return 'server';
+    if (getKeyRevision() !== revision || getKey() !== key) return 'server';
     this.hasKey = true;
     this.keepSignedIn = keptSignedIn();
     // The pages the account check read are this key's first pages: the open check below skips them as fresh.
@@ -413,6 +419,7 @@ function signedOut(): void {
   sync();
 }
 onSignedOut(signedOut);
+onKeyModeChanged(() => { library.keepSignedIn = keptSignedIn(); });
 
 function sync(): void {
   library.status = net !== 'ok' ? net : checking ? 'checking' : ran ? 'ok' : 'idle';

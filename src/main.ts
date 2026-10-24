@@ -1,12 +1,12 @@
-import { mount } from 'svelte';
-import './app.css';
-import App from './App.svelte';
-import { agentKey } from './lib/api/http';
-import { library } from './lib/data/library.svelte';
-
-mount(App, { target: document.getElementById('app')! });
-
-// AI-agent testing only (AGENTS.md "Agent testing"): `npm run dev:agent` serves the .env token, which takes the same
-// verify-then-keep path as a pasted key, kept in memory only (never in either store). A compile-time constant: no other mode
-// or build contains this. Never when framed: another page could embed and clickjack the app.
-if (import.meta.env.DEV && import.meta.env.MODE === 'agent' && window.top === window && !library.hasKey) void agentKey().then((k) => k && library.connect(k, { memoryOnly: true }));
+// Do not initialize credentials, queues, or API clients inside another page's frame.
+export {};
+if (window.top === window) {
+  await import('./bootstrap');
+} else {
+  const link = document.createElement('a');
+  link.href = location.href;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = 'Open PixelLab Backpack in its own tab';
+  document.getElementById('app')?.replaceChildren(link);
+}
