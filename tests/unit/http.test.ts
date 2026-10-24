@@ -917,3 +917,14 @@ test('authenticated requests omit cookies, avoid HTTP caching and refuse redirec
   expect(pending[0].init).toMatchObject({credentials:'omit', cache:'no-store', redirect:'error'});
   pending[0].reply(); await answer;
 });
+
+
+test('untagged older session credentials are discarded rather than migrated', async () => {
+  session.delete('pixellab-backpack:key-generation');
+  expect(session.get('pixellab-backpack:key')).toBe(KEY);
+  http = await loadModule();
+  expect(http.getKey()).toBeNull();
+  expect(session.has('pixellab-backpack:key')).toBe(false);
+  expect(local.has('pixellabApiKey')).toBe(false);
+  expect(calls).toHaveLength(0);
+});

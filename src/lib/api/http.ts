@@ -90,7 +90,7 @@ const clearSavedKey = () => {
 };
 if (!key) {
   try {
-    if ((sessionStorage.getItem(SESSION_GENERATION) ?? '') === readForgetMarker()) key = sessionStorage.getItem(KEY_NAME);
+    if (sessionStorage.getItem(SESSION_GENERATION) === readForgetMarker()) key = sessionStorage.getItem(KEY_NAME);
     else { sessionStorage.removeItem(KEY_NAME); sessionStorage.removeItem(SESSION_GENERATION); }
   } catch {
     /* no sessionStorage: memory only */
