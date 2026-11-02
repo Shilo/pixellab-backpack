@@ -185,8 +185,10 @@ function dropKey(clearSaved = true): void {
 /** AI-agent testing only: the .env token from `npm run dev:agent`'s endpoint, or null (missing, or the kill switch
  * localStorage 'backpack.agentKey' = 'off' is set). Called only from main.ts's agent block, so no build contains it. */
 export async function agentKey(): Promise<string | null> {
+  let off = false;
+  try { off = localStorage.getItem('backpack.agentKey') === 'off'; } catch { /* Optional storage can be unavailable; the agent key stays memory-only. */ }
+  if (off) return null;
   try {
-    if (localStorage.getItem('backpack.agentKey') === 'off') return null;
     const r = await fetch('/__dev/pixellab-key', { cache: 'no-store' });
     return r.ok ? await r.text() : null;
   } catch {

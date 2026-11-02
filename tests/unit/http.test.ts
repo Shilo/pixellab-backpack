@@ -840,6 +840,13 @@ test('agentKey: the kill switch sends no request; otherwise the dev endpoint ans
   expect(calls).toEqual([{ url: '/__dev/pixellab-key', init: { cache: 'no-store' } }]);
 });
 
+test('agentKey: unavailable optional storage still permits the memory-only connection', async () => {
+  autoReply();
+  vi.stubGlobal('localStorage', { getItem: () => { throw new Error('storage denied'); } });
+  expect(await http.agentKey()).toBe('{"ok":true}');
+  expect(calls).toEqual([{ url: '/__dev/pixellab-key', init: { cache: 'no-store' } }]);
+});
+
 for (const initial of ['shared', 'old-only', 'both'] as const) {
   test(`remembered key ${initial}: only the shared name is used, including after Forget`, async () => {
     session.clear();
