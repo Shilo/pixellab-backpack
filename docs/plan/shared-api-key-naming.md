@@ -4,6 +4,7 @@ Owner request: 2026-10-22. Applies to PixelDoll and PixelLab Backpack.
 
 - Remembered browser credentials use `localStorage["pixellabApiKey"]` on both apps. Session-only credentials retain each app's existing behavior.
 - Agent development uses `PIXELLAB_API_KEY_AGENT_DEV` in each ignored repo-root `.env`. Agent credentials remain in memory; no build or CI receives them.
+- Set `PIXELLAB_API_KEY_AGENT_DEV=${PIXELLAB_SECRET}` to reference that inherited server environment variable, or use another valid name inside `${...}`. Only the complete reference is resolved; missing/blank targets and malformed references fail with a sanitized setup error, never a literal fallback. Non-reference values remain literal tokens. Node dotenv parsing handles quotes, comments and whitespace. No recursive expansion, defaults, interpolation or shell commands are supported. Restart the terminal/editor and server after Windows environment changes. See [the researched contract](../research/2026-11-02-agent-env-reference-best-practices.md).
 - Use only the shared saved name. Old app-specific API-key entries are ignored, never migrated, and left untouched. Forget and disabling persistence remove only the shared saved name.
 - Other apps adopt saved credential changes on reload. Live synchronization between apps is outside this change.
 

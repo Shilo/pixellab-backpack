@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
-import { localSameOrigin } from './agent-key.ts';
+import { localSameOrigin, resolveAgentKey } from './agent-key.ts';
 
 // The `/*` block of public/_headers, so `vite preview` (and e2e) run under the production CSP.
 const headers = Object.fromEntries(
@@ -46,14 +46,14 @@ function agentKey(): Plugin {
           res.statusCode = 403;
           return res.end();
         }
-        let key = '';
         try {
-          key = readFileSync(join(server.config.root, '.env'), 'utf8').match(/^PIXELLAB_API_KEY_AGENT_DEV=(.*)$/m)?.[1]?.trim() ?? '';
-        } catch {
-          /* no .env: 404 */
+          const key = resolveAgentKey(readFileSync(join(server.config.root, '.env'), 'utf8'), process.env);
+          res.statusCode = key ? 200 : 404;
+          res.end(key);
+        } catch (error) {
+          res.statusCode = (error as NodeJS.ErrnoException).code === 'ENOENT' ? 404 : 503;
+          res.end(res.statusCode === 404 ? '' : 'Agent token setup error: check the reference syntax and inherited environment variable.');
         }
-        res.statusCode = key ? 200 : 404;
-        res.end(key);
       });
     },
   };
